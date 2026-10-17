@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+.env
+.env.*
+test/live/*.json
+test/live/*.local.json
+*.log

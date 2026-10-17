@@ -16,3 +16,7 @@ upstream/
 *.log
 .DS_Store
 kimi/
+
+# On-premise deployment: secrets, certificates and local settings
+infrastructure/production/secrets/
+infrastructure/production/certs/

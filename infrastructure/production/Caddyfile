@@ -1,0 +1,52 @@
+# UNITECH-EHR edge: the only service reachable from the hospital network.
+# One HTTPS address serves the web app, the API and the image viewer, so
+# session cookies stay same-site and no CORS is needed. HTTP is redirected to
+# HTTPS automatically for the site address below.
+#
+# EHR_HOSTNAME  e.g. ehr.hospital.local (must match the certificate)
+# EHR_TLS       "tls /certs/cert.pem /certs/key.pem" for a certificate issued
+#               by hospital IT (recommended), or "tls internal" for Caddy's own
+#               CA while you wait for one (browsers must trust that CA).
+
+{
+	# The site always sets TLS explicitly (certificate files or "internal"), so
+	# Caddy never tries public ACME from an internal network.
+	servers {
+		# The API trusts X-Forwarded-For only from this proxy (TRUST_PROXY).
+		trusted_proxies static private_ranges
+	}
+}
+
+{$EHR_HOSTNAME} {
+	{$EHR_TLS:tls internal}
+
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	# API, OHIF viewer and DICOMweb go to the hospital API, which checks the EHR
+	# session and adds Orthanc's service credentials (see pacs-viewer.proxy.ts).
+	@backend path /api/* /ohif /ohif/* /dicom-web /dicom-web/*
+	handle @backend {
+		reverse_proxy api:4000
+	}
+
+	# Everything else is the single-page app.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

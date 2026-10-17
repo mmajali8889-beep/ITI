@@ -1,0 +1,94 @@
+# UNITECH-EHR on-premise stack (roadmap 24.7 / 24.8).
+#
+#   cd infrastructure/production
+#   cp .env.example .env            # hostname, TLS mode, Medplum address
+#   ./generate-secrets.sh           # creates ./secrets (git-ignored, mode 600)
+#   docker compose up -d --build
+#
+# Only the proxy publishes ports (80 -> HTTPS redirect, 443). The API and
+# Orthanc are reachable only inside this network. Medplum runs as its own stack
+# (see upstream Medplum docs) and is reached at MEDPLUM_BASE_URL.
+
+name: unitech-ehr
+
+services:
+  proxy:
+    build:
+      context: ../../apps/ehr-web
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      EHR_HOSTNAME: ${EHR_HOSTNAME:?set EHR_HOSTNAME in .env}
+      EHR_TLS: ${EHR_TLS:-tls internal}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
+      - caddy-data:/data
+    depends_on:
+      api:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ../../services/hospital-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      WEB_ORIGIN: https://${EHR_HOSTNAME}
+      TRUST_PROXY: uniquelocal
+      ENABLED_HOSPITAL_CODES: ${ENABLED_HOSPITAL_CODES:-HOSP-A}
+      MEDPLUM_BASE_URL: ${MEDPLUM_BASE_URL:?set MEDPLUM_BASE_URL in .env}
+      MEDPLUM_CLIENT_ID: ${MEDPLUM_CLIENT_ID:?set MEDPLUM_CLIENT_ID in .env}
+      MEDPLUM_PROVISIONING_EMAIL: ${MEDPLUM_PROVISIONING_EMAIL:-}
+      ORTHANC_URL: http://orthanc:8042
+      ORTHANC_USERNAME: hospital-api
+      OHIF_VIEWER_URL: /ohif
+      # Secrets as files (never as plain environment values).
+      AUTH_SESSION_SECRET_FILE: /run/secrets/auth_session_secret
+      MEDPLUM_CLIENT_SECRET_FILE: /run/secrets/medplum_client_secret
+      MEDPLUM_PROVISIONING_PASSWORD_FILE: /run/secrets/medplum_provisioning_password
+      ORTHANC_PASSWORD_FILE: /run/secrets/orthanc_password
+    secrets:
+      - auth_session_secret
+      - medplum_client_secret
+      - medplum_provisioning_password
+      - orthanc_password
+    extra_hosts:
+      # Lets MEDPLUM_BASE_URL point at a Medplum running on this same server.
+      - "host.docker.internal:host-gateway"
+
+  orthanc:
+    image: orthancteam/orthanc:24.10.3
+    restart: unless-stopped
+    environment:
+      ORTHANC__NAME: HOSPITAL-EHR-PACS
+      ORTHANC__AUTHENTICATION_ENABLED: "true"
+      ORTHANC__REMOTE_ACCESS_ALLOWED: "true"
+      ORTHANC__DICOM_AET: ORTHANC
+      DICOM_WEB_PLUGIN_ENABLED: "true"
+      OHIF_PLUGIN_ENABLED: "true"
+      ORTHANC__OHIF__DATA_SOURCE: dicom-web
+    volumes:
+      - orthanc-db:/var/lib/orthanc/db
+      # The service account, generated into a git-ignored file.
+      - ./secrets/orthanc_users.json:/etc/orthanc/users.json:ro
+    ports:
+      # DICOM from modalities on the hospital network (restrict by firewall).
+      - "${ORTHANC_DICOM_BIND:-4242}:4242"
+
+secrets:
+  auth_session_secret:
+    file: ./secrets/auth_session_secret
+  medplum_client_secret:
+    file: ./secrets/medplum_client_secret
+  medplum_provisioning_password:
+    file: ./secrets/medplum_provisioning_password
+  orthanc_password:
+    file: ./secrets/orthanc_password
+
+volumes:
+  caddy-data:
+  orthanc-db:

@@ -87,6 +87,10 @@ Logging out revokes the session durably. A hash of the token is stored in Medplu
 
 In the Claude desktop app, `.claude/launch.json` starts both servers.
 
+## Production (on-premise)
+
+See [`docs/DEPLOYMENT_ON_PREMISE.md`](docs/DEPLOYMENT_ON_PREMISE.md): one HTTPS address via Caddy, secrets as files, and the API refusing unsafe production settings. Files are in `infrastructure/production/`.
+
 ## Tests
 
 ```bash

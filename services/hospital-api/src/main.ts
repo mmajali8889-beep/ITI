@@ -7,9 +7,27 @@ import {
   pacsViewerProxy,
 } from './radiology/pacs-viewer.proxy';
 import { PacsStudyAccessService } from './radiology/pacs-study-access.service';
+import {
+  loadSecretFiles,
+  productionConfigProblems,
+} from './config/runtime-config';
 
 async function bootstrap() {
+  // Secrets may come from files (Docker secrets); then fail fast in production
+  // if anything critical is missing or unsafe, before serving any request.
+  loadSecretFiles();
+  const problems = productionConfigProblems();
+  if (problems.length) {
+    throw new Error(
+      `Refusing to start in production:\n - ${problems.join('\n - ')}`,
+    );
+  }
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Behind the TLS reverse proxy, take the client address from X-Forwarded-For
+  // (audit events record it). Set to the proxy's network, e.g. "uniquelocal".
+  if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY);
 
   // Don't advertise the framework, and stop browsers MIME-sniffing API responses.
   app.disable('x-powered-by');
