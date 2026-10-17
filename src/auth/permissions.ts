@@ -1,0 +1,23 @@
+export const PERMISSIONS_EXTENSION = 'https://hospital-ehr.local/fhir/StructureDefinition/rbac-permissions';
+
+export const ROLE_PERMISSIONS: Record<string, string[]> = {
+  'system-administrator': ['*'],
+  administrator: ['dashboard', 'patients', 'registration', 'appointments', 'clinical', 'laboratory', 'radiology', 'pharmacy', 'emergency', 'inpatient', 'nursing', 'rounds', 'surgery', 'icu', 'consultations', 'bed-management', 'discharge', 'billing', 'medical-records', 'inventory', 'administration'],
+  receptionist: ['dashboard', 'patients', 'registration', 'appointments'],
+  nurse: ['dashboard', 'patients', 'clinical', 'emergency', 'inpatient', 'nursing', 'icu', 'discharge'],
+  doctor: ['dashboard', 'patients', 'clinical', 'laboratory', 'radiology', 'pharmacy', 'emergency', 'inpatient', 'rounds', 'consultations', 'discharge'],
+  consultant: ['dashboard', 'patients', 'clinical', 'laboratory', 'radiology', 'pharmacy', 'emergency', 'inpatient', 'rounds', 'surgery', 'icu', 'consultations', 'discharge'],
+  'lab-technician': ['dashboard', 'patients', 'laboratory'],
+  'lab-supervisor': ['dashboard', 'patients', 'laboratory'],
+  radiologist: ['dashboard', 'patients', 'radiology'],
+  'radiology-technician': ['dashboard', 'patients', 'radiology'],
+  pharmacist: ['dashboard', 'patients', 'pharmacy', 'inventory'],
+  cashier: ['dashboard', 'patients', 'billing'],
+  'insurance-officer': ['dashboard', 'patients', 'billing'],
+  'medical-records': ['dashboard', 'patients', 'medical-records'],
+  'supply-chain-officer': ['dashboard', 'inventory'],
+};
+
+export function permissionsForRoles(roles: string[]): string[] {
+  return [...new Set(roles.flatMap((role) => ROLE_PERMISSIONS[role] ?? []))];
+}
