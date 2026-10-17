@@ -8,87 +8,54 @@ import {
   Query,
 } from '@nestjs/common';
 
-import {
-  MedicationsService,
-} from './medications.service';
+import { MedicationsService } from './medications.service';
 
-import {
-  CreateMedicationRequestDto,
-} from './dto/create-medication-request.dto';
+import { CreateMedicationRequestDto } from './dto/create-medication-request.dto';
 
-@Controller(
-  'api/medications',
-)
+@Controller('api/medications')
 export class MedicationsController {
-  constructor(
-    private readonly medicationsService:
-      MedicationsService,
-  ) {}
+  constructor(private readonly medicationsService: MedicationsService) {}
 
   @Post()
   create(
     @Body()
-    dto:
-      CreateMedicationRequestDto,
+    dto: CreateMedicationRequestDto,
   ) {
-    return this.medicationsService.create(
-      dto,
-    );
+    return this.medicationsService.create(dto);
   }
 
   @Get()
   findByEncounter(
     @Query('encounterId')
-    encounterId:
-      string,
+    encounterId: string,
   ) {
-    return this.medicationsService.findByEncounter(
-      encounterId,
-    );
+    return this.medicationsService.findByEncounter(encounterId);
   }
 
-  @Get(
-    'patient/:patientId',
-  )
+  @Get('patient/:patientId')
   findByPatient(
     @Param('patientId')
-    patientId:
-      string,
+    patientId: string,
   ) {
-    return this.medicationsService.findByPatient(
-      patientId,
-    );
+    return this.medicationsService.findByPatient(patientId);
   }
 
-  @Get(
-    ':medicationRequestId',
-  )
+  @Get(':medicationRequestId')
   findById(
-    @Param(
-      'medicationRequestId',
-    )
-    medicationRequestId:
-      string,
+    @Param('medicationRequestId')
+    medicationRequestId: string,
   ) {
-    return this.medicationsService.findById(
-      medicationRequestId,
-    );
+    return this.medicationsService.findById(medicationRequestId);
   }
 
-  @Patch(
-    ':medicationRequestId/status',
-  )
+  @Patch(':medicationRequestId/status')
   updateStatus(
-    @Param(
-      'medicationRequestId',
-    )
-    medicationRequestId:
-      string,
+    @Param('medicationRequestId')
+    medicationRequestId: string,
 
     @Body()
     body: {
-      status:
-        string;
+      status: string;
     },
   ) {
     return this.medicationsService.updateStatus(

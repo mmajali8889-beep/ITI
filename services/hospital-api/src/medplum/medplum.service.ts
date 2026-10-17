@@ -6,7 +6,10 @@ import type { Resource } from '@medplum/fhirtypes';
 /** Another request changed the resource between our read and our write. */
 export class ConcurrentUpdateError extends ConflictException {
   constructor(resourceType: string) {
-    super({ message: `${resourceType} was changed by another request; reload and try again`, code: 'CONCURRENT_UPDATE' });
+    super({
+      message: `${resourceType} was changed by another request; reload and try again`,
+      code: 'CONCURRENT_UPDATE',
+    });
   }
 }
 
@@ -14,7 +17,12 @@ export class ConcurrentUpdateError extends ConflictException {
 export function isVersionConflict(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   if (error instanceof ConcurrentUpdateError) return true;
-  const candidate = error as { status?: number; response?: { status?: number }; message?: string; outcome?: { issue?: Array<{ details?: { text?: string } }> } };
+  const candidate = error as {
+    status?: number;
+    response?: { status?: number };
+    message?: string;
+    outcome?: { issue?: Array<{ details?: { text?: string } }> };
+  };
   const status = candidate.status ?? candidate.response?.status;
   if (status === 409 || status === 412) return true;
   const text = `${candidate.message ?? ''} ${candidate.outcome?.issue?.map((issue) => issue.details?.text).join(' ') ?? ''}`;
@@ -40,10 +48,7 @@ export class MedplumService implements OnModuleInit {
       throw new Error('Medplum credentials are missing');
     }
 
-    await this.client.startClientLogin(
-      clientId,
-      clientSecret,
-    );
+    await this.client.startClientLogin(clientId, clientSecret);
 
     console.log('Medplum API authentication successful');
   }
@@ -60,11 +65,17 @@ export class MedplumService implements OnModuleInit {
    */
   async updateIfUnchanged<T extends Resource>(resource: T): Promise<WithId<T>> {
     const versionId = resource.meta?.versionId;
-    if (!resource.id || !versionId) throw new Error(`${resource.resourceType} must be read before a guarded update`);
+    if (!resource.id || !versionId)
+      throw new Error(
+        `${resource.resourceType} must be read before a guarded update`,
+      );
     try {
-      return await this.client.updateResource<T>(resource, { headers: { 'If-Match': `W/"${versionId}"` } });
+      return await this.client.updateResource<T>(resource, {
+        headers: { 'If-Match': `W/"${versionId}"` },
+      });
     } catch (error) {
-      if (isVersionConflict(error)) throw new ConcurrentUpdateError(resource.resourceType);
+      if (isVersionConflict(error))
+        throw new ConcurrentUpdateError(resource.resourceType);
       throw error;
     }
   }
@@ -92,7 +103,9 @@ export class MedplumService implements OnModuleInit {
       scope: 'openid profile',
     });
     if (!response.code || response.mfaRequired || response.mfaEnrollRequired) {
-      throw new Error('Medplum provisioning account requires interactive authentication');
+      throw new Error(
+        'Medplum provisioning account requires interactive authentication',
+      );
     }
     await client.processCode(response.code);
     this.provisioningClient = client;

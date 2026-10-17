@@ -1,14 +1,7 @@
-export type ClinicalNoteStatus =
-  | 'draft'
-  | 'signed'
-  | 'entered-in-error';
+export type ClinicalNoteStatus = 'draft' | 'signed' | 'entered-in-error';
 
 export type ClinicalNoteType =
-  | 'initial'
-  | 'progress'
-  | 'consultation'
-  | 'discharge'
-  | 'addendum';
+  'initial' | 'progress' | 'consultation' | 'discharge' | 'addendum';
 
 export class CreateClinicalNoteDto {
   patientId!: string;

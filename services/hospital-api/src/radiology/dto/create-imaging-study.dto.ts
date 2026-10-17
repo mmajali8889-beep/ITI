@@ -1,9 +1,5 @@
 export type ImagingStudyStatus =
-  | 'registered'
-  | 'available'
-  | 'cancelled'
-  | 'entered-in-error'
-  | 'unknown';
+  'registered' | 'available' | 'cancelled' | 'entered-in-error' | 'unknown';
 
 export interface CreateImagingSeriesDto {
   uid: string;

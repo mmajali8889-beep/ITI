@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Req, Res, UnauthorizedException } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { Public } from './public.decorator';
@@ -18,7 +26,13 @@ export class AuthController {
   @Public()
   @Post('login')
   async login(
-    @Body() body: { hospitalId?: string; username?: string; password?: string; remember?: boolean },
+    @Body()
+    body: {
+      hospitalId?: string;
+      username?: string;
+      password?: string;
+      remember?: boolean;
+    },
     @Res({ passthrough: true }) response: Response,
   ) {
     const session = await this.authService.login(body);
@@ -38,7 +52,10 @@ export class AuthController {
   }
 
   @Post('logout')
-  async logout(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
+  async logout(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
     await this.authService.logout(readSessionCookie(request));
     response.clearCookie(SESSION_COOKIE, COOKIE_OPTIONS);
     return { authenticated: false };

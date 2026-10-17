@@ -11,17 +11,11 @@ import type {
   PractitionerRole,
 } from '@medplum/fhirtypes';
 
-import {
-  MedplumService,
-} from '../medplum/medplum.service';
+import { MedplumService } from '../medplum/medplum.service';
 
-import {
-  CreateRadiologistDto,
-} from './dto/create-radiologist.dto';
+import { CreateRadiologistDto } from './dto/create-radiologist.dto';
 
-import {
-  UpdateRadiologistDto,
-} from './dto/update-radiologist.dto';
+import { UpdateRadiologistDto } from './dto/update-radiologist.dto';
 
 const CLINICAL_ROLE_SYSTEM =
   'http://hospital-ehr.local/fhir/CodeSystem/clinical-role';
@@ -34,59 +28,38 @@ const MEDICAL_LICENSE_SYSTEM =
 
 @Injectable()
 export class RadiologistsService {
-  constructor(
-    private readonly medplumService:
-      MedplumService,
-  ) {}
+  constructor(private readonly medplumService: MedplumService) {}
 
-  async list(
-    hospitalId: string,
-    active?: string,
-  ) {
-    const hospital = await this.readHospital(
-      hospitalId,
-    );
+  async list(hospitalId: string, active?: string) {
+    const hospital = await this.readHospital(hospitalId);
 
-    const roles = await this.findHospitalRoles(
-      hospitalId,
-    );
+    const roles = await this.findHospitalRoles(hospitalId);
 
-    const activeFilter =
-      this.optionalBoolean(active);
+    const activeFilter = this.optionalBoolean(active);
 
     const filteredRoles = roles.filter(
       (role) =>
         activeFilter === undefined ||
-        Boolean(role.active ?? true) ===
-          activeFilter,
+        Boolean(role.active ?? true) === activeFilter,
     );
 
     const radiologists = await Promise.all(
       filteredRoles.map(async (role) => {
-        const practitionerId =
-          this.referenceId(
-            role.practitioner?.reference,
-            'Practitioner',
-          );
+        const practitionerId = this.referenceId(
+          role.practitioner?.reference,
+          'Practitioner',
+        );
 
         if (!practitionerId) {
           return undefined;
         }
 
         try {
-          const practitioner =
-            await this.medplumService
-              .getClient()
-              .readResource(
-                'Practitioner',
-                practitionerId,
-              );
+          const practitioner = await this.medplumService
+            .getClient()
+            .readResource('Practitioner', practitionerId);
 
-          return this.mapRadiologist(
-            practitioner,
-            role,
-            hospital,
-          );
+          return this.mapRadiologist(practitioner, role, hospital);
         } catch {
           return undefined;
         }
@@ -94,43 +67,21 @@ export class RadiologistsService {
     );
 
     const items = radiologists
-      .filter(
-        (
-          item,
-        ): item is NonNullable<
-          typeof item
-        > => Boolean(item),
-      )
-      .sort((a, b) =>
-        a.displayName.localeCompare(
-          b.displayName,
-        ),
-      );
+      .filter((item): item is NonNullable<typeof item> => Boolean(item))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
     return {
       hospitalId,
-      hospitalName:
-        hospital.name ?? hospitalId,
+      hospitalName: hospital.name ?? hospitalId,
       total: items.length,
       radiologists: items,
     };
   }
 
-  async get(
-    practitionerId: string,
-    hospitalId: string,
-  ) {
-    const hospital = await this.readHospital(
-      hospitalId,
-    );
-    const practitioner =
-      await this.readPractitioner(
-        practitionerId,
-      );
-    const role = await this.findRole(
-      practitionerId,
-      hospitalId,
-    );
+  async get(practitionerId: string, hospitalId: string) {
+    const hospital = await this.readHospital(hospitalId);
+    const practitioner = await this.readPractitioner(practitionerId);
+    const role = await this.findRole(practitionerId, hospitalId);
 
     if (!role) {
       throw new NotFoundException(
@@ -138,51 +89,31 @@ export class RadiologistsService {
       );
     }
 
-    return this.mapRadiologist(
-      practitioner,
-      role,
-      hospital,
-    );
+    return this.mapRadiologist(practitioner, role, hospital);
   }
 
-  async create(
-    dto: CreateRadiologistDto,
-  ) {
+  async create(dto: CreateRadiologistDto) {
     this.validateCreate(dto);
 
-    const hospital = await this.readHospital(
-      dto.hospitalId,
-    );
+    const hospital = await this.readHospital(dto.hospitalId);
 
-    const existingPractitioner =
-      await this.findExistingPractitioner(
-        dto,
-      );
+    const existingPractitioner = await this.findExistingPractitioner(dto);
 
-    let practitioner =
-      existingPractitioner;
+    let practitioner = existingPractitioner;
     let createdPractitioner = false;
 
     if (!practitioner) {
-      practitioner =
-        await this.medplumService
-          .getClient()
-          .createResource<Practitioner>(
-            this.buildPractitioner(dto),
-          );
+      practitioner = await this.medplumService
+        .getClient()
+        .createResource<Practitioner>(this.buildPractitioner(dto));
       createdPractitioner = true;
     }
 
     if (!practitioner.id) {
-      throw new BadRequestException(
-        'Practitioner was created without an ID.',
-      );
+      throw new BadRequestException('Practitioner was created without an ID.');
     }
 
-    let role = await this.findRole(
-      practitioner.id,
-      dto.hospitalId,
-    );
+    let role = await this.findRole(practitioner.id, dto.hospitalId);
     let createdRole = false;
 
     if (!role) {
@@ -192,27 +123,19 @@ export class RadiologistsService {
           resourceType: 'PractitionerRole',
           active: dto.active ?? true,
           practitioner: {
-            reference:
-              `Practitioner/${practitioner.id}`,
-            display:
-              this.practitionerDisplay(
-                practitioner,
-              ),
+            reference: `Practitioner/${practitioner.id}`,
+            display: this.practitionerDisplay(practitioner),
           },
           organization: {
-            reference:
-              `Organization/${dto.hospitalId}`,
-            display:
-              hospital.name,
+            reference: `Organization/${dto.hospitalId}`,
+            display: hospital.name,
           },
           code: [
             {
               coding: [
                 {
-                  system:
-                    CLINICAL_ROLE_SYSTEM,
-                  code:
-                    RADIOLOGIST_ROLE_CODE,
+                  system: CLINICAL_ROLE_SYSTEM,
+                  code: RADIOLOGIST_ROLE_CODE,
                   display: 'Radiologist',
                 },
               ],
@@ -226,10 +149,7 @@ export class RadiologistsService {
           ],
         });
       createdRole = true;
-    } else if (
-      dto.active !== undefined &&
-      role.active !== dto.active
-    ) {
+    } else if (dto.active !== undefined && role.active !== dto.active) {
       role = await this.medplumService
         .getClient()
         .updateResource<PractitionerRole>({
@@ -241,36 +161,18 @@ export class RadiologistsService {
     return {
       createdPractitioner,
       createdRole,
-      radiologist:
-        this.mapRadiologist(
-          practitioner,
-          role,
-          hospital,
-        ),
+      radiologist: this.mapRadiologist(practitioner, role, hospital),
     };
   }
 
-  async update(
-    practitionerId: string,
-    dto: UpdateRadiologistDto,
-  ) {
+  async update(practitionerId: string, dto: UpdateRadiologistDto) {
     if (!dto.hospitalId?.trim()) {
-      throw new BadRequestException(
-        'hospitalId is required.',
-      );
+      throw new BadRequestException('hospitalId is required.');
     }
 
-    const hospital = await this.readHospital(
-      dto.hospitalId,
-    );
-    const practitioner =
-      await this.readPractitioner(
-        practitionerId,
-      );
-    let role = await this.findRole(
-      practitionerId,
-      dto.hospitalId,
-    );
+    const hospital = await this.readHospital(dto.hospitalId);
+    const practitioner = await this.readPractitioner(practitionerId);
+    let role = await this.findRole(practitionerId, dto.hospitalId);
 
     if (!role) {
       throw new NotFoundException(
@@ -278,20 +180,13 @@ export class RadiologistsService {
       );
     }
 
-    const updatedPractitioner =
-      await this.medplumService
-        .getClient()
-        .updateResource<Practitioner>(
-          this.applyPractitionerUpdates(
-            practitioner,
-            dto,
-          ),
-        );
+    const updatedPractitioner = await this.medplumService
+      .getClient()
+      .updateResource<Practitioner>(
+        this.applyPractitionerUpdates(practitioner, dto),
+      );
 
-    if (
-      dto.active !== undefined &&
-      role.active !== dto.active
-    ) {
+    if (dto.active !== undefined && role.active !== dto.active) {
       role = await this.medplumService
         .getClient()
         .updateResource<PractitionerRole>({
@@ -300,67 +195,40 @@ export class RadiologistsService {
         });
     }
 
-    return this.mapRadiologist(
-      updatedPractitioner,
-      role,
-      hospital,
-    );
+    return this.mapRadiologist(updatedPractitioner, role, hospital);
   }
 
-  private validateCreate(
-    dto: CreateRadiologistDto,
-  ) {
+  private validateCreate(dto: CreateRadiologistDto) {
     if (!dto.hospitalId?.trim()) {
-      throw new BadRequestException(
-        'hospitalId is required.',
-      );
+      throw new BadRequestException('hospitalId is required.');
     }
     if (!dto.givenName?.trim()) {
-      throw new BadRequestException(
-        'givenName is required.',
-      );
+      throw new BadRequestException('givenName is required.');
     }
     if (!dto.familyName?.trim()) {
-      throw new BadRequestException(
-        'familyName is required.',
-      );
+      throw new BadRequestException('familyName is required.');
     }
-    if (
-      !dto.employeeId?.trim() &&
-      !dto.licenseNumber?.trim()
-    ) {
+    if (!dto.employeeId?.trim() && !dto.licenseNumber?.trim()) {
       throw new BadRequestException(
         'employeeId or licenseNumber is required to prevent duplicate practitioner records.',
       );
     }
   }
 
-  private buildPractitioner(
-    dto: CreateRadiologistDto,
-  ): Practitioner {
+  private buildPractitioner(dto: CreateRadiologistDto): Practitioner {
     return {
       resourceType: 'Practitioner',
       active: dto.active ?? true,
-      identifier:
-        this.buildIdentifiers(
-          dto.employeeId,
-          dto.licenseNumber,
-        ),
+      identifier: this.buildIdentifiers(dto.employeeId, dto.licenseNumber),
       name: [
         {
           use: 'official',
-          text:
-            dto.displayName?.trim() ||
-            undefined,
+          text: dto.displayName?.trim() || undefined,
           given: [dto.givenName.trim()],
           family: dto.familyName.trim(),
         },
       ],
-      telecom:
-        this.buildTelecom(
-          dto.phone,
-          dto.email,
-        ),
+      telecom: this.buildTelecom(dto.phone, dto.email),
     };
   }
 
@@ -368,8 +236,7 @@ export class RadiologistsService {
     practitioner: Practitioner,
     dto: UpdateRadiologistDto,
   ): Practitioner {
-    const currentName =
-      practitioner.name?.[0];
+    const currentName = practitioner.name?.[0];
 
     const given =
       dto.givenName !== undefined
@@ -381,85 +248,58 @@ export class RadiologistsService {
         : currentName?.family;
     const text =
       dto.displayName !== undefined
-        ? dto.displayName.trim() ||
-          undefined
+        ? dto.displayName.trim() || undefined
         : currentName?.text;
 
     return {
       ...practitioner,
-      active:
-        dto.active ??
-        practitioner.active,
+      active: dto.active ?? practitioner.active,
       name: [
         {
           ...currentName,
-          use:
-            currentName?.use ??
-            'official',
+          use: currentName?.use ?? 'official',
           text,
-          given: given
-            ? [given]
-            : currentName?.given,
+          given: given ? [given] : currentName?.given,
           family,
         },
-        ...(practitioner.name?.slice(1) ??
-          []),
+        ...(practitioner.name?.slice(1) ?? []),
       ],
-      identifier:
-        this.mergeIdentifiers(
-          practitioner.identifier,
-          dto.employeeId,
-          dto.licenseNumber,
-        ),
-      telecom:
-        this.mergeTelecom(
-          practitioner.telecom,
-          dto.phone,
-          dto.email,
-        ),
+      identifier: this.mergeIdentifiers(
+        practitioner.identifier,
+        dto.employeeId,
+        dto.licenseNumber,
+      ),
+      telecom: this.mergeTelecom(practitioner.telecom, dto.phone, dto.email),
     };
   }
 
-  private async findExistingPractitioner(
-    dto: CreateRadiologistDto,
-  ) {
-    const medplum =
-      this.medplumService.getClient();
+  private async findExistingPractitioner(dto: CreateRadiologistDto) {
+    const medplum = this.medplumService.getClient();
 
-    const employeeId =
-      dto.employeeId?.trim();
-    const licenseNumber =
-      dto.licenseNumber?.trim();
+    const employeeId = dto.employeeId?.trim();
+    const licenseNumber = dto.licenseNumber?.trim();
 
-    const candidates =
-      await medplum.searchResources(
-        'Practitioner',
-        {
-          _count: '500',
-        },
-      );
+    const candidates = await medplum.searchResources('Practitioner', {
+      _count: '500',
+    });
 
     return candidates.find(
       (practitioner) =>
         Boolean(
           employeeId &&
-            practitioner.identifier?.some(
-              (identifier) =>
-                identifier.system ===
-                  EMPLOYEE_ID_SYSTEM &&
-                identifier.value ===
-                  employeeId,
-            ),
+          practitioner.identifier?.some(
+            (identifier) =>
+              identifier.system === EMPLOYEE_ID_SYSTEM &&
+              identifier.value === employeeId,
+          ),
         ) ||
         Boolean(
           licenseNumber &&
-            practitioner.identifier?.some(
-              (identifier) =>
-                identifier.system ===
-                  MEDICAL_LICENSE_SYSTEM &&
-                identifier.value ===
-                  licenseNumber,
-            ),
+          practitioner.identifier?.some(
+            (identifier) =>
+              identifier.system === MEDICAL_LICENSE_SYSTEM &&
+              identifier.value === licenseNumber,
+          ),
         ),
     );
   }
@@ -467,88 +307,60 @@ export class RadiologistsService {
   private async findHospitalRoles(
     hospitalId: string,
   ): Promise<PractitionerRole[]> {
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
     let roles: PractitionerRole[] = [];
 
     try {
-      roles = await medplum.searchResources(
-        'PractitionerRole',
-        {
-          organization:
-            `Organization/${hospitalId}`,
-          _count: '500',
-        },
-      );
+      roles = await medplum.searchResources('PractitionerRole', {
+        organization: `Organization/${hospitalId}`,
+        _count: '500',
+      });
     } catch {
-      roles = await medplum.searchResources(
-        'PractitionerRole',
-        {
-          _count: '500',
-        },
-      );
+      roles = await medplum.searchResources('PractitionerRole', {
+        _count: '500',
+      });
     }
 
     return roles.filter(
       (role) =>
-        role.organization?.reference ===
-          `Organization/${hospitalId}` &&
+        role.organization?.reference === `Organization/${hospitalId}` &&
         this.isRadiologistRole(role),
     );
   }
 
-  private async findRole(
-    practitionerId: string,
-    hospitalId: string,
-  ) {
-    const roles = await this.findHospitalRoles(
-      hospitalId,
-    );
+  private async findRole(practitionerId: string, hospitalId: string) {
+    const roles = await this.findHospitalRoles(hospitalId);
 
     return roles.find(
       (role) =>
-        role.practitioner?.reference ===
-        `Practitioner/${practitionerId}`,
+        role.practitioner?.reference === `Practitioner/${practitionerId}`,
     );
   }
 
-  private isRadiologistRole(
-    role: PractitionerRole,
-  ) {
+  private isRadiologistRole(role: PractitionerRole) {
     return Boolean(
       role.code?.some((concept) =>
         concept.coding?.some(
           (coding) =>
-            coding.system ===
-              CLINICAL_ROLE_SYSTEM &&
-            coding.code ===
-              RADIOLOGIST_ROLE_CODE,
+            coding.system === CLINICAL_ROLE_SYSTEM &&
+            coding.code === RADIOLOGIST_ROLE_CODE,
         ),
       ),
     );
   }
 
-  private async readHospital(
-    hospitalId: string,
-  ): Promise<Organization> {
+  private async readHospital(hospitalId: string): Promise<Organization> {
     if (!hospitalId?.trim()) {
-      throw new BadRequestException(
-        'hospitalId is required.',
-      );
+      throw new BadRequestException('hospitalId is required.');
     }
 
     try {
       return await this.medplumService
         .getClient()
-        .readResource(
-          'Organization',
-          hospitalId,
-        );
+        .readResource('Organization', hospitalId);
     } catch {
-      throw new NotFoundException(
-        'Hospital organization was not found.',
-      );
+      throw new NotFoundException('Hospital organization was not found.');
     }
   }
 
@@ -556,22 +368,15 @@ export class RadiologistsService {
     practitionerId: string,
   ): Promise<Practitioner> {
     if (!practitionerId?.trim()) {
-      throw new BadRequestException(
-        'practitionerId is required.',
-      );
+      throw new BadRequestException('practitionerId is required.');
     }
 
     try {
       return await this.medplumService
         .getClient()
-        .readResource(
-          'Practitioner',
-          practitionerId,
-        );
+        .readResource('Practitioner', practitionerId);
     } catch {
-      throw new NotFoundException(
-        'Practitioner was not found.',
-      );
+      throw new NotFoundException('Practitioner was not found.');
     }
   }
 
@@ -583,70 +388,37 @@ export class RadiologistsService {
     const name = practitioner.name?.[0];
 
     return {
-      practitionerId:
-        practitioner.id,
-      practitionerRoleId:
-        role.id,
+      practitionerId: practitioner.id,
+      practitionerRoleId: role.id,
       hospitalId: hospital.id,
-      hospitalName:
-        hospital.name ?? hospital.id,
+      hospitalName: hospital.name ?? hospital.id,
       active:
-        Boolean(
-          practitioner.active ?? true,
-        ) &&
-        Boolean(role.active ?? true),
-      practitionerActive:
-        practitioner.active ?? true,
-      roleActive:
-        role.active ?? true,
-      roleCode:
-        RADIOLOGIST_ROLE_CODE,
+        Boolean(practitioner.active ?? true) && Boolean(role.active ?? true),
+      practitionerActive: practitioner.active ?? true,
+      roleActive: role.active ?? true,
+      roleCode: RADIOLOGIST_ROLE_CODE,
       roleName: 'Radiologist',
       specialtyName: 'Radiology',
-      displayName:
-        this.practitionerDisplay(
-          practitioner,
-        ) ?? 'Radiologist',
-      givenName:
-        name?.given?.join(' '),
-      familyName:
-        name?.family,
-      employeeId:
-        this.identifierValue(
-          practitioner,
-          EMPLOYEE_ID_SYSTEM,
-        ),
-      licenseNumber:
-        this.identifierValue(
-          practitioner,
-          MEDICAL_LICENSE_SYSTEM,
-        ),
-      phone:
-        practitioner.telecom?.find(
-          (item) =>
-            item.system === 'phone',
-        )?.value,
-      email:
-        practitioner.telecom?.find(
-          (item) =>
-            item.system === 'email',
-        )?.value,
+      displayName: this.practitionerDisplay(practitioner) ?? 'Radiologist',
+      givenName: name?.given?.join(' '),
+      familyName: name?.family,
+      employeeId: this.identifierValue(practitioner, EMPLOYEE_ID_SYSTEM),
+      licenseNumber: this.identifierValue(practitioner, MEDICAL_LICENSE_SYSTEM),
+      phone: practitioner.telecom?.find((item) => item.system === 'phone')
+        ?.value,
+      email: practitioner.telecom?.find((item) => item.system === 'email')
+        ?.value,
     };
   }
 
-  private practitionerDisplay(
-    practitioner: Practitioner,
-  ) {
+  private practitionerDisplay(practitioner: Practitioner) {
     const name = practitioner.name?.[0];
 
     if (name?.text?.trim()) {
       return name.text.trim();
     }
 
-    const generated = [
-      name?.given?.join(' '),
-      name?.family,
-    ]
+    const generated = [name?.given?.join(' '), name?.family]
       .filter(Boolean)
       .join(' ')
       .trim();
@@ -674,9 +446,7 @@ export class RadiologistsService {
       });
     }
 
-    return identifiers.length
-      ? identifiers
-      : undefined;
+    return identifiers.length ? identifiers : undefined;
   }
 
   private mergeIdentifiers(
@@ -684,17 +454,12 @@ export class RadiologistsService {
     employeeId?: string,
     licenseNumber?: string,
   ) {
-    let identifiers = [
-      ...(current ?? []),
-    ];
+    let identifiers = [...(current ?? [])];
 
     if (employeeId !== undefined) {
-      identifiers =
-        identifiers.filter(
-          (identifier) =>
-            identifier.system !==
-            EMPLOYEE_ID_SYSTEM,
-        );
+      identifiers = identifiers.filter(
+        (identifier) => identifier.system !== EMPLOYEE_ID_SYSTEM,
+      );
       if (employeeId.trim()) {
         identifiers.push({
           system: EMPLOYEE_ID_SYSTEM,
@@ -704,12 +469,9 @@ export class RadiologistsService {
     }
 
     if (licenseNumber !== undefined) {
-      identifiers =
-        identifiers.filter(
-          (identifier) =>
-            identifier.system !==
-            MEDICAL_LICENSE_SYSTEM,
-        );
+      identifiers = identifiers.filter(
+        (identifier) => identifier.system !== MEDICAL_LICENSE_SYSTEM,
+      );
       if (licenseNumber.trim()) {
         identifiers.push({
           system: MEDICAL_LICENSE_SYSTEM,
@@ -718,15 +480,10 @@ export class RadiologistsService {
       }
     }
 
-    return identifiers.length
-      ? identifiers
-      : undefined;
+    return identifiers.length ? identifiers : undefined;
   }
 
-  private buildTelecom(
-    phone?: string,
-    email?: string,
-  ) {
+  private buildTelecom(phone?: string, email?: string) {
     const telecom: Practitioner['telecom'] = [];
 
     if (phone?.trim()) {
@@ -745,9 +502,7 @@ export class RadiologistsService {
       });
     }
 
-    return telecom.length
-      ? telecom
-      : undefined;
+    return telecom.length ? telecom : undefined;
   }
 
   private mergeTelecom(
@@ -758,9 +513,7 @@ export class RadiologistsService {
     let telecom = [...(current ?? [])];
 
     if (phone !== undefined) {
-      telecom = telecom.filter(
-        (item) => item.system !== 'phone',
-      );
+      telecom = telecom.filter((item) => item.system !== 'phone');
       if (phone.trim()) {
         telecom.push({
           system: 'phone',
@@ -771,9 +524,7 @@ export class RadiologistsService {
     }
 
     if (email !== undefined) {
-      telecom = telecom.filter(
-        (item) => item.system !== 'email',
-      );
+      telecom = telecom.filter((item) => item.system !== 'email');
       if (email.trim()) {
         telecom.push({
           system: 'email',
@@ -783,25 +534,16 @@ export class RadiologistsService {
       }
     }
 
-    return telecom.length
-      ? telecom
-      : undefined;
+    return telecom.length ? telecom : undefined;
   }
 
-  private identifierValue(
-    practitioner: Practitioner,
-    system: string,
-  ) {
+  private identifierValue(practitioner: Practitioner, system: string) {
     return practitioner.identifier?.find(
-      (identifier) =>
-        identifier.system === system,
+      (identifier) => identifier.system === system,
     )?.value;
   }
 
-  private referenceId(
-    reference: string | undefined,
-    resourceType: string,
-  ) {
+  private referenceId(reference: string | undefined, resourceType: string) {
     if (!reference) {
       return undefined;
     }
@@ -812,9 +554,7 @@ export class RadiologistsService {
       : undefined;
   }
 
-  private optionalBoolean(
-    value?: string,
-  ) {
+  private optionalBoolean(value?: string) {
     if (value === undefined || value === '') {
       return undefined;
     }
@@ -825,8 +565,6 @@ export class RadiologistsService {
       return false;
     }
 
-    throw new BadRequestException(
-      'active must be true or false.',
-    );
+    throw new BadRequestException('active must be true or false.');
   }
 }

@@ -1,20 +1,11 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 
 import { PatientsService } from './patients.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
 
 @Controller('api/patients')
 export class PatientsController {
-  constructor(
-    private readonly patientsService: PatientsService,
-  ) {}
+  constructor(private readonly patientsService: PatientsService) {}
 
   // =====================================================
   // Search / List Patients
@@ -46,7 +37,6 @@ export class PatientsController {
 
     @Query('passportNumber')
     passportNumber?: string,
-
   ) {
     return this.patientsService.findAll({
       search,
@@ -103,9 +93,6 @@ export class PatientsController {
     patientId: string,
     @Query('hospitalId') hospitalId: string,
   ) {
-    return this.patientsService.findById(
-      patientId,
-      hospitalId,
-    );
+    return this.patientsService.findById(patientId, hospitalId);
   }
 }

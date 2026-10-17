@@ -16,14 +16,11 @@ import { Roles } from '../auth/roles.decorator';
 @Controller('api/laboratory/reports')
 export class LaboratoryReportsController {
   constructor(
-    private readonly laboratoryReportsService:
-      LaboratoryReportsService,
+    private readonly laboratoryReportsService: LaboratoryReportsService,
   ) {}
 
   @Post()
-  createReport(
-    @Body() dto: CreateLabReportDto,
-  ) {
+  createReport(@Body() dto: CreateLabReportDto) {
     return this.laboratoryReportsService.createReport(dto);
   }
 
@@ -32,7 +29,10 @@ export class LaboratoryReportsController {
     @Param('orderId') orderId: string,
     @Query('hospitalId') hospitalId: string,
   ) {
-    return this.laboratoryReportsService.findByOrder(orderId, requireHospitalId(hospitalId));
+    return this.laboratoryReportsService.findByOrder(
+      orderId,
+      requireHospitalId(hospitalId),
+    );
   }
 
   @Get('encounter/:encounterId')
@@ -41,7 +41,8 @@ export class LaboratoryReportsController {
     @Query('hospitalId') hospitalId: string,
   ) {
     return this.laboratoryReportsService.findByEncounter(
-      encounterId, requireHospitalId(hospitalId),
+      encounterId,
+      requireHospitalId(hospitalId),
     );
   }
 
@@ -51,43 +52,47 @@ export class LaboratoryReportsController {
     @Query('hospitalId') hospitalId: string,
   ) {
     return this.laboratoryReportsService.findByPatient(
-      patientId, requireHospitalId(hospitalId),
+      patientId,
+      requireHospitalId(hospitalId),
     );
   }
 
   @Get(':reportId')
-  findReport(
-    @Param('reportId') reportId: string,
-  ) {
+  findReport(@Param('reportId') reportId: string) {
     return this.laboratoryReportsService.findReport(reportId);
   }
 
   @Post(':reportId/finalize')
-  @Roles('lab-supervisor', 'consultant', 'administrator', 'system-administrator')
+  @Roles(
+    'lab-supervisor',
+    'consultant',
+    'administrator',
+    'system-administrator',
+  )
   finalizeReport(
     @Param('reportId') reportId: string,
     @Body() dto: FinalizeLabReportDto,
   ) {
-    return this.laboratoryReportsService.finalizeReport(
-      reportId,
-      dto,
-    );
+    return this.laboratoryReportsService.finalizeReport(reportId, dto);
   }
 
   @Post(':reportId/amend')
-  @Roles('lab-supervisor', 'consultant', 'administrator', 'system-administrator')
+  @Roles(
+    'lab-supervisor',
+    'consultant',
+    'administrator',
+    'system-administrator',
+  )
   amendReport(
     @Param('reportId') reportId: string,
     @Body() dto: FinalizeLabReportDto,
   ) {
-    return this.laboratoryReportsService.amendReport(
-      reportId,
-      dto,
-    );
+    return this.laboratoryReportsService.amendReport(reportId, dto);
   }
 }
 
 function requireHospitalId(hospitalId: string): string {
-  if (!hospitalId?.trim()) throw new BadRequestException('Hospital ID is required');
+  if (!hospitalId?.trim())
+    throw new BadRequestException('Hospital ID is required');
   return hospitalId;
 }

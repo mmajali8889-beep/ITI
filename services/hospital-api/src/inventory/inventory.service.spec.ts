@@ -1,7 +1,155 @@
-import{ConflictException}from'@nestjs/common';import{InventoryService}from'./inventory.service';
-describe('InventoryService',()=>{const medplum={searchResources:jest.fn(),createResource:jest.fn(),readResource:jest.fn(),updateResource:jest.fn()};let service:InventoryService;const h={url:'https://hospital-ehr.local/fhir/StructureDefinition/inventory-hospital',valueReference:{reference:'Organization/h1'}},item={resourceType:'Basic',id:'item-1',code:{coding:[{code:'inventory-item'}],text:'Test reagent'},extension:[h,{url:'https://hospital-ehr.local/fhir/StructureDefinition/inventory-sku',valueString:'LAB-1'},{url:'https://hospital-ehr.local/fhir/StructureDefinition/inventory-unit',valueString:'box'},{url:'https://hospital-ehr.local/fhir/StructureDefinition/inventory-reorder-point',valueDecimal:5},{url:'https://hospital-ehr.local/fhir/StructureDefinition/inventory-stock',valueString:JSON.stringify([{locationId:'main',locationName:'Main',quantity:10,lots:[{lotNumber:'LOT-1',expiryDate:'2027-01-01',quantity:10}]}])}]};beforeEach(()=>{jest.resetAllMocks();medplum.searchResources.mockResolvedValue([]);medplum.createResource.mockImplementation(async r=>({...r,id:'new-1'}));medplum.updateResource.mockImplementation(async r=>r);service=new InventoryService({getClient:()=>medplum}as never)});
-it('creates a hospital-scoped inventory master item with reorder control',async()=>{await expect(service.createItem({hospitalId:'h1',sku:'MED-1',name:'Medication',category:'pharmacy',unit:'pack',reorderPoint:10})).resolves.toMatchObject({sku:'MED-1',totalStock:0,reorderPoint:10});expect(medplum.createResource).toHaveBeenCalledWith(expect.objectContaining({resourceType:'Basic',code:expect.objectContaining({text:'Medication'})}))});
-it('blocks stock consumption beyond the source balance',async()=>{medplum.readResource.mockResolvedValue(item);await expect(service.move({hospitalId:'h1',itemId:'item-1',quantity:11,sourceLocationId:'main',sourceLocationName:'Main',actorId:'p1',actorName:'Storekeeper',reason:'Issue',type:'consumption'})).rejects.toThrow(ConflictException)});
-it('records a transfer and preserves lot traceability',async()=>{medplum.readResource.mockResolvedValue(structuredClone(item));const result=await service.move({hospitalId:'h1',itemId:'item-1',quantity:4,sourceLocationId:'main',sourceLocationName:'Main',destinationLocationId:'lab',destinationLocationName:'Laboratory',actorId:'p1',actorName:'Storekeeper',reason:'Lab replenishment',lotNumber:'LOT-1',expiryDate:'2027-01-01',type:'transfer'});expect(result.movement).toMatchObject({type:'transfer',quantity:4,lotNumber:'LOT-1'});expect(result.item.locations).toEqual(expect.arrayContaining([expect.objectContaining({locationId:'main',quantity:6}),expect.objectContaining({locationId:'lab',quantity:4})]))});
-it('rejects receiving more than the approved purchase order quantity',async()=>{medplum.readResource.mockResolvedValue({resourceType:'SupplyRequest',id:'po-1',status:'active',quantity:{value:5},extension:[h,{url:'https://hospital-ehr.local/fhir/StructureDefinition/supply-stage',valueCode:'purchase-order'},{url:'https://hospital-ehr.local/fhir/StructureDefinition/inventory-item',valueReference:{reference:'Basic/item-1'}},{url:'https://hospital-ehr.local/fhir/StructureDefinition/purchase-received-quantity',valueDecimal:3}]});await expect(service.receive('po-1',{hospitalId:'h1',receiverId:'p1',receiverName:'Receiver',quantity:3,warehouseId:'main',warehouseName:'Main',lotNumber:'LOT-2'})).rejects.toThrow(ConflictException)});
+import { ConflictException } from '@nestjs/common';
+import { InventoryService } from './inventory.service';
+describe('InventoryService', () => {
+  const medplum = {
+    searchResources: jest.fn(),
+    createResource: jest.fn(),
+    readResource: jest.fn(),
+    updateResource: jest.fn(),
+  };
+  let service: InventoryService;
+  const h = {
+      url: 'https://hospital-ehr.local/fhir/StructureDefinition/inventory-hospital',
+      valueReference: { reference: 'Organization/h1' },
+    },
+    item = {
+      resourceType: 'Basic',
+      id: 'item-1',
+      code: { coding: [{ code: 'inventory-item' }], text: 'Test reagent' },
+      extension: [
+        h,
+        {
+          url: 'https://hospital-ehr.local/fhir/StructureDefinition/inventory-sku',
+          valueString: 'LAB-1',
+        },
+        {
+          url: 'https://hospital-ehr.local/fhir/StructureDefinition/inventory-unit',
+          valueString: 'box',
+        },
+        {
+          url: 'https://hospital-ehr.local/fhir/StructureDefinition/inventory-reorder-point',
+          valueDecimal: 5,
+        },
+        {
+          url: 'https://hospital-ehr.local/fhir/StructureDefinition/inventory-stock',
+          valueString: JSON.stringify([
+            {
+              locationId: 'main',
+              locationName: 'Main',
+              quantity: 10,
+              lots: [
+                { lotNumber: 'LOT-1', expiryDate: '2027-01-01', quantity: 10 },
+              ],
+            },
+          ]),
+        },
+      ],
+    };
+  beforeEach(() => {
+    jest.resetAllMocks();
+    medplum.searchResources.mockResolvedValue([]);
+    medplum.createResource.mockImplementation(async (r) => ({
+      ...r,
+      id: 'new-1',
+    }));
+    medplum.updateResource.mockImplementation(async (r) => r);
+    service = new InventoryService({ getClient: () => medplum } as never);
+  });
+  it('creates a hospital-scoped inventory master item with reorder control', async () => {
+    await expect(
+      service.createItem({
+        hospitalId: 'h1',
+        sku: 'MED-1',
+        name: 'Medication',
+        category: 'pharmacy',
+        unit: 'pack',
+        reorderPoint: 10,
+      }),
+    ).resolves.toMatchObject({ sku: 'MED-1', totalStock: 0, reorderPoint: 10 });
+    expect(medplum.createResource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resourceType: 'Basic',
+        code: expect.objectContaining({ text: 'Medication' }),
+      }),
+    );
+  });
+  it('blocks stock consumption beyond the source balance', async () => {
+    medplum.readResource.mockResolvedValue(item);
+    await expect(
+      service.move({
+        hospitalId: 'h1',
+        itemId: 'item-1',
+        quantity: 11,
+        sourceLocationId: 'main',
+        sourceLocationName: 'Main',
+        actorId: 'p1',
+        actorName: 'Storekeeper',
+        reason: 'Issue',
+        type: 'consumption',
+      }),
+    ).rejects.toThrow(ConflictException);
+  });
+  it('records a transfer and preserves lot traceability', async () => {
+    medplum.readResource.mockResolvedValue(structuredClone(item));
+    const result = await service.move({
+      hospitalId: 'h1',
+      itemId: 'item-1',
+      quantity: 4,
+      sourceLocationId: 'main',
+      sourceLocationName: 'Main',
+      destinationLocationId: 'lab',
+      destinationLocationName: 'Laboratory',
+      actorId: 'p1',
+      actorName: 'Storekeeper',
+      reason: 'Lab replenishment',
+      lotNumber: 'LOT-1',
+      expiryDate: '2027-01-01',
+      type: 'transfer',
+    });
+    expect(result.movement).toMatchObject({
+      type: 'transfer',
+      quantity: 4,
+      lotNumber: 'LOT-1',
+    });
+    expect(result.item.locations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ locationId: 'main', quantity: 6 }),
+        expect.objectContaining({ locationId: 'lab', quantity: 4 }),
+      ]),
+    );
+  });
+  it('rejects receiving more than the approved purchase order quantity', async () => {
+    medplum.readResource.mockResolvedValue({
+      resourceType: 'SupplyRequest',
+      id: 'po-1',
+      status: 'active',
+      quantity: { value: 5 },
+      extension: [
+        h,
+        {
+          url: 'https://hospital-ehr.local/fhir/StructureDefinition/supply-stage',
+          valueCode: 'purchase-order',
+        },
+        {
+          url: 'https://hospital-ehr.local/fhir/StructureDefinition/inventory-item',
+          valueReference: { reference: 'Basic/item-1' },
+        },
+        {
+          url: 'https://hospital-ehr.local/fhir/StructureDefinition/purchase-received-quantity',
+          valueDecimal: 3,
+        },
+      ],
+    });
+    await expect(
+      service.receive('po-1', {
+        hospitalId: 'h1',
+        receiverId: 'p1',
+        receiverName: 'Receiver',
+        quantity: 3,
+        warehouseId: 'main',
+        warehouseName: 'Main',
+        lotNumber: 'LOT-2',
+      }),
+    ).rejects.toThrow(ConflictException);
+  });
 });

@@ -1,20 +1,11 @@
-export type ConditionCategoryType =
-  | 'encounter-diagnosis'
-  | 'problem-list-item';
+export type ConditionCategoryType = 'encounter-diagnosis' | 'problem-list-item';
 
-export type DiagnosisRank =
-  | 'primary'
-  | 'secondary';
+export type DiagnosisRank = 'primary' | 'secondary';
 
 export type DiagnosisCodeSystem = 'ICD-10' | 'ICD-11';
 
 export type ConditionClinicalStatus =
-  | 'active'
-  | 'recurrence'
-  | 'relapse'
-  | 'inactive'
-  | 'remission'
-  | 'resolved';
+  'active' | 'recurrence' | 'relapse' | 'inactive' | 'remission' | 'resolved';
 
 export type ConditionVerificationStatus =
   | 'unconfirmed'
@@ -44,11 +35,9 @@ export class CreateConditionDto {
 
   description!: string;
 
-  clinicalStatus?:
-    ConditionClinicalStatus;
+  clinicalStatus?: ConditionClinicalStatus;
 
-  verificationStatus?:
-    ConditionVerificationStatus;
+  verificationStatus?: ConditionVerificationStatus;
 
   severity?: string;
 

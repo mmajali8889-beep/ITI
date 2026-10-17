@@ -1,8 +1,4 @@
-import {
-  ArgumentsHost,
-  Catch,
-  HttpStatus,
-} from '@nestjs/common';
+import { ArgumentsHost, Catch, HttpStatus } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
 import { OperationOutcomeError } from '@medplum/core';
 

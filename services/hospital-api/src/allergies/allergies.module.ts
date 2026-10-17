@@ -4,16 +4,10 @@ import { AllergiesController } from './allergies.controller';
 import { AllergiesService } from './allergies.service';
 
 @Module({
-  controllers: [
-    AllergiesController,
-  ],
+  controllers: [AllergiesController],
 
-  providers: [
-    AllergiesService,
-  ],
+  providers: [AllergiesService],
 
-  exports: [
-    AllergiesService,
-  ],
+  exports: [AllergiesService],
 })
 export class AllergiesModule {}

@@ -9,19 +9,34 @@ const patients: Record<string, string> = { pa: 'hospital-a', pb: 'hospital-b' };
 
 function service(studies: ReturnType<typeof study>[]) {
   const client = {
-    searchResources: jest.fn(async (_type: string, query: { identifier: string }) => {
-      const wanted = query.identifier.split(',').map((value) => value.replace('urn:dicom:uid|urn:oid:', ''));
-      return studies.filter((item) => wanted.includes(item.identifier[0].value.replace('urn:oid:', '')));
-    }),
-    readResource: jest.fn(async (_type: string, id: string) => ({ resourceType: 'Patient', id, managingOrganization: { reference: `Organization/${patients[id]}` } })),
+    searchResources: jest.fn(
+      async (_type: string, query: { identifier: string }) => {
+        const wanted = query.identifier
+          .split(',')
+          .map((value) => value.replace('urn:dicom:uid|urn:oid:', ''));
+        return studies.filter((item) =>
+          wanted.includes(item.identifier[0].value.replace('urn:oid:', '')),
+        );
+      },
+    ),
+    readResource: jest.fn(async (_type: string, id: string) => ({
+      resourceType: 'Patient',
+      id,
+      managingOrganization: { reference: `Organization/${patients[id]}` },
+    })),
   };
-  return { client, access: new PacsStudyAccessService({ getClient: () => client } as never) };
+  return {
+    client,
+    access: new PacsStudyAccessService({ getClient: () => client } as never),
+  };
 }
 
 describe('PacsStudyAccessService (26.4)', () => {
   it('allows only studies linked to a patient of the session hospital', async () => {
     const { access } = service([study('1.1', 'pa'), study('2.2', 'pb')]);
-    expect([...(await access.allowedUids(['1.1', '2.2', '3.3'], 'hospital-a'))]).toEqual(['1.1']);
+    expect([
+      ...(await access.allowedUids(['1.1', '2.2', '3.3'], 'hospital-a')),
+    ]).toEqual(['1.1']);
     expect(await access.isAllowed('2.2', 'hospital-b')).toBe(true);
     expect(await access.isAllowed('2.2', 'hospital-a')).toBe(false);
   });
@@ -45,7 +60,11 @@ describe('PacsStudyAccessService (26.4)', () => {
   });
 
   it('looks up a whole search page in one Medplum query', async () => {
-    const { access, client } = service([study('1.1', 'pa'), study('1.2', 'pa'), study('1.3', 'pb')]);
+    const { access, client } = service([
+      study('1.1', 'pa'),
+      study('1.2', 'pa'),
+      study('1.3', 'pb'),
+    ]);
     await access.allowedUids(['1.1', '1.2', '1.3'], 'hospital-a');
     expect(client.searchResources).toHaveBeenCalledTimes(1);
   });

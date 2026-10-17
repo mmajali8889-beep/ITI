@@ -10,24 +10,15 @@ import {
   Query,
 } from '@nestjs/common';
 
-import {
-  CreateRadiologyStationDto,
-} from './dto/create-radiology-station.dto';
+import { CreateRadiologyStationDto } from './dto/create-radiology-station.dto';
 
-import {
-  UpdateRadiologyStationDto,
-} from './dto/update-radiology-station.dto';
+import { UpdateRadiologyStationDto } from './dto/update-radiology-station.dto';
 
-import {
-  RadiologyStationsService,
-} from './radiology-stations.service';
+import { RadiologyStationsService } from './radiology-stations.service';
 
 @Controller('api/radiology/stations')
 export class RadiologyStationsController {
-  constructor(
-    private readonly stationsService:
-      RadiologyStationsService,
-  ) {}
+  constructor(private readonly stationsService: RadiologyStationsService) {}
 
   @Get()
   listStations(
@@ -40,53 +31,33 @@ export class RadiologyStationsController {
     @Query('active')
     active?: string,
   ) {
-    let activeValue:
-      boolean | undefined;
+    let activeValue: boolean | undefined;
 
-    if (
-      active !== undefined &&
-      active !== ''
-    ) {
-      if (
-        active !== 'true' &&
-        active !== 'false'
-      ) {
-        throw new BadRequestException(
-          'active must be true or false',
-        );
+    if (active !== undefined && active !== '') {
+      if (active !== 'true' && active !== 'false') {
+        throw new BadRequestException('active must be true or false');
       }
 
-      activeValue =
-        active === 'true';
+      activeValue = active === 'true';
     }
 
-    return this.stationsService
-      .listStations({
-        hospitalId,
-        modality,
-        active:
-          activeValue,
-      });
+    return this.stationsService.listStations({
+      hospitalId,
+      modality,
+      active: activeValue,
+    });
   }
-
 
   @Post('sync-orthanc')
   syncHospitalStations(
     @Query('hospitalId')
     hospitalId?: string,
   ) {
-    if (
-      !hospitalId?.trim()
-    ) {
-      throw new BadRequestException(
-        'hospitalId is required.',
-      );
+    if (!hospitalId?.trim()) {
+      throw new BadRequestException('hospitalId is required.');
     }
 
-    return this.stationsService
-      .syncHospitalStations(
-        hospitalId,
-      );
+    return this.stationsService.syncHospitalStations(hospitalId);
   }
 
   @Get(':stationId/orthanc')
@@ -94,10 +65,7 @@ export class RadiologyStationsController {
     @Param('stationId')
     stationId: string,
   ) {
-    return this.stationsService
-      .getStationOrthancStatus(
-        stationId,
-      );
+    return this.stationsService.getStationOrthancStatus(stationId);
   }
 
   @Post(':stationId/sync-orthanc')
@@ -105,10 +73,7 @@ export class RadiologyStationsController {
     @Param('stationId')
     stationId: string,
   ) {
-    return this.stationsService
-      .syncStationToOrthanc(
-        stationId,
-      );
+    return this.stationsService.syncStationToOrthanc(stationId);
   }
 
   @Post(':stationId/echo')
@@ -116,10 +81,7 @@ export class RadiologyStationsController {
     @Param('stationId')
     stationId: string,
   ) {
-    return this.stationsService
-      .echoStation(
-        stationId,
-      );
+    return this.stationsService.echoStation(stationId);
   }
 
   @Get(':stationId')
@@ -127,22 +89,15 @@ export class RadiologyStationsController {
     @Param('stationId')
     stationId: string,
   ) {
-    return this.stationsService
-      .getStation(
-        stationId,
-      );
+    return this.stationsService.getStation(stationId);
   }
 
   @Post()
   createStation(
     @Body()
-    dto:
-      CreateRadiologyStationDto,
+    dto: CreateRadiologyStationDto,
   ) {
-    return this.stationsService
-      .createStation(
-        dto,
-      );
+    return this.stationsService.createStation(dto);
   }
 
   @Patch(':stationId')
@@ -151,14 +106,9 @@ export class RadiologyStationsController {
     stationId: string,
 
     @Body()
-    dto:
-      UpdateRadiologyStationDto,
+    dto: UpdateRadiologyStationDto,
   ) {
-    return this.stationsService
-      .updateStation(
-        stationId,
-        dto,
-      );
+    return this.stationsService.updateStation(stationId, dto);
   }
 
   /**
@@ -170,9 +120,6 @@ export class RadiologyStationsController {
     @Param('stationId')
     stationId: string,
   ) {
-    return this.stationsService
-      .deactivateStation(
-        stationId,
-      );
+    return this.stationsService.deactivateStation(stationId);
   }
 }

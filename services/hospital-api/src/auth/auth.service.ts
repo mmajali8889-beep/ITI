@@ -22,13 +22,19 @@ import { isHospitalEnabled } from '../hospitals/enabled-hospitals';
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const REMEMBERED_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const REVOCATION_CODE_SYSTEM = 'https://hospital-ehr.local/CodeSystem/auth';
-const REVOCATION_HASH_SYSTEM = 'https://hospital-ehr.local/revoked-session-sha256';
-const REVOCATION_EXPIRES_URL = 'https://hospital-ehr.local/fhir/StructureDefinition/revoked-session-expires';
+const REVOCATION_HASH_SYSTEM =
+  'https://hospital-ehr.local/revoked-session-sha256';
+const REVOCATION_EXPIRES_URL =
+  'https://hospital-ehr.local/fhir/StructureDefinition/revoked-session-expires';
 
 /** Fails closed: a production process must never offer the development admin login. */
-export function assertDevAdminConfiguration(env: NodeJS.ProcessEnv = process.env): void {
+export function assertDevAdminConfiguration(
+  env: NodeJS.ProcessEnv = process.env,
+): void {
   if (env.NODE_ENV === 'production' && env.AUTH_DEV_ADMIN_ENABLED === 'true') {
-    throw new Error('AUTH_DEV_ADMIN_ENABLED must not be set when NODE_ENV=production');
+    throw new Error(
+      'AUTH_DEV_ADMIN_ENABLED must not be set when NODE_ENV=production',
+    );
   }
 }
 
@@ -40,12 +46,15 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
   // so a logout survives restarts and reaches other API instances on refresh.
   private readonly revokedTokenHashes = new Set<string>();
   private revocationRefresh?: NodeJS.Timeout;
-  private readonly revocationRefreshMs = Number(process.env.AUTH_REVOCATION_REFRESH_SECONDS ?? 60) * 1000;
+  private readonly revocationRefreshMs =
+    Number(process.env.AUTH_REVOCATION_REFRESH_SECONDS ?? 60) * 1000;
 
   constructor(@Optional() private readonly medplumService?: MedplumService) {
     assertDevAdminConfiguration();
     if (this.devAdminEnabled()) {
-      this.logger.warn('Development admin login is ENABLED (AUTH_DEV_ADMIN_ENABLED=true); never use this outside local development');
+      this.logger.warn(
+        'Development admin login is ENABLED (AUTH_DEV_ADMIN_ENABLED=true); never use this outside local development',
+      );
     }
   }
 
@@ -53,7 +62,11 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     if (!this.medplumService) return;
     await this.loadRevocations();
     this.revocationRefresh = setInterval(() => {
-      this.loadRevocations().catch((error: unknown) => this.logger.warn(`Refreshing revoked sessions failed: ${String(error)}`));
+      this.loadRevocations().catch((error: unknown) =>
+        this.logger.warn(
+          `Refreshing revoked sessions failed: ${String(error)}`,
+        ),
+      );
     }, this.revocationRefreshMs);
     this.revocationRefresh.unref?.();
   }
@@ -72,10 +85,18 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     if (!client) return;
     const now = Date.now();
     const active = new Set<string>();
-    for await (const page of client.searchResourcePages('Basic', { code: `${REVOCATION_CODE_SYSTEM}|revoked-session`, _count: '1000' })) {
+    for await (const page of client.searchResourcePages('Basic', {
+      code: `${REVOCATION_CODE_SYSTEM}|revoked-session`,
+      _count: '1000',
+    })) {
       for (const item of page) {
-        const hash = item.identifier?.find((id) => id.system === REVOCATION_HASH_SYSTEM)?.value;
-        const expires = Date.parse(item.extension?.find((ext) => ext.url === REVOCATION_EXPIRES_URL)?.valueDateTime ?? '');
+        const hash = item.identifier?.find(
+          (id) => id.system === REVOCATION_HASH_SYSTEM,
+        )?.value;
+        const expires = Date.parse(
+          item.extension?.find((ext) => ext.url === REVOCATION_EXPIRES_URL)
+            ?.valueDateTime ?? '',
+        );
         if (!hash) continue;
         if (Number.isFinite(expires) && expires <= now) {
           await client.deleteResource('Basic', item.id).catch(() => undefined);
@@ -87,25 +108,50 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     for (const hash of active) this.revokedTokenHashes.add(hash);
   }
 
-  private async persistRevocation(hash: string, expiresAt: number): Promise<void> {
+  private async persistRevocation(
+    hash: string,
+    expiresAt: number,
+  ): Promise<void> {
     const client = this.medplumService?.getClient();
     if (!client) return;
     const revocation: Basic = {
       resourceType: 'Basic',
-      code: { coding: [{ system: REVOCATION_CODE_SYSTEM, code: 'revoked-session', display: 'Revoked session' }] },
+      code: {
+        coding: [
+          {
+            system: REVOCATION_CODE_SYSTEM,
+            code: 'revoked-session',
+            display: 'Revoked session',
+          },
+        ],
+      },
       identifier: [{ system: REVOCATION_HASH_SYSTEM, value: hash }],
       // Basic.created is a FHIR `date`.
       created: new Date().toISOString().slice(0, 10),
-      extension: [{ url: REVOCATION_EXPIRES_URL, valueDateTime: new Date(expiresAt).toISOString() }],
+      extension: [
+        {
+          url: REVOCATION_EXPIRES_URL,
+          valueDateTime: new Date(expiresAt).toISOString(),
+        },
+      ],
     };
-    await client.createResourceIfNoneExist<Basic>(revocation, `identifier=${encodeURIComponent(REVOCATION_HASH_SYSTEM)}|${hash}`);
+    await client.createResourceIfNoneExist<Basic>(
+      revocation,
+      `identifier=${encodeURIComponent(REVOCATION_HASH_SYSTEM)}|${hash}`,
+    );
   }
   // Per-account brute-force protection, keyed by hospital and username. Medplum
   // only throttles per client address, which behind a hospital NAT blocks
   // everyone at once. In-memory: one API instance; use a shared store to scale out.
-  private readonly failedLogins = new Map<string, { count: number; firstAt: number; lockedUntil?: number }>();
-  private readonly maxFailedLogins = Number(process.env.AUTH_MAX_FAILED_LOGINS ?? 5);
-  private readonly lockoutMs = Number(process.env.AUTH_LOCKOUT_MINUTES ?? 15) * 60 * 1000;
+  private readonly failedLogins = new Map<
+    string,
+    { count: number; firstAt: number; lockedUntil?: number }
+  >();
+  private readonly maxFailedLogins = Number(
+    process.env.AUTH_MAX_FAILED_LOGINS ?? 5,
+  );
+  private readonly lockoutMs =
+    Number(process.env.AUTH_LOCKOUT_MINUTES ?? 15) * 60 * 1000;
 
   private assertNotLocked(key: string): void {
     const entry = this.failedLogins.get(key);
@@ -115,22 +161,31 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       this.failedLogins.delete(key);
       return;
     }
-    throw new HttpException({
-      message: 'This account is temporarily locked after repeated failed sign-ins; try again later or ask an administrator',
-      code: 'ACCOUNT_LOCKED',
-      retryAfterSeconds: Math.ceil(remainingMs / 1000),
-    }, HttpStatus.LOCKED);
+    throw new HttpException(
+      {
+        message:
+          'This account is temporarily locked after repeated failed sign-ins; try again later or ask an administrator',
+        code: 'ACCOUNT_LOCKED',
+        retryAfterSeconds: Math.ceil(remainingMs / 1000),
+      },
+      HttpStatus.LOCKED,
+    );
   }
 
   private recordFailedLogin(key: string): void {
     const now = Date.now();
     for (const [k, v] of this.failedLogins) {
-      if ((v.lockedUntil ?? v.firstAt + this.lockoutMs) < now) this.failedLogins.delete(k);
+      if ((v.lockedUntil ?? v.firstAt + this.lockoutMs) < now)
+        this.failedLogins.delete(k);
     }
     const entry = this.failedLogins.get(key);
-    const current = entry && now - entry.firstAt < this.lockoutMs ? entry : { count: 0, firstAt: now };
+    const current =
+      entry && now - entry.firstAt < this.lockoutMs
+        ? entry
+        : { count: 0, firstAt: now };
     current.count += 1;
-    if (current.count >= this.maxFailedLogins) current.lockedUntil = now + this.lockoutMs;
+    if (current.count >= this.maxFailedLogins)
+      current.lockedUntil = now + this.lockoutMs;
     this.failedLogins.set(key, current);
   }
   private readonly sessionSecret = this.getSessionSecret();
@@ -183,7 +238,9 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       return undefined;
     }
     try {
-      const claims = JSON.parse(Buffer.from(payload, 'base64url').toString()) as {
+      const claims = JSON.parse(
+        Buffer.from(payload, 'base64url').toString(),
+      ) as {
         v: number;
         hospitalId: string;
         expiresAt: number;
@@ -225,7 +282,10 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
 
   /** Opt-in only, never in production, and only with credentials set explicitly. */
   private devAdminEnabled(): boolean {
-    return process.env.AUTH_DEV_ADMIN_ENABLED === 'true' && process.env.NODE_ENV !== 'production';
+    return (
+      process.env.AUTH_DEV_ADMIN_ENABLED === 'true' &&
+      process.env.NODE_ENV !== 'production'
+    );
   }
 
   private matchesDevelopmentAdmin(username: string, password: string): boolean {
@@ -258,7 +318,9 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     const username = input.username?.trim();
 
     if (!hospitalId || !username || !input.password) {
-      throw new BadRequestException('Hospital, username, and password are required');
+      throw new BadRequestException(
+        'Hospital, username, and password are required',
+      );
     }
 
     const lockKey = `${hospitalId}:${username.toLowerCase()}`;
@@ -275,7 +337,9 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
         const clientId = process.env.MEDPLUM_CLIENT_ID;
         const clientSecret = process.env.MEDPLUM_CLIENT_SECRET;
         if (!clientId || !clientSecret) {
-          throw new UnauthorizedException('Development admin is not configured');
+          throw new UnauthorizedException(
+            'Development admin is not configured',
+          );
         }
         await client.startClientLogin(clientId, clientSecret);
         profile = {
@@ -285,14 +349,20 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
         };
       } else {
         const response = await client.startLogin({
-          email: username.includes('@') ? username : `${username}@unitech.local`,
+          email: username.includes('@')
+            ? username
+            : `${username}@unitech.local`,
           password: input.password,
-          scope: input.remember ? 'openid profile offline_access' : 'openid profile',
+          scope: input.remember
+            ? 'openid profile offline_access'
+            : 'openid profile',
         });
 
         if (response.mfaRequired || response.mfaEnrollRequired) {
           throw new UnauthorizedException({
-            code: response.mfaEnrollRequired ? 'MFA_ENROLL_REQUIRED' : 'MFA_REQUIRED',
+            code: response.mfaEnrollRequired
+              ? 'MFA_ENROLL_REQUIRED'
+              : 'MFA_REQUIRED',
             message: 'Multi-factor authentication is required for this account',
           });
         }
@@ -308,7 +378,8 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       // user from creating a session for a hospital they cannot access in Medplum.
       const hospital = await client.readResource('Organization', hospitalId);
       const hospitalCode = hospital.identifier?.find(
-        (identifier) => identifier.system === 'https://hospital-ehr.local/organization-code',
+        (identifier) =>
+          identifier.system === 'https://hospital-ehr.local/organization-code',
       )?.value;
       if (!isHospitalEnabled(hospitalCode)) {
         throw new UnauthorizedException({
@@ -317,21 +388,55 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
         });
       }
 
-      const practitionerRoles = profile.resourceType === 'Practitioner' && profile.id !== 'development-admin'
-        ? await client.searchResources('PractitionerRole', { practitioner: `Practitioner/${profile.id}`, organization: `Organization/${hospitalId}`, active: 'true', _count: '100' }).catch(() => [])
-        : [];
-      const roles = profile.id === 'development-admin' ? ['system-administrator'] : [...new Set(practitionerRoles.flatMap((item) => item.code?.flatMap((code) => code.coding?.map((coding) => coding.code).filter((value): value is string => Boolean(value)) ?? []) ?? []))];
+      const practitionerRoles =
+        profile.resourceType === 'Practitioner' &&
+        profile.id !== 'development-admin'
+          ? await client
+              .searchResources('PractitionerRole', {
+                practitioner: `Practitioner/${profile.id}`,
+                organization: `Organization/${hospitalId}`,
+                active: 'true',
+                _count: '100',
+              })
+              .catch(() => [])
+          : [];
+      const roles =
+        profile.id === 'development-admin'
+          ? ['system-administrator']
+          : [
+              ...new Set(
+                practitionerRoles.flatMap(
+                  (item) =>
+                    item.code?.flatMap(
+                      (code) =>
+                        code.coding
+                          ?.map((coding) => coding.code)
+                          .filter((value): value is string => Boolean(value)) ??
+                        [],
+                    ) ?? [],
+                ),
+              ),
+            ];
       const directPermissions = practitionerRoles.flatMap((role) => {
-        const raw = role.extension?.find((extension) => extension.url === PERMISSIONS_EXTENSION)?.valueString;
+        const raw = role.extension?.find(
+          (extension) => extension.url === PERMISSIONS_EXTENSION,
+        )?.valueString;
         if (!raw) return [];
-        try { return JSON.parse(raw) as string[]; } catch { return []; }
+        try {
+          return JSON.parse(raw) as string[];
+        } catch {
+          return [];
+        }
       });
-      const permissions = profile.id === 'development-admin'
-        ? ['*']
-        : [...new Set([...permissionsForRoles(roles), ...directPermissions])];
+      const permissions =
+        profile.id === 'development-admin'
+          ? ['*']
+          : [...new Set([...permissionsForRoles(roles), ...directPermissions])];
       const sessionData: Omit<AuthSession, 'id'> = {
         hospitalId,
-        expiresAt: Date.now() + (input.remember ? REMEMBERED_SESSION_TTL_MS : SESSION_TTL_MS),
+        expiresAt:
+          Date.now() +
+          (input.remember ? REMEMBERED_SESSION_TTL_MS : SESSION_TTL_MS),
         profile,
         roles,
         permissions,
@@ -352,10 +457,19 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       // Medplum throttles sign-in attempts per client address. Report that as
       // such, or staff are told their (correct) password is wrong.
       if (isMedplumRateLimitError(error)) {
-        throw new HttpException({ message: 'Too many sign-in attempts from this network; wait a few minutes and try again', code: 'SIGN_IN_THROTTLED' }, HttpStatus.TOO_MANY_REQUESTS);
+        throw new HttpException(
+          {
+            message:
+              'Too many sign-in attempts from this network; wait a few minutes and try again',
+            code: 'SIGN_IN_THROTTLED',
+          },
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
       }
       this.recordFailedLogin(lockKey);
-      throw new UnauthorizedException('Invalid username or password, or hospital access is not permitted');
+      throw new UnauthorizedException(
+        'Invalid username or password, or hospital access is not permitted',
+      );
     }
   }
 
@@ -383,7 +497,9 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       // The token is already refused by this instance; persistence makes it
       // stick across restarts and instances, so report the failure loudly.
-      this.logger.error(`Could not persist session revocation; it will not survive a restart: ${String(error)}`);
+      this.logger.error(
+        `Could not persist session revocation; it will not survive a restart: ${String(error)}`,
+      );
     }
     await session.medplum.signOut().catch(() => undefined);
   }

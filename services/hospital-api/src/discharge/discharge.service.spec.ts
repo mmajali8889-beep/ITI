@@ -1,1 +1,104 @@
-import{ConflictException}from'@nestjs/common';import{Test}from'@nestjs/testing';import{MedplumService}from'../medplum/medplum.service';import{BedManagementService}from'../bed-management/bed-management.service';import{DischargeService}from'./discharge.service';describe('DischargeService',()=>{let service:DischargeService,task:any;const encounter={resourceType:'Encounter',id:'e1',status:'in-progress',class:{code:'IMP'},subject:{reference:'Patient/p1'},serviceProvider:{reference:'Organization/h1'},location:[{status:'active',location:{reference:'Location/b1'}}]};const medplum={readResource:jest.fn(),searchResources:jest.fn(),createResource:jest.fn(),updateResource:jest.fn()},beds={markDirty:jest.fn()};beforeEach(async()=>{jest.resetAllMocks();task=undefined;medplum.readResource.mockImplementation(async(type:string)=>type==='Encounter'?encounter:task);medplum.searchResources.mockResolvedValue([]);medplum.createResource.mockImplementation(async(r:any)=>{if(r.resourceType==='Task'){task={...r,id:'d1'};return task}return{...r,id:'summary1'}});medplum.updateResource.mockImplementation(async(r:any)=>{if(r.resourceType==='Task')task=r;return r});beds.markDirty.mockResolvedValue({});const m=await Test.createTestingModule({providers:[DischargeService,{provide:MedplumService,useValue:{getClient:()=>medplum}},{provide:BedManagementService,useValue:beds}]}).compile();service=m.get(DischargeService)});async function start(){return service.create({hospitalId:'h1',patientId:'p1',encounterId:'e1',physicianName:'Dr Omar',decisionReason:'Stable'})}it('blocks finalization before mandatory gates',async()=>{await start();await expect(service.finalize('d1',{hospitalId:'h1',actorName:'Nurse',confirmation:true})).rejects.toBeInstanceOf(ConflictException)});it('captures medication reconciliation and all discharge summary sections',async()=>{await start();await service.reconcile('d1',{hospitalId:'h1',clinicianName:'Pharmacist',homeMedications:['Aspirin']});const result=await service.summary('d1',{hospitalId:'h1',authorName:'Dr Omar',admissionReason:'Pain',finalDiagnoses:['Condition'],procedures:[],hospitalCourse:'Improved during admission',investigations:'Reviewed',dischargeMedications:['Aspirin'],conditionAtDischarge:'Stable',instructions:'Return if worse',followUp:'Clinic'});expect(result).toMatchObject({reconciliationComplete:true,summaryId:'summary1'});expect(medplum.createResource).toHaveBeenCalledWith(expect.objectContaining({resourceType:'Composition',section:expect.arrayContaining([expect.objectContaining({title:'Hospital course'})])}))});});
+import { ConflictException } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { MedplumService } from '../medplum/medplum.service';
+import { BedManagementService } from '../bed-management/bed-management.service';
+import { DischargeService } from './discharge.service';
+describe('DischargeService', () => {
+  let service: DischargeService, task: any;
+  const encounter = {
+    resourceType: 'Encounter',
+    id: 'e1',
+    status: 'in-progress',
+    class: { code: 'IMP' },
+    subject: { reference: 'Patient/p1' },
+    serviceProvider: { reference: 'Organization/h1' },
+    location: [{ status: 'active', location: { reference: 'Location/b1' } }],
+  };
+  const medplum = {
+      readResource: jest.fn(),
+      searchResources: jest.fn(),
+      createResource: jest.fn(),
+      updateResource: jest.fn(),
+    },
+    beds = { markDirty: jest.fn() };
+  beforeEach(async () => {
+    jest.resetAllMocks();
+    task = undefined;
+    medplum.readResource.mockImplementation(async (type: string) =>
+      type === 'Encounter' ? encounter : task,
+    );
+    medplum.searchResources.mockResolvedValue([]);
+    medplum.createResource.mockImplementation(async (r: any) => {
+      if (r.resourceType === 'Task') {
+        task = { ...r, id: 'd1' };
+        return task;
+      }
+      return { ...r, id: 'summary1' };
+    });
+    medplum.updateResource.mockImplementation(async (r: any) => {
+      if (r.resourceType === 'Task') task = r;
+      return r;
+    });
+    beds.markDirty.mockResolvedValue({});
+    const m = await Test.createTestingModule({
+      providers: [
+        DischargeService,
+        { provide: MedplumService, useValue: { getClient: () => medplum } },
+        { provide: BedManagementService, useValue: beds },
+      ],
+    }).compile();
+    service = m.get(DischargeService);
+  });
+  async function start() {
+    return service.create({
+      hospitalId: 'h1',
+      patientId: 'p1',
+      encounterId: 'e1',
+      physicianName: 'Dr Omar',
+      decisionReason: 'Stable',
+    });
+  }
+  it('blocks finalization before mandatory gates', async () => {
+    await start();
+    await expect(
+      service.finalize('d1', {
+        hospitalId: 'h1',
+        actorName: 'Nurse',
+        confirmation: true,
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+  it('captures medication reconciliation and all discharge summary sections', async () => {
+    await start();
+    await service.reconcile('d1', {
+      hospitalId: 'h1',
+      clinicianName: 'Pharmacist',
+      homeMedications: ['Aspirin'],
+    });
+    const result = await service.summary('d1', {
+      hospitalId: 'h1',
+      authorName: 'Dr Omar',
+      admissionReason: 'Pain',
+      finalDiagnoses: ['Condition'],
+      procedures: [],
+      hospitalCourse: 'Improved during admission',
+      investigations: 'Reviewed',
+      dischargeMedications: ['Aspirin'],
+      conditionAtDischarge: 'Stable',
+      instructions: 'Return if worse',
+      followUp: 'Clinic',
+    });
+    expect(result).toMatchObject({
+      reconciliationComplete: true,
+      summaryId: 'summary1',
+    });
+    expect(medplum.createResource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resourceType: 'Composition',
+        section: expect.arrayContaining([
+          expect.objectContaining({ title: 'Hospital course' }),
+        ]),
+      }),
+    );
+  });
+});

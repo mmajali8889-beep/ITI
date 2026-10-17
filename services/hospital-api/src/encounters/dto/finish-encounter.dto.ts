@@ -1,5 +1,15 @@
-export type DispositionType = 'home' | 'admit' | 'icu' | 'operating-room' | 'transfer' | 'referred' | 'left-against-advice' | 'left-without-being-seen' | 'deceased';
-export type DischargeCondition = 'stable' | 'improved' | 'unchanged' | 'deteriorated';
+export type DispositionType =
+  | 'home'
+  | 'admit'
+  | 'icu'
+  | 'operating-room'
+  | 'transfer'
+  | 'referred'
+  | 'left-against-advice'
+  | 'left-without-being-seen'
+  | 'deceased';
+export type DischargeCondition =
+  'stable' | 'improved' | 'unchanged' | 'deteriorated';
 
 export class FinishEncounterDto {
   hospitalId!: string;

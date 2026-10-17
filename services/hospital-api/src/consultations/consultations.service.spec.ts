@@ -1,2 +1,137 @@
-import{ConflictException,NotFoundException}from'@nestjs/common';import{Test,TestingModule}from'@nestjs/testing';import{MedplumService}from'../medplum/medplum.service';import{ConsultationsService}from'./consultations.service';
-describe('ConsultationsService closed-loop workflow',()=>{let service:ConsultationsService;let task:any,request:any;const patient={resourceType:'Patient',id:'p1',managingOrganization:{reference:'Organization/h1'}};const encounter={resourceType:'Encounter',id:'e1',status:'in-progress',subject:{reference:'Patient/p1',display:'Mona Ali'},serviceProvider:{reference:'Organization/h1'}};const medplum={readResource:jest.fn(),searchResources:jest.fn(),createResource:jest.fn(),updateResource:jest.fn()};beforeEach(async()=>{jest.resetAllMocks();task=undefined;request=undefined;medplum.readResource.mockImplementation(async(type:string,id:string)=>type==='Patient'?patient:type==='Encounter'?encounter:type==='Task'?task:type==='ServiceRequest'?request:{resourceType:type,id});medplum.createResource.mockImplementation(async(resource:any)=>{if(resource.resourceType==='ServiceRequest'){request={...resource,id:'r1'};return request}if(resource.resourceType==='Task'){task={...resource,id:'t1'};return task}return{...resource,id:`${resource.resourceType}-1`}});medplum.updateResource.mockImplementation(async(resource:any)=>{if(resource.resourceType==='Task')task=resource;if(resource.resourceType==='ServiceRequest')request=resource;return resource});medplum.searchResources.mockImplementation(async(type:string)=>type==='Task'&&task?[task]:[]);const module:TestingModule=await Test.createTestingModule({providers:[ConsultationsService,{provide:MedplumService,useValue:{getClient:()=>medplum}}]}).compile();service=module.get(ConsultationsService);});async function create(priority:'routine'|'urgent'|'stat'='urgent'){return service.create({hospitalId:'h1',patientId:'p1',encounterId:'e1',specialty:'Cardiology',reason:'Chest pain',clinicalQuestion:'Assess ischemia',priority,requesterName:'Dr Omar'});}it('creates linked ServiceRequest and specialty Task',async()=>{await expect(create()).resolves.toMatchObject({id:'t1',requestId:'r1',specialty:'Cardiology',status:'ready'});expect(medplum.createResource).toHaveBeenCalledWith(expect.objectContaining({resourceType:'ServiceRequest'}));expect(medplum.createResource).toHaveBeenCalledWith(expect.objectContaining({resourceType:'Task',focus:{reference:'ServiceRequest/r1'}}));});it('requires acceptance before consultant completion',async()=>{await create();await expect(service.complete('t1',{hospitalId:'h1',consultantName:'Dr Sara',assessment:'A',consultationNote:'N',recommendations:['R']})).rejects.toBeInstanceOf(ConflictException);});it('creates consultation note and notifies the requesting doctor',async()=>{await create();await service.accept('t1',{hospitalId:'h1',consultantName:'Dr Sara'});const result=await service.complete('t1',{hospitalId:'h1',consultantName:'Dr Sara',assessment:'Possible ACS',consultationNote:'Reviewed',recommendations:['Serial troponin']});expect(result.status).toBe('completed');expect(medplum.createResource).toHaveBeenCalledWith(expect.objectContaining({resourceType:'DocumentReference'}));expect(medplum.createResource).toHaveBeenCalledWith(expect.objectContaining({resourceType:'Communication',recipient:expect.any(Array)}));expect(request.status).toBe('completed');});it('prevents cross-hospital access',async()=>{await create();await expect(service.accept('t1',{hospitalId:'h2',consultantName:'Dr Sara'})).rejects.toBeInstanceOf(NotFoundException);});});
+import { ConflictException, NotFoundException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { MedplumService } from '../medplum/medplum.service';
+import { ConsultationsService } from './consultations.service';
+describe('ConsultationsService closed-loop workflow', () => {
+  let service: ConsultationsService;
+  let task: any, request: any;
+  const patient = {
+    resourceType: 'Patient',
+    id: 'p1',
+    managingOrganization: { reference: 'Organization/h1' },
+  };
+  const encounter = {
+    resourceType: 'Encounter',
+    id: 'e1',
+    status: 'in-progress',
+    subject: { reference: 'Patient/p1', display: 'Mona Ali' },
+    serviceProvider: { reference: 'Organization/h1' },
+  };
+  const medplum = {
+    readResource: jest.fn(),
+    searchResources: jest.fn(),
+    createResource: jest.fn(),
+    updateResource: jest.fn(),
+  };
+  beforeEach(async () => {
+    jest.resetAllMocks();
+    task = undefined;
+    request = undefined;
+    medplum.readResource.mockImplementation(async (type: string, id: string) =>
+      type === 'Patient'
+        ? patient
+        : type === 'Encounter'
+          ? encounter
+          : type === 'Task'
+            ? task
+            : type === 'ServiceRequest'
+              ? request
+              : { resourceType: type, id },
+    );
+    medplum.createResource.mockImplementation(async (resource: any) => {
+      if (resource.resourceType === 'ServiceRequest') {
+        request = { ...resource, id: 'r1' };
+        return request;
+      }
+      if (resource.resourceType === 'Task') {
+        task = { ...resource, id: 't1' };
+        return task;
+      }
+      return { ...resource, id: `${resource.resourceType}-1` };
+    });
+    medplum.updateResource.mockImplementation(async (resource: any) => {
+      if (resource.resourceType === 'Task') task = resource;
+      if (resource.resourceType === 'ServiceRequest') request = resource;
+      return resource;
+    });
+    medplum.searchResources.mockImplementation(async (type: string) =>
+      type === 'Task' && task ? [task] : [],
+    );
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ConsultationsService,
+        { provide: MedplumService, useValue: { getClient: () => medplum } },
+      ],
+    }).compile();
+    service = module.get(ConsultationsService);
+  });
+  async function create(priority: 'routine' | 'urgent' | 'stat' = 'urgent') {
+    return service.create({
+      hospitalId: 'h1',
+      patientId: 'p1',
+      encounterId: 'e1',
+      specialty: 'Cardiology',
+      reason: 'Chest pain',
+      clinicalQuestion: 'Assess ischemia',
+      priority,
+      requesterName: 'Dr Omar',
+    });
+  }
+  it('creates linked ServiceRequest and specialty Task', async () => {
+    await expect(create()).resolves.toMatchObject({
+      id: 't1',
+      requestId: 'r1',
+      specialty: 'Cardiology',
+      status: 'ready',
+    });
+    expect(medplum.createResource).toHaveBeenCalledWith(
+      expect.objectContaining({ resourceType: 'ServiceRequest' }),
+    );
+    expect(medplum.createResource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resourceType: 'Task',
+        focus: { reference: 'ServiceRequest/r1' },
+      }),
+    );
+  });
+  it('requires acceptance before consultant completion', async () => {
+    await create();
+    await expect(
+      service.complete('t1', {
+        hospitalId: 'h1',
+        consultantName: 'Dr Sara',
+        assessment: 'A',
+        consultationNote: 'N',
+        recommendations: ['R'],
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+  it('creates consultation note and notifies the requesting doctor', async () => {
+    await create();
+    await service.accept('t1', { hospitalId: 'h1', consultantName: 'Dr Sara' });
+    const result = await service.complete('t1', {
+      hospitalId: 'h1',
+      consultantName: 'Dr Sara',
+      assessment: 'Possible ACS',
+      consultationNote: 'Reviewed',
+      recommendations: ['Serial troponin'],
+    });
+    expect(result.status).toBe('completed');
+    expect(medplum.createResource).toHaveBeenCalledWith(
+      expect.objectContaining({ resourceType: 'DocumentReference' }),
+    );
+    expect(medplum.createResource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resourceType: 'Communication',
+        recipient: expect.any(Array),
+      }),
+    );
+    expect(request.status).toBe('completed');
+  });
+  it('prevents cross-hospital access', async () => {
+    await create();
+    await expect(
+      service.accept('t1', { hospitalId: 'h2', consultantName: 'Dr Sara' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+});

@@ -8,9 +8,7 @@ import {
   Query,
 } from '@nestjs/common';
 
-import {
-  ClinicalNotesService,
-} from './clinical-notes.service';
+import { ClinicalNotesService } from './clinical-notes.service';
 
 import {
   CreateAddendumDto,
@@ -19,23 +17,16 @@ import {
   SignClinicalNoteDto,
 } from './dto/clinical-note.dto';
 
-@Controller(
-  'api/clinical-notes',
-)
+@Controller('api/clinical-notes')
 export class ClinicalNotesController {
-  constructor(
-    private readonly clinicalNotesService:
-      ClinicalNotesService,
-  ) {}
+  constructor(private readonly clinicalNotesService: ClinicalNotesService) {}
 
   @Post()
   create(
     @Body()
     dto: CreateClinicalNoteDto,
   ) {
-    return this.clinicalNotesService.create(
-      dto,
-    );
+    return this.clinicalNotesService.create(dto);
   }
 
   @Get()
@@ -44,10 +35,7 @@ export class ClinicalNotesController {
     encounterId: string,
     @Query('hospitalId') hospitalId: string,
   ) {
-    return this.clinicalNotesService.findByEncounter(
-      encounterId,
-      hospitalId,
-    );
+    return this.clinicalNotesService.findByEncounter(encounterId, hospitalId);
   }
 
   @Get('patient/:patientId')
@@ -56,10 +44,7 @@ export class ClinicalNotesController {
     patientId: string,
     @Query('hospitalId') hospitalId: string,
   ) {
-    return this.clinicalNotesService.findByPatient(
-      patientId,
-      hospitalId,
-    );
+    return this.clinicalNotesService.findByPatient(patientId, hospitalId);
   }
 
   @Get(':noteId')
@@ -68,10 +53,7 @@ export class ClinicalNotesController {
     noteId: string,
     @Query('hospitalId') hospitalId: string,
   ) {
-    return this.clinicalNotesService.findById(
-      noteId,
-      hospitalId,
-    );
+    return this.clinicalNotesService.findById(noteId, hospitalId);
   }
 
   @Patch(':noteId')
@@ -82,10 +64,7 @@ export class ClinicalNotesController {
     @Body()
     dto: UpdateClinicalNoteDto,
   ) {
-    return this.clinicalNotesService.update(
-      noteId,
-      dto,
-    );
+    return this.clinicalNotesService.update(noteId, dto);
   }
 
   @Post(':noteId/sign')
@@ -94,10 +73,7 @@ export class ClinicalNotesController {
     noteId: string,
     @Body() dto: SignClinicalNoteDto,
   ) {
-    return this.clinicalNotesService.sign(
-      noteId,
-      dto,
-    );
+    return this.clinicalNotesService.sign(noteId, dto);
   }
 
   @Post(':noteId/addendum')
@@ -108,9 +84,6 @@ export class ClinicalNotesController {
     @Body()
     dto: CreateAddendumDto,
   ) {
-    return this.clinicalNotesService.createAddendum(
-      noteId,
-      dto,
-    );
+    return this.clinicalNotesService.createAddendum(noteId, dto);
   }
 }

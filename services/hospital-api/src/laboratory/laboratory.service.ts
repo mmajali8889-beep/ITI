@@ -30,9 +30,7 @@ const HOSPITAL_EXTENSION_URL =
 
 @Injectable()
 export class LaboratoryService {
-  constructor(
-    private readonly medplumService: MedplumService,
-  ) {}
+  constructor(private readonly medplumService: MedplumService) {}
 
   async createOrder(dto: CreateLabOrderDto) {
     this.validateCreateDto(dto);
@@ -42,10 +40,7 @@ export class LaboratoryService {
     let patient: Patient;
 
     try {
-      patient = await medplum.readResource(
-        'Patient',
-        dto.patientId,
-      );
+      patient = await medplum.readResource('Patient', dto.patientId);
     } catch {
       throw new NotFoundException('Patient not found');
     }
@@ -53,51 +48,35 @@ export class LaboratoryService {
     let encounter: Encounter;
 
     try {
-      encounter = await medplum.readResource(
-        'Encounter',
-        dto.encounterId,
-      );
+      encounter = await medplum.readResource('Encounter', dto.encounterId);
     } catch {
       throw new NotFoundException('Encounter not found');
     }
 
-    if (
-      encounter.subject?.reference !==
-      `Patient/${dto.patientId}`
-    ) {
+    if (encounter.subject?.reference !== `Patient/${dto.patientId}`) {
       throw new BadRequestException(
         'Encounter does not belong to this patient',
       );
     }
 
-    const encounterHospitalId =
-      this.extractReferenceId(
-        encounter.serviceProvider?.reference,
-        'Organization',
-      );
+    const encounterHospitalId = this.extractReferenceId(
+      encounter.serviceProvider?.reference,
+      'Organization',
+    );
 
-    if (
-      encounterHospitalId &&
-      encounterHospitalId !== dto.hospitalId
-    ) {
+    if (encounterHospitalId && encounterHospitalId !== dto.hospitalId) {
       throw new BadRequestException(
         'Encounter does not belong to this hospital',
       );
     }
 
-    const patientHospitalId =
-      this.extractReferenceId(
-        patient.managingOrganization?.reference,
-        'Organization',
-      );
+    const patientHospitalId = this.extractReferenceId(
+      patient.managingOrganization?.reference,
+      'Organization',
+    );
 
-    if (
-      patientHospitalId &&
-      patientHospitalId !== dto.hospitalId
-    ) {
-      throw new BadRequestException(
-        'Patient does not belong to this hospital',
-      );
+    if (patientHospitalId && patientHospitalId !== dto.hospitalId) {
+      throw new BadRequestException('Patient does not belong to this hospital');
     }
 
     this.assertFinancialClearance(encounter);
@@ -147,13 +126,11 @@ export class LaboratoryService {
 
       requester: dto.practitionerId
         ? {
-            reference:
-              `Practitioner/${dto.practitionerId}`,
+            reference: `Practitioner/${dto.practitionerId}`,
             display: dto.practitionerName,
           }
         : {
-            reference:
-              `Organization/${dto.hospitalId}`,
+            reference: `Organization/${dto.hospitalId}`,
           },
 
       note: dto.clinicalNote?.trim()
@@ -168,46 +145,38 @@ export class LaboratoryService {
         {
           url: HOSPITAL_EXTENSION_URL,
           valueReference: {
-            reference:
-              `Organization/${dto.hospitalId}`,
+            reference: `Organization/${dto.hospitalId}`,
           },
         },
       ],
     };
 
-    const created =
-      await medplum.createResource(serviceRequest);
+    const created = await medplum.createResource(serviceRequest);
 
     return this.mapOrder(created);
   }
 
   async findByEncounter(encounterId: string, hospitalId?: string) {
     if (!encounterId) {
-      throw new BadRequestException(
-        'Encounter ID is required',
-      );
+      throw new BadRequestException('Encounter ID is required');
     }
 
     const medplum = this.medplumService.getClient();
 
-    const resources =
-      await medplum.searchResources(
-        'ServiceRequest',
-        {
-          encounter: `Encounter/${encounterId}`,
-          _count: '500',
-        },
-      );
+    const resources = await medplum.searchResources('ServiceRequest', {
+      encounter: `Encounter/${encounterId}`,
+      _count: '500',
+    });
 
     const orders = resources
-      .filter((resource) =>
-        this.isLaboratoryOrder(resource) && (!hospitalId || this.mapOrder(resource).hospitalId === hospitalId),
+      .filter(
+        (resource) =>
+          this.isLaboratoryOrder(resource) &&
+          (!hospitalId || this.mapOrder(resource).hospitalId === hospitalId),
       )
       .map((resource) => this.mapOrder(resource))
       .sort(
-        (a, b) =>
-          this.dateValue(b.authoredOn) -
-          this.dateValue(a.authoredOn),
+        (a, b) => this.dateValue(b.authoredOn) - this.dateValue(a.authoredOn),
       );
 
     return {
@@ -218,40 +187,31 @@ export class LaboratoryService {
 
   async findByPatient(patientId: string, hospitalId?: string) {
     if (!patientId) {
-      throw new BadRequestException(
-        'Patient ID is required',
-      );
+      throw new BadRequestException('Patient ID is required');
     }
 
     const medplum = this.medplumService.getClient();
 
     try {
-      await medplum.readResource(
-        'Patient',
-        patientId,
-      );
+      await medplum.readResource('Patient', patientId);
     } catch {
       throw new NotFoundException('Patient not found');
     }
 
-    const resources =
-      await medplum.searchResources(
-        'ServiceRequest',
-        {
-          subject: `Patient/${patientId}`,
-          _count: '500',
-        },
-      );
+    const resources = await medplum.searchResources('ServiceRequest', {
+      subject: `Patient/${patientId}`,
+      _count: '500',
+    });
 
     const orders = resources
-      .filter((resource) =>
-        this.isLaboratoryOrder(resource) && (!hospitalId || this.mapOrder(resource).hospitalId === hospitalId),
+      .filter(
+        (resource) =>
+          this.isLaboratoryOrder(resource) &&
+          (!hospitalId || this.mapOrder(resource).hospitalId === hospitalId),
       )
       .map((resource) => this.mapOrder(resource))
       .sort(
-        (a, b) =>
-          this.dateValue(b.authoredOn) -
-          this.dateValue(a.authoredOn),
+        (a, b) => this.dateValue(b.authoredOn) - this.dateValue(a.authoredOn),
       );
 
     return {
@@ -264,9 +224,7 @@ export class LaboratoryService {
     const order = await this.readOrder(orderId);
 
     if (!this.isLaboratoryOrder(order)) {
-      throw new NotFoundException(
-        'Laboratory order not found',
-      );
+      throw new NotFoundException('Laboratory order not found');
     }
 
     return this.mapOrder(order);
@@ -297,9 +255,7 @@ export class LaboratoryService {
     ];
 
     if (!allowedStatuses.includes(status)) {
-      throw new BadRequestException(
-        'Invalid laboratory order status',
-      );
+      throw new BadRequestException('Invalid laboratory order status');
     }
 
     const medplum = this.medplumService.getClient();
@@ -310,156 +266,106 @@ export class LaboratoryService {
       !this.isLaboratoryOrder(order) ||
       this.mapOrder(order).hospitalId !== hospitalId.trim()
     ) {
-      throw new NotFoundException(
-        'Laboratory order not found',
-      );
+      throw new NotFoundException('Laboratory order not found');
     }
 
-    const updated =
-      await medplum.updateResource({
-        ...order,
-        status,
-      });
+    const updated = await medplum.updateResource({
+      ...order,
+      status,
+    });
 
     return this.mapOrder(updated);
   }
 
-  private async readOrder(
-    orderId: string,
-  ): Promise<ServiceRequest> {
+  private async readOrder(orderId: string): Promise<ServiceRequest> {
     if (!orderId) {
-      throw new BadRequestException(
-        'Laboratory order ID is required',
-      );
+      throw new BadRequestException('Laboratory order ID is required');
     }
 
     const medplum = this.medplumService.getClient();
 
     try {
-      return await medplum.readResource(
-        'ServiceRequest',
-        orderId,
-      );
+      return await medplum.readResource('ServiceRequest', orderId);
     } catch {
-      throw new NotFoundException(
-        'Laboratory order not found',
-      );
+      throw new NotFoundException('Laboratory order not found');
     }
   }
 
-  private validateCreateDto(
-    dto: CreateLabOrderDto,
-  ) {
+  private validateCreateDto(dto: CreateLabOrderDto) {
     if (!dto.patientId?.trim()) {
-      throw new BadRequestException(
-        'Patient ID is required',
-      );
+      throw new BadRequestException('Patient ID is required');
     }
 
     if (!dto.encounterId?.trim()) {
-      throw new BadRequestException(
-        'Encounter ID is required',
-      );
+      throw new BadRequestException('Encounter ID is required');
     }
 
     if (!dto.hospitalId?.trim()) {
-      throw new BadRequestException(
-        'Hospital ID is required',
-      );
+      throw new BadRequestException('Hospital ID is required');
     }
 
     if (!dto.testCode?.trim()) {
-      throw new BadRequestException(
-        'Laboratory test code is required',
-      );
+      throw new BadRequestException('Laboratory test code is required');
     }
 
     if (!dto.testName?.trim()) {
-      throw new BadRequestException(
-        'Laboratory test name is required',
-      );
+      throw new BadRequestException('Laboratory test name is required');
     }
   }
 
-  private isLaboratoryOrder(
-    resource: ServiceRequest,
-  ) {
+  private isLaboratoryOrder(resource: ServiceRequest) {
     return (
-      resource.category?.some(
-        (category) =>
-          category.coding?.some(
-            (coding) =>
-              coding.code ===
-              LAB_CATEGORY_CODE,
-          ),
+      resource.category?.some((category) =>
+        category.coding?.some((coding) => coding.code === LAB_CATEGORY_CODE),
       ) ?? false
     );
   }
 
-  private mapOrder(
-    resource: ServiceRequest,
-  ) {
-    const hospitalId =
-      resource.extension
-        ?.find(
-          (extension) =>
-            extension.url ===
-            HOSPITAL_EXTENSION_URL,
-        )
-        ?.valueReference?.reference
-        ?.replace('Organization/', '');
+  private mapOrder(resource: ServiceRequest) {
+    const hospitalId = resource.extension
+      ?.find((extension) => extension.url === HOSPITAL_EXTENSION_URL)
+      ?.valueReference?.reference?.replace('Organization/', '');
 
     return {
       id: resource.id,
 
-      resourceType:
-        resource.resourceType,
+      resourceType: resource.resourceType,
 
-      status:
-        resource.status,
+      status: resource.status,
 
-      intent:
-        resource.intent,
+      intent: resource.intent,
 
-      priority:
-        resource.priority ?? 'routine',
+      priority: resource.priority ?? 'routine',
 
-      testCode:
-        resource.code?.coding?.[0]?.code,
+      testCode: resource.code?.coding?.[0]?.code,
 
       testName:
         resource.code?.text ??
         resource.code?.coding?.[0]?.display ??
         'Laboratory Test',
 
-      patientId:
-        this.extractReferenceId(
-          resource.subject?.reference,
-          'Patient',
-        ),
+      patientId: this.extractReferenceId(
+        resource.subject?.reference,
+        'Patient',
+      ),
 
-      encounterId:
-        this.extractReferenceId(
-          resource.encounter?.reference,
-          'Encounter',
-        ),
+      encounterId: this.extractReferenceId(
+        resource.encounter?.reference,
+        'Encounter',
+      ),
 
       hospitalId,
 
-      practitionerId:
-        this.extractReferenceId(
-          resource.requester?.reference,
-          'Practitioner',
-        ),
+      practitionerId: this.extractReferenceId(
+        resource.requester?.reference,
+        'Practitioner',
+      ),
 
-      practitionerName:
-        resource.requester?.display,
+      practitionerName: resource.requester?.display,
 
-      authoredOn:
-        resource.authoredOn,
+      authoredOn: resource.authoredOn,
 
-      clinicalNote:
-        resource.note?.[0]?.text,
+      clinicalNote: resource.note?.[0]?.text,
     };
   }
 
@@ -480,494 +386,453 @@ export class LaboratoryService {
     return reference.slice(prefix.length);
   }
 
-  private dateValue(
-    value?: string,
-  ) {
+  private dateValue(value?: string) {
     if (!value) {
       return 0;
     }
 
-    const timestamp =
-      new Date(value).getTime();
+    const timestamp = new Date(value).getTime();
 
-    return Number.isNaN(timestamp)
-      ? 0
-      : timestamp;
+    return Number.isNaN(timestamp) ? 0 : timestamp;
   }
 
-async createSpecimen(dto: CreateSpecimenDto) {
-  if (!dto.orderId?.trim()) {
-    throw new BadRequestException(
-      'Laboratory order ID is required',
-    );
-  }
+  async createSpecimen(dto: CreateSpecimenDto) {
+    if (!dto.orderId?.trim()) {
+      throw new BadRequestException('Laboratory order ID is required');
+    }
 
-  if (!dto.patientId?.trim()) {
-    throw new BadRequestException(
-      'Patient ID is required',
-    );
-  }
+    if (!dto.patientId?.trim()) {
+      throw new BadRequestException('Patient ID is required');
+    }
 
-  if (!dto.encounterId?.trim()) {
-    throw new BadRequestException(
-      'Encounter ID is required',
-    );
-  }
+    if (!dto.encounterId?.trim()) {
+      throw new BadRequestException('Encounter ID is required');
+    }
 
-  if (!dto.hospitalId?.trim()) {
-    throw new BadRequestException(
-      'Hospital ID is required',
-    );
-  }
+    if (!dto.hospitalId?.trim()) {
+      throw new BadRequestException('Hospital ID is required');
+    }
 
-  if (!dto.specimenTypeCode?.trim()) {
-    throw new BadRequestException(
-      'Specimen type code is required',
-    );
-  }
+    if (!dto.specimenTypeCode?.trim()) {
+      throw new BadRequestException('Specimen type code is required');
+    }
 
-  if (!dto.specimenTypeName?.trim()) {
-    throw new BadRequestException(
-      'Specimen type name is required',
-    );
-  }
+    if (!dto.specimenTypeName?.trim()) {
+      throw new BadRequestException('Specimen type name is required');
+    }
 
-  const medplum = this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
-  let order: ServiceRequest;
+    let order: ServiceRequest;
 
-  try {
-    order = await medplum.readResource(
-      'ServiceRequest',
-      dto.orderId,
-    );
-  } catch {
-    throw new NotFoundException(
-      'Laboratory order not found',
-    );
-  }
+    try {
+      order = await medplum.readResource('ServiceRequest', dto.orderId);
+    } catch {
+      throw new NotFoundException('Laboratory order not found');
+    }
 
-  if (!this.isLaboratoryOrder(order)) {
-    throw new BadRequestException(
-      'ServiceRequest is not a laboratory order',
-    );
-  }
+    if (!this.isLaboratoryOrder(order)) {
+      throw new BadRequestException('ServiceRequest is not a laboratory order');
+    }
 
-  const orderPatientId =
-    this.extractReferenceId(
+    const orderPatientId = this.extractReferenceId(
       order.subject?.reference,
       'Patient',
     );
 
-  if (orderPatientId !== dto.patientId) {
-    throw new BadRequestException(
-      'Laboratory order does not belong to this patient',
-    );
-  }
+    if (orderPatientId !== dto.patientId) {
+      throw new BadRequestException(
+        'Laboratory order does not belong to this patient',
+      );
+    }
 
-  const orderEncounterId =
-    this.extractReferenceId(
+    const orderEncounterId = this.extractReferenceId(
       order.encounter?.reference,
       'Encounter',
     );
 
-  if (
-    orderEncounterId &&
-    orderEncounterId !== dto.encounterId
-  ) {
-    throw new BadRequestException(
-      'Laboratory order does not belong to this encounter',
-    );
-  }
+    if (orderEncounterId && orderEncounterId !== dto.encounterId) {
+      throw new BadRequestException(
+        'Laboratory order does not belong to this encounter',
+      );
+    }
 
-  const accessionNumber =
-    dto.accessionNumber?.trim() ||
-    this.generateAccessionNumber();
+    const accessionNumber =
+      dto.accessionNumber?.trim() || this.generateAccessionNumber();
 
-  const specimen: Specimen = {
-    resourceType: 'Specimen',
+    const specimen: Specimen = {
+      resourceType: 'Specimen',
 
-    status: 'available',
+      status: 'available',
 
-    identifier: [
-      {
-        system:
-          'http://hospital-ehr.local/fhir/NamingSystem/lab-accession',
-        value: accessionNumber,
-      },
-      {
-        system: 'http://hospital-ehr.local/fhir/NamingSystem/specimen-barcode',
-        value: `BAR-${accessionNumber}`,
-      },
-    ],
-
-    type: {
-      coding: [
+      identifier: [
         {
-          system: 'http://snomed.info/sct',
-          code: dto.specimenTypeCode.trim(),
-          display: dto.specimenTypeName.trim(),
+          system: 'http://hospital-ehr.local/fhir/NamingSystem/lab-accession',
+          value: accessionNumber,
+        },
+        {
+          system:
+            'http://hospital-ehr.local/fhir/NamingSystem/specimen-barcode',
+          value: `BAR-${accessionNumber}`,
         },
       ],
-      text: dto.specimenTypeName.trim(),
-    },
 
-    subject: {
-      reference: `Patient/${dto.patientId}`,
-    },
-
-    request: [
-      {
-        reference: `ServiceRequest/${dto.orderId}`,
+      type: {
+        coding: [
+          {
+            system: 'http://snomed.info/sct',
+            code: dto.specimenTypeCode.trim(),
+            display: dto.specimenTypeName.trim(),
+          },
+        ],
+        text: dto.specimenTypeName.trim(),
       },
-    ],
 
-    receivedTime: undefined,
+      subject: {
+        reference: `Patient/${dto.patientId}`,
+      },
 
-    collection: {
-      collectedDateTime:
-        dto.collectedAt ??
-        new Date().toISOString(),
+      request: [
+        {
+          reference: `ServiceRequest/${dto.orderId}`,
+        },
+      ],
 
-      collector: dto.collectorId
-        ? {
-            reference:
-              `Practitioner/${dto.collectorId}`,
-            display: dto.collectorName,
-          }
-        : dto.collectorName
+      receivedTime: undefined,
+
+      collection: {
+        collectedDateTime: dto.collectedAt ?? new Date().toISOString(),
+
+        collector: dto.collectorId
           ? {
+              reference: `Practitioner/${dto.collectorId}`,
               display: dto.collectorName,
             }
-          : undefined,
-    },
+          : dto.collectorName
+            ? {
+                display: dto.collectorName,
+              }
+            : undefined,
+      },
 
-    note: dto.note?.trim()
-      ? [
-          {
-            text: dto.note.trim(),
+      note: dto.note?.trim()
+        ? [
+            {
+              text: dto.note.trim(),
+            },
+          ]
+        : undefined,
+
+      extension: [
+        {
+          url: 'http://hospital-ehr.local/fhir/StructureDefinition/hospital',
+          valueReference: {
+            reference: `Organization/${dto.hospitalId}`,
           },
-        ]
-      : undefined,
-
-    extension: [
-      {
-        url:
-          'http://hospital-ehr.local/fhir/StructureDefinition/hospital',
-        valueReference: {
-          reference:
-            `Organization/${dto.hospitalId}`,
         },
-      },
 
-      {
-        url:
-          'http://hospital-ehr.local/fhir/StructureDefinition/encounter',
-        valueReference: {
-          reference:
-            `Encounter/${dto.encounterId}`,
+        {
+          url: 'http://hospital-ehr.local/fhir/StructureDefinition/encounter',
+          valueReference: {
+            reference: `Encounter/${dto.encounterId}`,
+          },
         },
-      },
-      {
-        url: 'http://hospital-ehr.local/fhir/StructureDefinition/specimen-workflow-status',
-        valueCode: 'collected',
-      },
-      {
-        url: 'http://hospital-ehr.local/fhir/StructureDefinition/specimen-acceptance-status',
-        valueCode: 'pending',
-      },
-    ],
-  };
+        {
+          url: 'http://hospital-ehr.local/fhir/StructureDefinition/specimen-workflow-status',
+          valueCode: 'collected',
+        },
+        {
+          url: 'http://hospital-ehr.local/fhir/StructureDefinition/specimen-acceptance-status',
+          valueCode: 'pending',
+        },
+      ],
+    };
 
-  const created =
-    await medplum.createResource(specimen);
+    const created = await medplum.createResource(specimen);
 
-  return this.mapSpecimen(created);
-}
-
-async findSpecimensByOrder(
-  orderId: string,
-  hospitalId?: string,
-) {
-  if (!orderId?.trim()) {
-    throw new BadRequestException(
-      'Laboratory order ID is required',
-    );
+    return this.mapSpecimen(created);
   }
 
-  const medplum =
-    this.medplumService.getClient();
+  async findSpecimensByOrder(orderId: string, hospitalId?: string) {
+    if (!orderId?.trim()) {
+      throw new BadRequestException('Laboratory order ID is required');
+    }
 
-  const resources =
-    await medplum.searchResources(
-      'Specimen',
-      {
-        _count: '1000',
-      },
-    );
+    const medplum = this.medplumService.getClient();
 
-  const orderReference =
-    `ServiceRequest/${orderId}`;
+    const resources = await medplum.searchResources('Specimen', {
+      _count: '1000',
+    });
 
-  const specimens =
-    resources
+    const orderReference = `ServiceRequest/${orderId}`;
+
+    const specimens = resources
       .filter(
         (resource) =>
           resource.request?.some(
-            (requestReference) =>
-              requestReference.reference ===
-              orderReference,
+            (requestReference) => requestReference.reference === orderReference,
           ) ?? false,
       )
       .filter(
-        (resource) => !hospitalId || this.mapSpecimen(resource).hospitalId === hospitalId,
+        (resource) =>
+          !hospitalId || this.mapSpecimen(resource).hospitalId === hospitalId,
       )
-      .map((resource) =>
-        this.mapSpecimen(resource),
-      )
+      .map((resource) => this.mapSpecimen(resource))
       .sort(
-        (a, b) =>
-          this.dateValue(b.collectedAt) -
-          this.dateValue(a.collectedAt),
+        (a, b) => this.dateValue(b.collectedAt) - this.dateValue(a.collectedAt),
       );
 
-  return {
-    total: specimens.length,
-    specimens,
-  };
-}
-
-async findSpecimen(
-  specimenId: string,
-) {
-  const specimen =
-    await this.readSpecimen(specimenId);
-
-  return this.mapSpecimen(specimen);
-}
-
-async updateSpecimenStatus(
-  specimenId: string,
-  dto: UpdateSpecimenStatusDto,
-) {
-  const allowedStatuses = [
-    'available',
-    'unavailable',
-    'unsatisfactory',
-    'entered-in-error',
-  ];
-
-  if (
-    !dto.status ||
-    !allowedStatuses.includes(dto.status)
-  ) {
-    throw new BadRequestException(
-      'Invalid specimen status',
-    );
+    return {
+      total: specimens.length,
+      specimens,
+    };
   }
 
-  const medplum =
-    this.medplumService.getClient();
+  async findSpecimen(specimenId: string) {
+    const specimen = await this.readSpecimen(specimenId);
 
-  const specimen =
-    await this.readSpecimen(specimenId);
-
-  if (dto.acceptanceStatus === 'rejected' && !dto.rejectionReason?.trim()) {
-    throw new BadRequestException('Rejection reason is required for a rejected specimen');
-  }
-  if (dto.acceptanceStatus === 'accepted' && !dto.receivedAt && !specimen.receivedTime) {
-    throw new BadRequestException('Specimen received time is required before acceptance');
-  }
-  const workflowUrls = new Set([
-    'http://hospital-ehr.local/fhir/StructureDefinition/specimen-workflow-status',
-    'http://hospital-ehr.local/fhir/StructureDefinition/specimen-acceptance-status',
-    'http://hospital-ehr.local/fhir/StructureDefinition/specimen-rejection-reason',
-    'http://hospital-ehr.local/fhir/StructureDefinition/recollection-required',
-    'http://hospital-ehr.local/fhir/StructureDefinition/specimen-receiver',
-  ]);
-
-  const updated: Specimen = {
-    ...specimen,
-
-    status: dto.status,
-
-    receivedTime:
-      dto.receivedAt ??
-      specimen.receivedTime,
-
-    note: dto.note?.trim()
-      ? [
-          ...(specimen.note ?? []),
-          {
-            text: dto.note.trim(),
-          },
-        ]
-      : specimen.note,
-
-    extension: [
-      ...(specimen.extension ?? []).filter((item) => !workflowUrls.has(item.url)),
-      { url: 'http://hospital-ehr.local/fhir/StructureDefinition/specimen-workflow-status', valueCode: dto.acceptanceStatus === 'accepted' ? 'accepted' : dto.acceptanceStatus === 'rejected' ? 'rejected-recollection' : dto.receivedAt ? 'received' : 'collected' },
-      { url: 'http://hospital-ehr.local/fhir/StructureDefinition/specimen-acceptance-status', valueCode: dto.acceptanceStatus ?? 'pending' },
-      ...(dto.rejectionReason ? [{ url: 'http://hospital-ehr.local/fhir/StructureDefinition/specimen-rejection-reason', valueString: dto.rejectionReason.trim() }] : []),
-      { url: 'http://hospital-ehr.local/fhir/StructureDefinition/recollection-required', valueBoolean: dto.acceptanceStatus === 'rejected' ? (dto.recollectionRequired ?? true) : false },
-      ...(dto.receiverId || dto.receiverName ? [{ url: 'http://hospital-ehr.local/fhir/StructureDefinition/specimen-receiver', valueReference: dto.receiverId ? { reference: `Practitioner/${dto.receiverId}`, display: dto.receiverName } : { display: dto.receiverName } }] : []),
-    ],
-  };
-
-  const saved =
-    await medplum.updateResource(updated);
-
-  return this.mapSpecimen(saved);
-}
-
-private async readSpecimen(
-  specimenId: string,
-): Promise<Specimen> {
-  if (!specimenId?.trim()) {
-    throw new BadRequestException(
-      'Specimen ID is required',
-    );
+    return this.mapSpecimen(specimen);
   }
 
-  const medplum =
-    this.medplumService.getClient();
+  async updateSpecimenStatus(specimenId: string, dto: UpdateSpecimenStatusDto) {
+    const allowedStatuses = [
+      'available',
+      'unavailable',
+      'unsatisfactory',
+      'entered-in-error',
+    ];
 
-  try {
-    return await medplum.readResource(
-      'Specimen',
-      specimenId,
-    );
-  } catch {
-    throw new NotFoundException(
-      'Specimen not found',
-    );
+    if (!dto.status || !allowedStatuses.includes(dto.status)) {
+      throw new BadRequestException('Invalid specimen status');
+    }
+
+    const medplum = this.medplumService.getClient();
+
+    const specimen = await this.readSpecimen(specimenId);
+
+    if (dto.acceptanceStatus === 'rejected' && !dto.rejectionReason?.trim()) {
+      throw new BadRequestException(
+        'Rejection reason is required for a rejected specimen',
+      );
+    }
+    if (
+      dto.acceptanceStatus === 'accepted' &&
+      !dto.receivedAt &&
+      !specimen.receivedTime
+    ) {
+      throw new BadRequestException(
+        'Specimen received time is required before acceptance',
+      );
+    }
+    const workflowUrls = new Set([
+      'http://hospital-ehr.local/fhir/StructureDefinition/specimen-workflow-status',
+      'http://hospital-ehr.local/fhir/StructureDefinition/specimen-acceptance-status',
+      'http://hospital-ehr.local/fhir/StructureDefinition/specimen-rejection-reason',
+      'http://hospital-ehr.local/fhir/StructureDefinition/recollection-required',
+      'http://hospital-ehr.local/fhir/StructureDefinition/specimen-receiver',
+    ]);
+
+    const updated: Specimen = {
+      ...specimen,
+
+      status: dto.status,
+
+      receivedTime: dto.receivedAt ?? specimen.receivedTime,
+
+      note: dto.note?.trim()
+        ? [
+            ...(specimen.note ?? []),
+            {
+              text: dto.note.trim(),
+            },
+          ]
+        : specimen.note,
+
+      extension: [
+        ...(specimen.extension ?? []).filter(
+          (item) => !workflowUrls.has(item.url),
+        ),
+        {
+          url: 'http://hospital-ehr.local/fhir/StructureDefinition/specimen-workflow-status',
+          valueCode:
+            dto.acceptanceStatus === 'accepted'
+              ? 'accepted'
+              : dto.acceptanceStatus === 'rejected'
+                ? 'rejected-recollection'
+                : dto.receivedAt
+                  ? 'received'
+                  : 'collected',
+        },
+        {
+          url: 'http://hospital-ehr.local/fhir/StructureDefinition/specimen-acceptance-status',
+          valueCode: dto.acceptanceStatus ?? 'pending',
+        },
+        ...(dto.rejectionReason
+          ? [
+              {
+                url: 'http://hospital-ehr.local/fhir/StructureDefinition/specimen-rejection-reason',
+                valueString: dto.rejectionReason.trim(),
+              },
+            ]
+          : []),
+        {
+          url: 'http://hospital-ehr.local/fhir/StructureDefinition/recollection-required',
+          valueBoolean:
+            dto.acceptanceStatus === 'rejected'
+              ? (dto.recollectionRequired ?? true)
+              : false,
+        },
+        ...(dto.receiverId || dto.receiverName
+          ? [
+              {
+                url: 'http://hospital-ehr.local/fhir/StructureDefinition/specimen-receiver',
+                valueReference: dto.receiverId
+                  ? {
+                      reference: `Practitioner/${dto.receiverId}`,
+                      display: dto.receiverName,
+                    }
+                  : { display: dto.receiverName },
+              },
+            ]
+          : []),
+      ],
+    };
+
+    const saved = await medplum.updateResource(updated);
+
+    return this.mapSpecimen(saved);
   }
-}
 
-private mapSpecimen(
-  specimen: Specimen,
-) {
-  const hospitalId =
-    specimen.extension
+  private async readSpecimen(specimenId: string): Promise<Specimen> {
+    if (!specimenId?.trim()) {
+      throw new BadRequestException('Specimen ID is required');
+    }
+
+    const medplum = this.medplumService.getClient();
+
+    try {
+      return await medplum.readResource('Specimen', specimenId);
+    } catch {
+      throw new NotFoundException('Specimen not found');
+    }
+  }
+
+  private mapSpecimen(specimen: Specimen) {
+    const hospitalId = specimen.extension
       ?.find(
         (extension) =>
           extension.url ===
           'http://hospital-ehr.local/fhir/StructureDefinition/hospital',
       )
-      ?.valueReference?.reference
-      ?.replace(
-        'Organization/',
-        '',
-      );
+      ?.valueReference?.reference?.replace('Organization/', '');
 
-  const encounterId =
-    specimen.extension
+    const encounterId = specimen.extension
       ?.find(
         (extension) =>
           extension.url ===
           'http://hospital-ehr.local/fhir/StructureDefinition/encounter',
       )
-      ?.valueReference?.reference
-      ?.replace(
-        'Encounter/',
-        '',
-      );
+      ?.valueReference?.reference?.replace('Encounter/', '');
 
-  return {
-    id: specimen.id,
+    return {
+      id: specimen.id,
 
-    resourceType:
-      specimen.resourceType,
+      resourceType: specimen.resourceType,
 
-    status:
-      specimen.status,
+      status: specimen.status,
 
-    accessionNumber:
-      specimen.identifier?.[0]?.value,
+      accessionNumber: specimen.identifier?.[0]?.value,
 
-    barcode: specimen.identifier?.find((identifier) => identifier.system === 'http://hospital-ehr.local/fhir/NamingSystem/specimen-barcode')?.value,
+      barcode: specimen.identifier?.find(
+        (identifier) =>
+          identifier.system ===
+          'http://hospital-ehr.local/fhir/NamingSystem/specimen-barcode',
+      )?.value,
 
-    workflowStatus: specimen.extension?.find((extension) => extension.url === 'http://hospital-ehr.local/fhir/StructureDefinition/specimen-workflow-status')?.valueCode,
+      workflowStatus: specimen.extension?.find(
+        (extension) =>
+          extension.url ===
+          'http://hospital-ehr.local/fhir/StructureDefinition/specimen-workflow-status',
+      )?.valueCode,
 
-    acceptanceStatus: specimen.extension?.find((extension) => extension.url === 'http://hospital-ehr.local/fhir/StructureDefinition/specimen-acceptance-status')?.valueCode,
+      acceptanceStatus: specimen.extension?.find(
+        (extension) =>
+          extension.url ===
+          'http://hospital-ehr.local/fhir/StructureDefinition/specimen-acceptance-status',
+      )?.valueCode,
 
-    rejectionReason: specimen.extension?.find((extension) => extension.url === 'http://hospital-ehr.local/fhir/StructureDefinition/specimen-rejection-reason')?.valueString,
+      rejectionReason: specimen.extension?.find(
+        (extension) =>
+          extension.url ===
+          'http://hospital-ehr.local/fhir/StructureDefinition/specimen-rejection-reason',
+      )?.valueString,
 
-    recollectionRequired: specimen.extension?.find((extension) => extension.url === 'http://hospital-ehr.local/fhir/StructureDefinition/recollection-required')?.valueBoolean,
+      recollectionRequired: specimen.extension?.find(
+        (extension) =>
+          extension.url ===
+          'http://hospital-ehr.local/fhir/StructureDefinition/recollection-required',
+      )?.valueBoolean,
 
-    specimenTypeCode:
-      specimen.type?.coding?.[0]?.code,
+      specimenTypeCode: specimen.type?.coding?.[0]?.code,
 
-    specimenTypeName:
-      specimen.type?.text ??
-      specimen.type?.coding?.[0]?.display,
+      specimenTypeName:
+        specimen.type?.text ?? specimen.type?.coding?.[0]?.display,
 
-    patientId:
-      this.extractReferenceId(
+      patientId: this.extractReferenceId(
         specimen.subject?.reference,
         'Patient',
       ),
 
-    orderId:
-      this.extractReferenceId(
+      orderId: this.extractReferenceId(
         specimen.request?.[0]?.reference,
         'ServiceRequest',
       ),
 
-    encounterId,
+      encounterId,
 
-    hospitalId,
+      hospitalId,
 
-    collectedAt:
-      specimen.collection
-        ?.collectedDateTime,
+      collectedAt: specimen.collection?.collectedDateTime,
 
-    collectorId:
-      this.extractReferenceId(
-        specimen.collection
-          ?.collector?.reference,
+      collectorId: this.extractReferenceId(
+        specimen.collection?.collector?.reference,
         'Practitioner',
       ),
 
-    collectorName:
-      specimen.collection
-        ?.collector?.display,
+      collectorName: specimen.collection?.collector?.display,
 
-    receivedAt:
-      specimen.receivedTime,
+      receivedAt: specimen.receivedTime,
 
-    notes:
-      specimen.note
-        ?.map((note) => note.text)
-        .filter(Boolean) ?? [],
-  };
-}
-
-private assertFinancialClearance(encounter: Encounter) {
-  const status = encounter.extension?.find((item) => item.url === 'https://hospital-ehr.local/fhir/StructureDefinition/financial-clearance-status')?.valueCode;
-  if (status && !['cleared', 'emergency-override'].includes(status)) {
-    throw new ConflictException({ message: 'Financial clearance is required before non-emergency services', code: 'FINANCIAL_CLEARANCE_REQUIRED', status });
+      notes: specimen.note?.map((note) => note.text).filter(Boolean) ?? [],
+    };
   }
-}
 
-private generateAccessionNumber() {
-  const now = new Date();
+  private assertFinancialClearance(encounter: Encounter) {
+    const status = encounter.extension?.find(
+      (item) =>
+        item.url ===
+        'https://hospital-ehr.local/fhir/StructureDefinition/financial-clearance-status',
+    )?.valueCode;
+    if (status && !['cleared', 'emergency-override'].includes(status)) {
+      throw new ConflictException({
+        message:
+          'Financial clearance is required before non-emergency services',
+        code: 'FINANCIAL_CLEARANCE_REQUIRED',
+        status,
+      });
+    }
+  }
 
-  const date =
-    `${now.getFullYear()}` +
-    `${String(
-      now.getMonth() + 1,
-    ).padStart(2, '0')}` +
-    `${String(
-      now.getDate(),
-    ).padStart(2, '0')}`;
+  private generateAccessionNumber() {
+    const now = new Date();
 
-  const random =
-    Math.floor(
-      100000 +
-      Math.random() * 900000,
-    );
+    const date =
+      `${now.getFullYear()}` +
+      `${String(now.getMonth() + 1).padStart(2, '0')}` +
+      `${String(now.getDate()).padStart(2, '0')}`;
 
-  return `LAB-${date}-${random}`;
-}
+    const random = Math.floor(100000 + Math.random() * 900000);
+
+    return `LAB-${date}-${random}`;
+  }
 }

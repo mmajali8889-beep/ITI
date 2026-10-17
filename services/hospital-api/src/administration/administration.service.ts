@@ -631,13 +631,18 @@ export class AdministrationService {
     roleCodes: string[],
   ): Promise<string[]> {
     const defaults = roleCodes.filter((role) => DEFAULT_ROLES.includes(role));
-    const customCodes = roleCodes.filter((role) => !DEFAULT_ROLES.includes(role));
+    const customCodes = roleCodes.filter(
+      (role) => !DEFAULT_ROLES.includes(role),
+    );
     const permissions = permissionsForRoles(defaults);
     if (customCodes.length) {
       const configured = await this.roles(hospitalId);
       for (const code of customCodes) {
-        const role = configured.items.find((item) => item.code === code && item.managed);
-        if (!role) throw new BadRequestException(`Unsupported job role: ${code}`);
+        const role = configured.items.find(
+          (item) => item.code === code && item.managed,
+        );
+        if (!role)
+          throw new BadRequestException(`Unsupported job role: ${code}`);
         permissions.push(...(role.permissions ?? []));
       }
     }

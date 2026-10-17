@@ -8,22 +8,13 @@ import {
   Query,
 } from '@nestjs/common';
 
-import {
-  ConditionsService,
-} from './conditions.service';
+import { ConditionsService } from './conditions.service';
 
-import {
-  CreateConditionDto,
-} from './dto/create-condition.dto';
+import { CreateConditionDto } from './dto/create-condition.dto';
 
-@Controller(
-  'api/conditions',
-)
+@Controller('api/conditions')
 export class ConditionsController {
-  constructor(
-    private readonly conditionsService:
-      ConditionsService,
-  ) {}
+  constructor(private readonly conditionsService: ConditionsService) {}
 
   // =====================================================
   // CREATE CONDITION
@@ -34,12 +25,9 @@ export class ConditionsController {
   @Post()
   create(
     @Body()
-    dto:
-      CreateConditionDto,
+    dto: CreateConditionDto,
   ) {
-    return this.conditionsService.create(
-      dto,
-    );
+    return this.conditionsService.create(dto);
   }
 
   // =====================================================
@@ -51,14 +39,10 @@ export class ConditionsController {
   @Get()
   findByEncounter(
     @Query('encounterId')
-    encounterId:
-      string,
+    encounterId: string,
     @Query('hospitalId') hospitalId: string,
   ) {
-    return this.conditionsService.findByEncounter(
-      encounterId,
-      hospitalId,
-    );
+    return this.conditionsService.findByEncounter(encounterId, hospitalId);
   }
 
   // =====================================================
@@ -67,19 +51,13 @@ export class ConditionsController {
   // GET /api/conditions/patient/:patientId
   // =====================================================
 
-  @Get(
-    'patient/:patientId',
-  )
+  @Get('patient/:patientId')
   findPatientProblems(
     @Param('patientId')
-    patientId:
-      string,
+    patientId: string,
     @Query('hospitalId') hospitalId: string,
   ) {
-    return this.conditionsService.findPatientProblems(
-      patientId,
-      hospitalId,
-    );
+    return this.conditionsService.findPatientProblems(patientId, hospitalId);
   }
 
   // =====================================================
@@ -88,19 +66,13 @@ export class ConditionsController {
   // GET /api/conditions/:conditionId
   // =====================================================
 
-  @Get(
-    ':conditionId',
-  )
+  @Get(':conditionId')
   findById(
     @Param('conditionId')
-    conditionId:
-      string,
+    conditionId: string,
     @Query('hospitalId') hospitalId: string,
   ) {
-    return this.conditionsService.findById(
-      conditionId,
-      hospitalId,
-    );
+    return this.conditionsService.findById(conditionId, hospitalId);
   }
 
   // =====================================================
@@ -109,18 +81,14 @@ export class ConditionsController {
   // PATCH /api/conditions/:conditionId/status
   // =====================================================
 
-  @Patch(
-    ':conditionId/status',
-  )
+  @Patch(':conditionId/status')
   updateStatus(
     @Param('conditionId')
-    conditionId:
-      string,
+    conditionId: string,
 
     @Body()
     body: {
-      clinicalStatus:
-        string;
+      clinicalStatus: string;
       hospitalId: string;
     },
   ) {

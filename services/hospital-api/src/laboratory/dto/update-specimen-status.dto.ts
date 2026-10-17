@@ -1,9 +1,5 @@
 export class UpdateSpecimenStatusDto {
-  status!:
-    | 'available'
-    | 'unavailable'
-    | 'unsatisfactory'
-    | 'entered-in-error';
+  status!: 'available' | 'unavailable' | 'unsatisfactory' | 'entered-in-error';
 
   receivedAt?: string;
 
@@ -18,4 +14,4 @@ export class UpdateSpecimenStatusDto {
   receiverName?: string;
 
   note?: string;
-} 
+}

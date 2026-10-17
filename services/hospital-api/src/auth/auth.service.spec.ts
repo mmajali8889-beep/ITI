@@ -5,7 +5,8 @@ describe('AuthService durable signed sessions', () => {
   const originalSecret = process.env.AUTH_SESSION_SECRET;
 
   beforeEach(() => {
-    process.env.AUTH_SESSION_SECRET = 'test-session-secret-that-is-longer-than-32-characters';
+    process.env.AUTH_SESSION_SECRET =
+      'test-session-secret-that-is-longer-than-32-characters';
   });
 
   afterAll(() => {
@@ -26,9 +27,11 @@ describe('AuthService durable signed sessions', () => {
       permissions: ['dashboard', 'nursing'],
       medplum: { signOut: jest.fn() },
     } as unknown as Omit<AuthSession, 'id'>;
-    return (service as unknown as {
-      createSessionToken(value: Omit<AuthSession, 'id'>): string;
-    }).createSessionToken(session);
+    return (
+      service as unknown as {
+        createSessionToken(value: Omit<AuthSession, 'id'>): string;
+      }
+    ).createSessionToken(session);
   }
 
   it('restores a valid session after the in-memory store is lost', () => {
@@ -45,7 +48,9 @@ describe('AuthService durable signed sessions', () => {
   it('rejects a tampered session token', () => {
     const token = issue(new AuthService());
     const [payload, signature] = token.split('.');
-    expect(new AuthService().getSession(`${payload}x.${signature}`)).toBeUndefined();
+    expect(
+      new AuthService().getSession(`${payload}x.${signature}`),
+    ).toBeUndefined();
   });
 
   it('revokes a session during logout', async () => {

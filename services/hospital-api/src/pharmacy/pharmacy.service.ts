@@ -29,7 +29,9 @@ const HOSPITAL = `${BASE}pharmacy-hospital`,
   RETURNED = `${BASE}returned-quantity`,
   ALLOCATIONS = `${BASE}batch-allocations`,
   RETURN_LOG = `${BASE}return-log`;
-const VERIFICATION = `${BASE}pharmacy-verification`, COUNSELING = `${BASE}patient-counseling`, WARD = `${BASE}ward-supply`;
+const VERIFICATION = `${BASE}pharmacy-verification`,
+  COUNSELING = `${BASE}patient-counseling`,
+  WARD = `${BASE}ward-supply`;
 @Injectable()
 export class PharmacyService {
   constructor(private readonly medplumService: MedplumService) {}
@@ -190,10 +192,7 @@ export class PharmacyService {
           const patientId = item.subject?.reference?.replace('Patient/', '');
           if (!patientName && patientId) {
             try {
-          const patient = await medplum.readResource(
-                'Patient',
-                patientId,
-              );
+              const patient = await medplum.readResource('Patient', patientId);
               patientName = patient.name?.[0]?.text;
             } catch {
               patientName = undefined;
@@ -217,18 +216,48 @@ export class PharmacyService {
   }
 
   async verifyPrescription(id: string, dto: VerifyPrescriptionDto) {
-    if (!dto.hospitalId || !dto.pharmacistName?.trim()) throw new BadRequestException('Hospital and pharmacist are required');
-    if (!['approved', 'rejected', 'clarification-required'].includes(dto.decision)) throw new BadRequestException('Invalid pharmacy verification decision');
-    if (dto.decision === 'approved' && (!dto.allergyChecked || !dto.interactionChecked || !dto.doseChecked || !dto.stockChecked)) {
-      throw new BadRequestException('Allergy, interaction, dose and stock checks are required before approval');
+    if (!dto.hospitalId || !dto.pharmacistName?.trim())
+      throw new BadRequestException('Hospital and pharmacist are required');
+    if (
+      !['approved', 'rejected', 'clarification-required'].includes(dto.decision)
+    )
+      throw new BadRequestException('Invalid pharmacy verification decision');
+    if (
+      dto.decision === 'approved' &&
+      (!dto.allergyChecked ||
+        !dto.interactionChecked ||
+        !dto.doseChecked ||
+        !dto.stockChecked)
+    ) {
+      throw new BadRequestException(
+        'Allergy, interaction, dose and stock checks are required before approval',
+      );
     }
-    if (dto.decision !== 'approved' && !dto.issues?.trim()) throw new BadRequestException('Clinical issue details are required');
+    if (dto.decision !== 'approved' && !dto.issues?.trim())
+      throw new BadRequestException('Clinical issue details are required');
     const request = await this.readRequest(id, dto.hospitalId);
-    if (this.verification(request)?.decision === 'approved') throw new ConflictException('Prescription is already clinically verified');
-    const record = { decision: dto.decision, allergyChecked: dto.allergyChecked, interactionChecked: dto.interactionChecked, doseChecked: dto.doseChecked, stockChecked: dto.stockChecked, pharmacistId: dto.pharmacistId, pharmacistName: dto.pharmacistName.trim(), issues: dto.issues?.trim(), verifiedAt: new Date().toISOString() };
-    request.extension = [...(request.extension ?? []).filter((item) => item.url !== VERIFICATION), { url: VERIFICATION, valueString: JSON.stringify(record) }];
+    if (this.verification(request)?.decision === 'approved')
+      throw new ConflictException(
+        'Prescription is already clinically verified',
+      );
+    const record = {
+      decision: dto.decision,
+      allergyChecked: dto.allergyChecked,
+      interactionChecked: dto.interactionChecked,
+      doseChecked: dto.doseChecked,
+      stockChecked: dto.stockChecked,
+      pharmacistId: dto.pharmacistId,
+      pharmacistName: dto.pharmacistName.trim(),
+      issues: dto.issues?.trim(),
+      verifiedAt: new Date().toISOString(),
+    };
+    request.extension = [
+      ...(request.extension ?? []).filter((item) => item.url !== VERIFICATION),
+      { url: VERIFICATION, valueString: JSON.stringify(record) },
+    ];
     if (dto.decision === 'rejected') request.status = 'stopped';
-    else if (dto.decision === 'clarification-required') request.status = 'on-hold';
+    else if (dto.decision === 'clarification-required')
+      request.status = 'on-hold';
     await this.medplumService.getClient().updateResource(request);
     return { medicationRequestId: id, ...record };
   }
@@ -246,7 +275,10 @@ export class PharmacyService {
       throw new BadRequestException(
         'Dispense quantity must be a positive whole number',
       );
-    if (!dto.wardId && !dto.wardName && !dto.counselingProvided) throw new BadRequestException('Patient counseling confirmation is required for outpatient dispensing');
+    if (!dto.wardId && !dto.wardName && !dto.counselingProvided)
+      throw new BadRequestException(
+        'Patient counseling confirmation is required for outpatient dispensing',
+      );
     const medplum = this.medplumService.getClient();
     let request: MedicationRequest;
     try {
@@ -263,7 +295,11 @@ export class PharmacyService {
     )
       throw new NotFoundException('Active prescription not found');
     const verification = this.verification(request);
-    if (verification?.decision !== 'approved') throw new ConflictException({ message: 'Clinical pharmacy verification is required before dispensing', code: 'PHARMACY_VERIFICATION_REQUIRED' });
+    if (verification?.decision !== 'approved')
+      throw new ConflictException({
+        message: 'Clinical pharmacy verification is required before dispensing',
+        code: 'PHARMACY_VERIFICATION_REQUIRED',
+      });
     const queue = await this.queue(dto.hospitalId);
     const row = queue.requests.find(
       (item) => item.id === dto.medicationRequestId,
@@ -343,8 +379,27 @@ export class PharmacyService {
         },
         { url: ALLOCATIONS, valueString: JSON.stringify(allocations) },
         { url: RETURNED, valueInteger: 0 },
-        { url: COUNSELING, valueString: JSON.stringify({ provided: dto.counselingProvided, notes: dto.counselingNotes?.trim(), at: new Date().toISOString() }) },
-        ...(dto.wardId || dto.wardName ? [{ url: WARD, valueReference: dto.wardId ? { reference: `Location/${dto.wardId}`, display: dto.wardName } : { display: dto.wardName } }] : []),
+        {
+          url: COUNSELING,
+          valueString: JSON.stringify({
+            provided: dto.counselingProvided,
+            notes: dto.counselingNotes?.trim(),
+            at: new Date().toISOString(),
+          }),
+        },
+        ...(dto.wardId || dto.wardName
+          ? [
+              {
+                url: WARD,
+                valueReference: dto.wardId
+                  ? {
+                      reference: `Location/${dto.wardId}`,
+                      display: dto.wardName,
+                    }
+                  : { display: dto.wardName },
+              },
+            ]
+          : []),
       ],
     };
     const created = await medplum.createResource<MedicationDispense>(dispense);
@@ -419,58 +474,272 @@ export class PharmacyService {
   }
 
   async emar(hospitalId: string, encounterId: string) {
-    if (!hospitalId || !encounterId) throw new BadRequestException('Hospital and encounter are required');
+    if (!hospitalId || !encounterId)
+      throw new BadRequestException('Hospital and encounter are required');
     const medplum = this.medplumService.getClient();
     let encounter: Encounter;
-    try { encounter = await medplum.readResource('Encounter', encounterId); } catch { throw new NotFoundException('Encounter not found'); }
-    if (encounter.serviceProvider?.reference !== `Organization/${hospitalId}`) throw new NotFoundException('Encounter not found');
+    try {
+      encounter = await medplum.readResource('Encounter', encounterId);
+    } catch {
+      throw new NotFoundException('Encounter not found');
+    }
+    if (encounter.serviceProvider?.reference !== `Organization/${hospitalId}`)
+      throw new NotFoundException('Encounter not found');
     const [requests, administrations] = await Promise.all([
-      medplum.searchResources('MedicationRequest', { encounter: `Encounter/${encounterId}`, _count: '500' }),
-      medplum.searchResources('MedicationAdministration', { context: `Encounter/${encounterId}`, _count: '1000' }),
+      medplum.searchResources('MedicationRequest', {
+        encounter: `Encounter/${encounterId}`,
+        _count: '500',
+      }),
+      medplum.searchResources('MedicationAdministration', {
+        context: `Encounter/${encounterId}`,
+        _count: '1000',
+      }),
     ]);
-    const orders = requests.filter((item) => this.requestHospitalId(item) === hospitalId).map((item) => ({ ...this.mapRequest(item), pharmacyVerification: this.verification(item) }));
-    const administrationsMapped = administrations.filter((item) => item.extension?.some((ext) => ext.url === HOSPITAL && ext.valueReference?.reference === `Organization/${hospitalId}`)).map((item) => this.mapAdministration(item));
-    return { hospitalId, encounterId, orders, administrations: administrationsMapped };
+    const orders = requests
+      .filter((item) => this.requestHospitalId(item) === hospitalId)
+      .map((item) => ({
+        ...this.mapRequest(item),
+        pharmacyVerification: this.verification(item),
+      }));
+    const administrationsMapped = administrations
+      .filter((item) =>
+        item.extension?.some(
+          (ext) =>
+            ext.url === HOSPITAL &&
+            ext.valueReference?.reference === `Organization/${hospitalId}`,
+        ),
+      )
+      .map((item) => this.mapAdministration(item));
+    return {
+      hospitalId,
+      encounterId,
+      orders,
+      administrations: administrationsMapped,
+    };
   }
 
   async administer(dto: AdministerMedicationDto) {
-    for (const field of ['hospitalId', 'medicationRequestId', 'patientId', 'encounterId', 'status', 'nurseName'] as const) if (!String(dto[field] ?? '').trim()) throw new BadRequestException(`${field} is required`);
-    if (!['given', 'held', 'refused', 'missed'].includes(dto.status)) throw new BadRequestException('Invalid administration outcome');
-    if (dto.status !== 'given' && !dto.reason?.trim()) throw new BadRequestException('Reason is required when medication is not given');
-    if (dto.status === 'given' && (!dto.patientBarcode?.trim() || !dto.medicationBarcode?.trim())) throw new BadRequestException('Patient and medication barcode scans are required before administration');
+    for (const field of [
+      'hospitalId',
+      'medicationRequestId',
+      'patientId',
+      'encounterId',
+      'status',
+      'nurseName',
+    ] as const)
+      if (!String(dto[field] ?? '').trim())
+        throw new BadRequestException(`${field} is required`);
+    if (!['given', 'held', 'refused', 'missed'].includes(dto.status))
+      throw new BadRequestException('Invalid administration outcome');
+    if (dto.status !== 'given' && !dto.reason?.trim())
+      throw new BadRequestException(
+        'Reason is required when medication is not given',
+      );
+    if (
+      dto.status === 'given' &&
+      (!dto.patientBarcode?.trim() || !dto.medicationBarcode?.trim())
+    )
+      throw new BadRequestException(
+        'Patient and medication barcode scans are required before administration',
+      );
     const medplum = this.medplumService.getClient();
-    const request = await this.readRequest(dto.medicationRequestId, dto.hospitalId);
-    if (request.subject?.reference !== `Patient/${dto.patientId}` || request.encounter?.reference !== `Encounter/${dto.encounterId}`) throw new NotFoundException('Medication order not found');
-    if (this.verification(request)?.decision !== 'approved') throw new ConflictException('Pharmacist verification is required before administration');
-    const dispenses = await medplum.searchResources('MedicationDispense', { prescription: `MedicationRequest/${dto.medicationRequestId}`, _count: '100' });
-    const supplied = dispenses.filter((item) => this.dispenseHospitalId(item) === dto.hospitalId && item.status === 'completed');
-    if (supplied.length === 0) throw new ConflictException('Medication must be supplied before administration');
+    const request = await this.readRequest(
+      dto.medicationRequestId,
+      dto.hospitalId,
+    );
+    if (
+      request.subject?.reference !== `Patient/${dto.patientId}` ||
+      request.encounter?.reference !== `Encounter/${dto.encounterId}`
+    )
+      throw new NotFoundException('Medication order not found');
+    if (this.verification(request)?.decision !== 'approved')
+      throw new ConflictException(
+        'Pharmacist verification is required before administration',
+      );
+    const dispenses = await medplum.searchResources('MedicationDispense', {
+      prescription: `MedicationRequest/${dto.medicationRequestId}`,
+      _count: '100',
+    });
+    const supplied = dispenses.filter(
+      (item) =>
+        this.dispenseHospitalId(item) === dto.hospitalId &&
+        item.status === 'completed',
+    );
+    if (supplied.length === 0)
+      throw new ConflictException(
+        'Medication must be supplied before administration',
+      );
     if (dto.status === 'given') {
-      const patient: Patient = await medplum.readResource('Patient', dto.patientId);
-      if (!patient.identifier?.some((identifier) => identifier.value === dto.patientBarcode?.trim())) throw new ConflictException({ message: 'Patient barcode does not match', code: 'BCMA_PATIENT_MISMATCH' });
-      const allocatedIds = supplied.flatMap((item) => this.allocations(item).map((allocation) => allocation.medicationId));
-      const batches: Medication[] = await Promise.all(allocatedIds.map((id) => medplum.readResource('Medication', id)));
-      if (!batches.some((item) => item.identifier?.some((identifier) => identifier.value === dto.medicationBarcode?.trim()))) throw new ConflictException({ message: 'Medication barcode does not match supplied medication', code: 'BCMA_MEDICATION_MISMATCH' });
+      const patient: Patient = await medplum.readResource(
+        'Patient',
+        dto.patientId,
+      );
+      if (
+        !patient.identifier?.some(
+          (identifier) => identifier.value === dto.patientBarcode?.trim(),
+        )
+      )
+        throw new ConflictException({
+          message: 'Patient barcode does not match',
+          code: 'BCMA_PATIENT_MISMATCH',
+        });
+      const allocatedIds = supplied.flatMap((item) =>
+        this.allocations(item).map((allocation) => allocation.medicationId),
+      );
+      const batches: Medication[] = await Promise.all(
+        allocatedIds.map((id) => medplum.readResource('Medication', id)),
+      );
+      if (
+        !batches.some((item) =>
+          item.identifier?.some(
+            (identifier) => identifier.value === dto.medicationBarcode?.trim(),
+          ),
+        )
+      )
+        throw new ConflictException({
+          message: 'Medication barcode does not match supplied medication',
+          code: 'BCMA_MEDICATION_MISMATCH',
+        });
     }
     const occurred = dto.administeredAt ?? new Date().toISOString();
     const resource: MedicationAdministration = {
       resourceType: 'MedicationAdministration',
-      status: dto.status === 'given' ? 'completed' : dto.status === 'held' ? 'on-hold' : 'not-done',
+      status:
+        dto.status === 'given'
+          ? 'completed'
+          : dto.status === 'held'
+            ? 'on-hold'
+            : 'not-done',
       statusReason: dto.reason ? [{ text: dto.reason.trim() }] : undefined,
       medicationCodeableConcept: request.medicationCodeableConcept,
-      subject: { reference: `Patient/${dto.patientId}` }, context: { reference: `Encounter/${dto.encounterId}` },
+      subject: { reference: `Patient/${dto.patientId}` },
+      context: { reference: `Encounter/${dto.encounterId}` },
       effectiveDateTime: occurred,
       request: { reference: `MedicationRequest/${dto.medicationRequestId}` },
-      performer: [{ actor: dto.nurseId ? { reference: `Practitioner/${dto.nurseId}`, display: dto.nurseName.trim() } : { display: dto.nurseName.trim() } }],
-      dosage: dto.status === 'given' ? { route: dto.route ? { text: dto.route.trim() } : undefined, dose: dto.dose !== undefined ? { value: dto.dose, unit: dto.doseUnit } : undefined } : undefined,
+      performer: [
+        {
+          actor: dto.nurseId
+            ? {
+                reference: `Practitioner/${dto.nurseId}`,
+                display: dto.nurseName.trim(),
+              }
+            : { display: dto.nurseName.trim() },
+        },
+      ],
+      dosage:
+        dto.status === 'given'
+          ? {
+              route: dto.route ? { text: dto.route.trim() } : undefined,
+              dose:
+                dto.dose !== undefined
+                  ? { value: dto.dose, unit: dto.doseUnit }
+                  : undefined,
+            }
+          : undefined,
       note: dto.notes?.trim() ? [{ text: dto.notes.trim() }] : undefined,
-      extension: [{ url: HOSPITAL, valueReference: { reference: `Organization/${dto.hospitalId}` } }, { url: `${BASE}emar-outcome`, valueCode: dto.status }, ...(dto.scheduledAt ? [{ url: `${BASE}scheduled-administration-time`, valueDateTime: dto.scheduledAt }] : []), ...(dto.patientBarcode ? [{ url: `${BASE}bcma-patient-barcode`, valueString: dto.patientBarcode.trim() }] : []), ...(dto.medicationBarcode ? [{ url: `${BASE}bcma-medication-barcode`, valueString: dto.medicationBarcode.trim() }] : [])],
+      extension: [
+        {
+          url: HOSPITAL,
+          valueReference: { reference: `Organization/${dto.hospitalId}` },
+        },
+        { url: `${BASE}emar-outcome`, valueCode: dto.status },
+        ...(dto.scheduledAt
+          ? [
+              {
+                url: `${BASE}scheduled-administration-time`,
+                valueDateTime: dto.scheduledAt,
+              },
+            ]
+          : []),
+        ...(dto.patientBarcode
+          ? [
+              {
+                url: `${BASE}bcma-patient-barcode`,
+                valueString: dto.patientBarcode.trim(),
+              },
+            ]
+          : []),
+        ...(dto.medicationBarcode
+          ? [
+              {
+                url: `${BASE}bcma-medication-barcode`,
+                valueString: dto.medicationBarcode.trim(),
+              },
+            ]
+          : []),
+      ],
     };
-    return this.mapAdministration(await medplum.createResource<MedicationAdministration>(resource));
+    return this.mapAdministration(
+      await medplum.createResource<MedicationAdministration>(resource),
+    );
   }
-  private async readRequest(id: string, hospitalId: string) { let request: MedicationRequest; try { request = await this.medplumService.getClient().readResource('MedicationRequest', id); } catch { throw new NotFoundException('Prescription not found'); } if (this.requestHospitalId(request) !== hospitalId) throw new NotFoundException('Prescription not found'); return request; }
-  private verification(item: MedicationRequest) { try { return JSON.parse(item.extension?.find((ext) => ext.url === VERIFICATION)?.valueString ?? 'null') as { decision?: string; allergyChecked?: boolean; interactionChecked?: boolean; doseChecked?: boolean; stockChecked?: boolean; pharmacistName?: string; verifiedAt?: string } | null; } catch { return null; } }
-  private mapAdministration(item: MedicationAdministration) { return { id: item.id, status: item.extension?.find((ext) => ext.url === `${BASE}emar-outcome`)?.valueCode, fhirStatus: item.status, patientId: item.subject.reference?.replace('Patient/', ''), encounterId: item.context?.reference?.replace('Encounter/', ''), medicationRequestId: item.request?.reference?.replace('MedicationRequest/', ''), medicationName: item.medicationCodeableConcept?.text, nurseId: item.performer?.[0]?.actor.reference?.replace('Practitioner/', ''), nurseName: item.performer?.[0]?.actor.display, scheduledAt: item.extension?.find((ext) => ext.url === `${BASE}scheduled-administration-time`)?.valueDateTime, administeredAt: item.effectiveDateTime, reason: item.statusReason?.[0]?.text, dose: item.dosage?.dose?.value, doseUnit: item.dosage?.dose?.unit, route: item.dosage?.route?.text, bcmaVerified: Boolean(item.extension?.find((ext) => ext.url === `${BASE}bcma-patient-barcode`) && item.extension?.find((ext) => ext.url === `${BASE}bcma-medication-barcode`)) }; }
+  private async readRequest(id: string, hospitalId: string) {
+    let request: MedicationRequest;
+    try {
+      request = await this.medplumService
+        .getClient()
+        .readResource('MedicationRequest', id);
+    } catch {
+      throw new NotFoundException('Prescription not found');
+    }
+    if (this.requestHospitalId(request) !== hospitalId)
+      throw new NotFoundException('Prescription not found');
+    return request;
+  }
+  private verification(item: MedicationRequest) {
+    try {
+      return JSON.parse(
+        item.extension?.find((ext) => ext.url === VERIFICATION)?.valueString ??
+          'null',
+      ) as {
+        decision?: string;
+        allergyChecked?: boolean;
+        interactionChecked?: boolean;
+        doseChecked?: boolean;
+        stockChecked?: boolean;
+        pharmacistName?: string;
+        verifiedAt?: string;
+      } | null;
+    } catch {
+      return null;
+    }
+  }
+  private mapAdministration(item: MedicationAdministration) {
+    return {
+      id: item.id,
+      status: item.extension?.find((ext) => ext.url === `${BASE}emar-outcome`)
+        ?.valueCode,
+      fhirStatus: item.status,
+      patientId: item.subject.reference?.replace('Patient/', ''),
+      encounterId: item.context?.reference?.replace('Encounter/', ''),
+      medicationRequestId: item.request?.reference?.replace(
+        'MedicationRequest/',
+        '',
+      ),
+      medicationName: item.medicationCodeableConcept?.text,
+      nurseId: item.performer?.[0]?.actor.reference?.replace(
+        'Practitioner/',
+        '',
+      ),
+      nurseName: item.performer?.[0]?.actor.display,
+      scheduledAt: item.extension?.find(
+        (ext) => ext.url === `${BASE}scheduled-administration-time`,
+      )?.valueDateTime,
+      administeredAt: item.effectiveDateTime,
+      reason: item.statusReason?.[0]?.text,
+      dose: item.dosage?.dose?.value,
+      doseUnit: item.dosage?.dose?.unit,
+      route: item.dosage?.route?.text,
+      bcmaVerified: Boolean(
+        item.extension?.find(
+          (ext) => ext.url === `${BASE}bcma-patient-barcode`,
+        ) &&
+        item.extension?.find(
+          (ext) => ext.url === `${BASE}bcma-medication-barcode`,
+        ),
+      ),
+    };
+  }
   private hospitalId(item: Medication) {
     return item.extension
       ?.find((ext) => ext.url === HOSPITAL)
@@ -570,8 +839,18 @@ export class PharmacyService {
       pharmacistName: item.performer?.[0]?.actor?.display,
       whenHandedOver: item.whenHandedOver,
       notes: item.note?.[0]?.text,
-      counseling: (() => { try { return JSON.parse(item.extension?.find((ext) => ext.url === COUNSELING)?.valueString ?? 'null'); } catch { return null; } })(),
-      wardName: item.extension?.find((ext) => ext.url === WARD)?.valueReference?.display,
+      counseling: (() => {
+        try {
+          return JSON.parse(
+            item.extension?.find((ext) => ext.url === COUNSELING)
+              ?.valueString ?? 'null',
+          );
+        } catch {
+          return null;
+        }
+      })(),
+      wardName: item.extension?.find((ext) => ext.url === WARD)?.valueReference
+        ?.display,
     };
   }
 }

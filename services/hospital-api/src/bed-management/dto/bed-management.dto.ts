@@ -1,1 +1,17 @@
-export type BedState='available'|'occupied'|'reserved'|'cleaning'|'dirty'|'blocked'|'maintenance'|'isolation';export class UpdateBedStateDto{hospitalId!:string;state!:BedState;actorName!:string;reason?:string;patientId?:string;encounterId?:string;}
+export type BedState =
+  | 'available'
+  | 'occupied'
+  | 'reserved'
+  | 'cleaning'
+  | 'dirty'
+  | 'blocked'
+  | 'maintenance'
+  | 'isolation';
+export class UpdateBedStateDto {
+  hospitalId!: string;
+  state!: BedState;
+  actorName!: string;
+  reason?: string;
+  patientId?: string;
+  encounterId?: string;
+}

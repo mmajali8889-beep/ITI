@@ -1,26 +1,14 @@
-import {
-  Module,
-} from '@nestjs/common';
+import { Module } from '@nestjs/common';
 
-import {
-  ConditionsController,
-} from './conditions.controller';
+import { ConditionsController } from './conditions.controller';
 
-import {
-  ConditionsService,
-} from './conditions.service';
+import { ConditionsService } from './conditions.service';
 
 @Module({
-  controllers: [
-    ConditionsController,
-  ],
+  controllers: [ConditionsController],
 
-  providers: [
-    ConditionsService,
-  ],
+  providers: [ConditionsService],
 
-  exports: [
-    ConditionsService,
-  ],
+  exports: [ConditionsService],
 })
 export class ConditionsModule {}

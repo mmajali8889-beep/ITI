@@ -12,7 +12,9 @@ function fakeMedplum() {
     async createResourceIfNoneExist(resource: Basic, query: string) {
       if (client.failCreate) throw new Error('Medplum unavailable');
       const value = decodeURIComponent(query.split('|').pop() ?? '');
-      const existing = [...store.values()].find((item) => item.identifier?.some((id) => id.value === value));
+      const existing = [...store.values()].find((item) =>
+        item.identifier?.some((id) => id.value === value),
+      );
       if (existing) return existing;
       const created = { ...resource, id: `basic-${++seq}` };
       store.set(created.id, created);
@@ -32,17 +34,26 @@ function issue(service: AuthService, expiresAt = Date.now() + 60_000): string {
   const session = {
     hospitalId: 'hospital-a',
     expiresAt,
-    profile: { resourceType: 'Practitioner', id: 'practitioner-1', name: [{ text: 'UAT Nurse' }] },
+    profile: {
+      resourceType: 'Practitioner',
+      id: 'practitioner-1',
+      name: [{ text: 'UAT Nurse' }],
+    },
     roles: ['nurse'],
     permissions: ['dashboard'],
     medplum: { signOut: jest.fn().mockResolvedValue(undefined) },
   } as unknown as Omit<AuthSession, 'id'>;
-  return (service as unknown as { createSessionToken(value: Omit<AuthSession, 'id'>): string }).createSessionToken(session);
+  return (
+    service as unknown as {
+      createSessionToken(value: Omit<AuthSession, 'id'>): string;
+    }
+  ).createSessionToken(session);
 }
 
 describe('AuthService persisted session revocation (24.3)', () => {
   beforeEach(() => {
-    process.env.AUTH_SESSION_SECRET = 'test-session-secret-that-is-longer-than-32-characters';
+    process.env.AUTH_SESSION_SECRET =
+      'test-session-secret-that-is-longer-than-32-characters';
     delete process.env.AUTH_DEV_ADMIN_ENABLED;
   });
 
@@ -74,7 +85,12 @@ describe('AuthService persisted session revocation (24.3)', () => {
     const service = new AuthService(medplum.service);
     await service.logout(issue(service, Date.now() + 60_000));
     const [entry] = medplum.client.store.values();
-    entry.extension = [{ url: entry.extension![0].url, valueDateTime: new Date(Date.now() - 1000).toISOString() }];
+    entry.extension = [
+      {
+        url: entry.extension![0].url,
+        valueDateTime: new Date(Date.now() - 1000).toISOString(),
+      },
+    ];
     await new AuthService(medplum.service).loadRevocations();
     expect(medplum.client.store.size).toBe(0);
   });
@@ -91,13 +107,20 @@ describe('AuthService persisted session revocation (24.3)', () => {
 
 describe('Development admin login (24.6)', () => {
   const env = { ...process.env };
-  afterEach(() => { process.env = { ...env }; });
+  afterEach(() => {
+    process.env = { ...env };
+  });
 
   const matches = (service: AuthService, u: string, p: string) =>
-    (service as unknown as { matchesDevelopmentAdmin(u: string, p: string): boolean }).matchesDevelopmentAdmin(u, p);
+    (
+      service as unknown as {
+        matchesDevelopmentAdmin(u: string, p: string): boolean;
+      }
+    ).matchesDevelopmentAdmin(u, p);
 
   beforeEach(() => {
-    process.env.AUTH_SESSION_SECRET = 'test-session-secret-that-is-longer-than-32-characters';
+    process.env.AUTH_SESSION_SECRET =
+      'test-session-secret-that-is-longer-than-32-characters';
     delete process.env.AUTH_DEV_ADMIN_ENABLED;
     delete process.env.DEV_ADMIN_USERNAME;
     delete process.env.DEV_ADMIN_PASSWORD;
@@ -114,7 +137,11 @@ describe('Development admin login (24.6)', () => {
   });
 
   it('accepts only the configured credentials when enabled', () => {
-    Object.assign(process.env, { AUTH_DEV_ADMIN_ENABLED: 'true', DEV_ADMIN_USERNAME: 'local-admin', DEV_ADMIN_PASSWORD: 'Local-Only-Pass1' });
+    Object.assign(process.env, {
+      AUTH_DEV_ADMIN_ENABLED: 'true',
+      DEV_ADMIN_USERNAME: 'local-admin',
+      DEV_ADMIN_PASSWORD: 'Local-Only-Pass1',
+    });
     const service = new AuthService();
     expect(matches(service, 'local-admin', 'Local-Only-Pass1')).toBe(true);
     expect(matches(service, 'local-admin', 'wrong')).toBe(false);
@@ -122,8 +149,20 @@ describe('Development admin login (24.6)', () => {
   });
 
   it('refuses to start in production with the dev login enabled', () => {
-    expect(() => assertDevAdminConfiguration({ NODE_ENV: 'production', AUTH_DEV_ADMIN_ENABLED: 'true' })).toThrow(/must not be set/);
-    expect(() => assertDevAdminConfiguration({ NODE_ENV: 'production' })).not.toThrow();
-    expect(() => assertDevAdminConfiguration({ NODE_ENV: 'development', AUTH_DEV_ADMIN_ENABLED: 'true' })).not.toThrow();
+    expect(() =>
+      assertDevAdminConfiguration({
+        NODE_ENV: 'production',
+        AUTH_DEV_ADMIN_ENABLED: 'true',
+      }),
+    ).toThrow(/must not be set/);
+    expect(() =>
+      assertDevAdminConfiguration({ NODE_ENV: 'production' }),
+    ).not.toThrow();
+    expect(() =>
+      assertDevAdminConfiguration({
+        NODE_ENV: 'development',
+        AUTH_DEV_ADMIN_ENABLED: 'true',
+      }),
+    ).not.toThrow();
   });
 });

@@ -4,15 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import type {
-  DocumentReference,
-  Encounter,
-  Patient,
-} from '@medplum/fhirtypes';
+import type { DocumentReference, Encounter, Patient } from '@medplum/fhirtypes';
 
-import {
-  MedplumService,
-} from '../medplum/medplum.service';
+import { MedplumService } from '../medplum/medplum.service';
 
 import {
   CreateAddendumDto,
@@ -56,247 +50,154 @@ interface ClinicalNoteContent {
 
 @Injectable()
 export class ClinicalNotesService {
-  constructor(
-    private readonly medplumService:
-      MedplumService,
-  ) {}
+  constructor(private readonly medplumService: MedplumService) {}
 
   /* =====================================================
      CREATE DRAFT
   ===================================================== */
 
-  async create(
-    dto: CreateClinicalNoteDto,
-  ) {
-    const medplum =
-      this.medplumService.getClient();
+  async create(dto: CreateClinicalNoteDto) {
+    const medplum = this.medplumService.getClient();
 
-    await this.validateContext(
-      dto.patientId,
-      dto.encounterId,
-      dto.hospitalId,
-    );
+    await this.validateContext(dto.patientId, dto.encounterId, dto.hospitalId);
 
-    const now =
-      new Date().toISOString();
+    const now = new Date().toISOString();
 
-    const content:
-      ClinicalNoteContent = {
-        noteType:
-          dto.noteType ??
-          'progress',
+    const content: ClinicalNoteContent = {
+      noteType: dto.noteType ?? 'progress',
 
-        status:
-          'draft',
+      status: 'draft',
 
-        chiefComplaint:
-          dto.chiefComplaint?.trim(),
+      chiefComplaint: dto.chiefComplaint?.trim(),
 
-        historyPresentIllness:
-          dto.historyPresentIllness?.trim(),
+      historyPresentIllness: dto.historyPresentIllness?.trim(),
 
-        reviewOfSystems:
-          dto.reviewOfSystems?.trim(),
+      reviewOfSystems: dto.reviewOfSystems?.trim(),
 
-        physicalExamination:
-          dto.physicalExamination?.trim(),
+      physicalExamination: dto.physicalExamination?.trim(),
 
-        assessment:
-          dto.assessment?.trim(),
+      assessment: dto.assessment?.trim(),
 
-        plan:
-          dto.plan?.trim(),
+      plan: dto.plan?.trim(),
 
-        progressNote:
-          dto.progressNote?.trim(),
+      progressNote: dto.progressNote?.trim(),
 
-        createdAt:
-          now,
+      createdAt: now,
 
-        updatedAt:
-          now,
+      updatedAt: now,
 
-        practitionerId:
-          dto.practitionerId,
+      practitionerId: dto.practitionerId,
 
-        practitionerName:
-          dto.practitionerName,
-      };
+      practitionerName: dto.practitionerName,
+    };
 
-    const document:
-      DocumentReference = {
-        resourceType:
-          'DocumentReference',
+    const document: DocumentReference = {
+      resourceType: 'DocumentReference',
 
-        status:
-          'current',
+      status: 'current',
 
-        type: {
-          coding: [
-            {
-              system:
-                'http://loinc.org',
-
-              code:
-                '11506-3',
-
-              display:
-                'Progress note',
-            },
-          ],
-
-          text:
-            this.getNoteTypeDisplay(
-              content.noteType,
-            ),
-        },
-
-        subject: {
-          reference:
-            `Patient/${dto.patientId}`,
-        },
-
-        context: {
-          encounter: [
-            {
-              reference:
-                `Encounter/${dto.encounterId}`,
-            },
-          ],
-
-          related: [
-            {
-              reference:
-                `Organization/${dto.hospitalId}`,
-            },
-          ],
-        },
-
-        date:
-          now,
-
-        author:
-          dto.practitionerId
-            ? [
-                {
-                  reference:
-                    `Practitioner/${dto.practitionerId}`,
-
-                  display:
-                    dto.practitionerName,
-                },
-              ]
-            : dto.practitionerName
-              ? [
-                  {
-                    display:
-                      dto.practitionerName,
-                  },
-                ]
-              : undefined,
-
-        description:
-          this.getNoteTypeDisplay(
-            content.noteType,
-          ),
-
-        content: [
+      type: {
+        coding: [
           {
-            attachment: {
-              contentType:
-                'application/json',
+            system: 'http://loinc.org',
 
-              data:
-                this.encodeContent(
-                  content,
-                ),
+            code: '11506-3',
 
-              title:
-                this.getNoteTypeDisplay(
-                  content.noteType,
-                ),
-
-              creation:
-                now,
-            },
+            display: 'Progress note',
           },
         ],
-      };
 
-    const created =
-      await medplum.createResource<DocumentReference>(
-        document,
-      );
+        text: this.getNoteTypeDisplay(content.noteType),
+      },
 
-    return this.mapNote(
-      created,
-    );
+      subject: {
+        reference: `Patient/${dto.patientId}`,
+      },
+
+      context: {
+        encounter: [
+          {
+            reference: `Encounter/${dto.encounterId}`,
+          },
+        ],
+
+        related: [
+          {
+            reference: `Organization/${dto.hospitalId}`,
+          },
+        ],
+      },
+
+      date: now,
+
+      author: dto.practitionerId
+        ? [
+            {
+              reference: `Practitioner/${dto.practitionerId}`,
+
+              display: dto.practitionerName,
+            },
+          ]
+        : dto.practitionerName
+          ? [
+              {
+                display: dto.practitionerName,
+              },
+            ]
+          : undefined,
+
+      description: this.getNoteTypeDisplay(content.noteType),
+
+      content: [
+        {
+          attachment: {
+            contentType: 'application/json',
+
+            data: this.encodeContent(content),
+
+            title: this.getNoteTypeDisplay(content.noteType),
+
+            creation: now,
+          },
+        },
+      ],
+    };
+
+    const created = await medplum.createResource<DocumentReference>(document);
+
+    return this.mapNote(created);
   }
 
   /* =====================================================
      GET ENCOUNTER NOTES
   ===================================================== */
 
-  async findByEncounter(
-    encounterId: string,
-  ) {
+  async findByEncounter(encounterId: string) {
     if (!encounterId) {
-      throw new BadRequestException(
-        'Encounter ID is required',
-      );
+      throw new BadRequestException('Encounter ID is required');
     }
 
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
-    const result =
-      await medplum.searchResources(
-        'DocumentReference',
-        {
-          encounter:
-            `Encounter/${encounterId}`,
+    const result = await medplum.searchResources('DocumentReference', {
+      encounter: `Encounter/${encounterId}`,
 
-          _count:
-            '200',
-        },
+      _count: '200',
+    });
+
+    const documents: DocumentReference[] = [...result];
+
+    const notes = documents
+      .filter((document) => this.isClinicalNote(document))
+      .map((document) => this.mapNote(document))
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt ?? b.createdAt ?? 0).getTime() -
+          new Date(a.updatedAt ?? a.createdAt ?? 0).getTime(),
       );
 
-    const documents:
-      DocumentReference[] = [
-        ...result,
-      ];
-
-    const notes =
-      documents
-        .filter(
-          (document) =>
-            this.isClinicalNote(
-              document,
-            ),
-        )
-        .map(
-          (document) =>
-            this.mapNote(
-              document,
-            ),
-        )
-        .sort(
-          (a, b) =>
-            new Date(
-              b.updatedAt ??
-                b.createdAt ??
-                0,
-            ).getTime() -
-            new Date(
-              a.updatedAt ??
-                a.createdAt ??
-                0,
-            ).getTime(),
-        );
-
     return {
-      total:
-        notes.length,
+      total: notes.length,
 
       notes,
     };
@@ -306,77 +207,38 @@ export class ClinicalNotesService {
      GET PATIENT NOTES
   ===================================================== */
 
-  async findByPatient(
-    patientId: string,
-  ) {
+  async findByPatient(patientId: string) {
     if (!patientId) {
-      throw new BadRequestException(
-        'Patient ID is required',
-      );
+      throw new BadRequestException('Patient ID is required');
     }
 
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
     try {
-      await medplum.readResource(
-        'Patient',
-        patientId,
-      );
+      await medplum.readResource('Patient', patientId);
     } catch {
-      throw new NotFoundException(
-        'Patient not found',
-      );
+      throw new NotFoundException('Patient not found');
     }
 
-    const result =
-      await medplum.searchResources(
-        'DocumentReference',
-        {
-          subject:
-            `Patient/${patientId}`,
+    const result = await medplum.searchResources('DocumentReference', {
+      subject: `Patient/${patientId}`,
 
-          _count:
-            '500',
-        },
+      _count: '500',
+    });
+
+    const documents: DocumentReference[] = [...result];
+
+    const notes = documents
+      .filter((document) => this.isClinicalNote(document))
+      .map((document) => this.mapNote(document))
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt ?? b.createdAt ?? 0).getTime() -
+          new Date(a.updatedAt ?? a.createdAt ?? 0).getTime(),
       );
 
-    const documents:
-      DocumentReference[] = [
-        ...result,
-      ];
-
-    const notes =
-      documents
-        .filter(
-          (document) =>
-            this.isClinicalNote(
-              document,
-            ),
-        )
-        .map(
-          (document) =>
-            this.mapNote(
-              document,
-            ),
-        )
-        .sort(
-          (a, b) =>
-            new Date(
-              b.updatedAt ??
-                b.createdAt ??
-                0,
-            ).getTime() -
-            new Date(
-              a.updatedAt ??
-                a.createdAt ??
-                0,
-            ).getTime(),
-        );
-
     return {
-      total:
-        notes.length,
+      total: notes.length,
 
       notes,
     };
@@ -386,404 +248,248 @@ export class ClinicalNotesService {
      GET NOTE
   ===================================================== */
 
-  async findById(
-    noteId: string,
-  ) {
-    const document =
-      await this.readNote(
-        noteId,
-      );
+  async findById(noteId: string) {
+    const document = await this.readNote(noteId);
 
-    return this.mapNote(
-      document,
-    );
+    return this.mapNote(document);
   }
 
   /* =====================================================
      UPDATE DRAFT
   ===================================================== */
 
-  async update(
-    noteId: string,
-    dto: UpdateClinicalNoteDto,
-  ) {
-    const medplum =
-      this.medplumService.getClient();
+  async update(noteId: string, dto: UpdateClinicalNoteDto) {
+    const medplum = this.medplumService.getClient();
 
-    const document =
-      await this.readNote(
-        noteId,
-      );
+    const document = await this.readNote(noteId);
 
-    const content =
-      this.getContent(
-        document,
-      );
+    const content = this.getContent(document);
 
-    if (
-      content.status ===
-      'signed'
-    ) {
+    if (content.status === 'signed') {
       throw new BadRequestException(
         'Signed clinical notes cannot be modified. Create an addendum instead.',
       );
     }
 
-    content.chiefComplaint =
-      this.updateText(
-        dto.chiefComplaint,
-        content.chiefComplaint,
-      );
-
-    content.historyPresentIllness =
-      this.updateText(
-        dto.historyPresentIllness,
-        content.historyPresentIllness,
-      );
-
-    content.reviewOfSystems =
-      this.updateText(
-        dto.reviewOfSystems,
-        content.reviewOfSystems,
-      );
-
-    content.physicalExamination =
-      this.updateText(
-        dto.physicalExamination,
-        content.physicalExamination,
-      );
-
-    content.assessment =
-      this.updateText(
-        dto.assessment,
-        content.assessment,
-      );
-
-    content.plan =
-      this.updateText(
-        dto.plan,
-        content.plan,
-      );
-
-    content.progressNote =
-      this.updateText(
-        dto.progressNote,
-        content.progressNote,
-      );
-
-    content.updatedAt =
-      new Date().toISOString();
-
-    this.setContent(
-      document,
-      content,
+    content.chiefComplaint = this.updateText(
+      dto.chiefComplaint,
+      content.chiefComplaint,
     );
 
-    const updated =
-      await medplum.updateResource<DocumentReference>(
-        document,
-      );
-
-    return this.mapNote(
-      updated,
+    content.historyPresentIllness = this.updateText(
+      dto.historyPresentIllness,
+      content.historyPresentIllness,
     );
+
+    content.reviewOfSystems = this.updateText(
+      dto.reviewOfSystems,
+      content.reviewOfSystems,
+    );
+
+    content.physicalExamination = this.updateText(
+      dto.physicalExamination,
+      content.physicalExamination,
+    );
+
+    content.assessment = this.updateText(dto.assessment, content.assessment);
+
+    content.plan = this.updateText(dto.plan, content.plan);
+
+    content.progressNote = this.updateText(
+      dto.progressNote,
+      content.progressNote,
+    );
+
+    content.updatedAt = new Date().toISOString();
+
+    this.setContent(document, content);
+
+    const updated = await medplum.updateResource<DocumentReference>(document);
+
+    return this.mapNote(updated);
   }
 
   /* =====================================================
      SIGN NOTE
   ===================================================== */
 
-  async sign(
-    noteId: string,
-  ) {
-    const medplum =
-      this.medplumService.getClient();
+  async sign(noteId: string) {
+    const medplum = this.medplumService.getClient();
 
-    const document =
-      await this.readNote(
-        noteId,
-      );
+    const document = await this.readNote(noteId);
 
-    const content =
-      this.getContent(
-        document,
-      );
+    const content = this.getContent(document);
 
-    if (
-      content.status ===
-      'signed'
-    ) {
-      throw new BadRequestException(
-        'Clinical note is already signed',
-      );
+    if (content.status === 'signed') {
+      throw new BadRequestException('Clinical note is already signed');
     }
 
-    if (
-      !this.hasClinicalContent(
-        content,
-      )
-    ) {
-      throw new BadRequestException(
-        'Cannot sign an empty clinical note',
-      );
+    if (!this.hasClinicalContent(content)) {
+      throw new BadRequestException('Cannot sign an empty clinical note');
     }
 
-    const now =
-      new Date().toISOString();
+    const now = new Date().toISOString();
 
-    content.status =
-      'signed';
+    content.status = 'signed';
 
-    content.signedAt =
-      now;
+    content.signedAt = now;
 
-    content.updatedAt =
-      now;
+    content.updatedAt = now;
 
-    document.date =
-      now;
+    document.date = now;
 
-    this.setContent(
-      document,
-      content,
-    );
+    this.setContent(document, content);
 
-    const updated =
-      await medplum.updateResource<DocumentReference>(
-        document,
-      );
+    const updated = await medplum.updateResource<DocumentReference>(document);
 
-    return this.mapNote(
-      updated,
-    );
+    return this.mapNote(updated);
   }
 
   /* =====================================================
      ADDENDUM
   ===================================================== */
 
-  async createAddendum(
-    noteId: string,
-    dto: CreateAddendumDto,
-  ) {
-    if (
-      !dto.text?.trim()
-    ) {
-      throw new BadRequestException(
-        'Addendum text is required',
-      );
+  async createAddendum(noteId: string, dto: CreateAddendumDto) {
+    if (!dto.text?.trim()) {
+      throw new BadRequestException('Addendum text is required');
     }
 
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
-    const original =
-      await this.readNote(
-        noteId,
-      );
+    const original = await this.readNote(noteId);
 
-    const originalContent =
-      this.getContent(
-        original,
-      );
+    const originalContent = this.getContent(original);
 
-    if (
-      originalContent.status !==
-      'signed'
-    ) {
+    if (originalContent.status !== 'signed') {
       throw new BadRequestException(
         'Addendum can only be added to a signed clinical note',
       );
     }
 
-    const patientId =
-      original.subject
-        ?.reference
-        ?.replace(
-          'Patient/',
-          '',
-        );
+    const patientId = original.subject?.reference?.replace('Patient/', '');
 
-    const encounterId =
-      original.context
-        ?.encounter?.[0]
-        ?.reference
-        ?.replace(
-          'Encounter/',
-          '',
-        );
+    const encounterId = original.context?.encounter?.[0]?.reference?.replace(
+      'Encounter/',
+      '',
+    );
 
-    const hospitalId =
-      original.context
-        ?.related?.find(
-          (reference) =>
-            reference.reference?.startsWith(
-              'Organization/',
-            ),
-        )
-        ?.reference
-        ?.replace(
-          'Organization/',
-          '',
-        );
+    const hospitalId = original.context?.related
+      ?.find((reference) => reference.reference?.startsWith('Organization/'))
+      ?.reference?.replace('Organization/', '');
 
-    if (
-      !patientId ||
-      !encounterId ||
-      !hospitalId
-    ) {
+    if (!patientId || !encounterId || !hospitalId) {
       throw new BadRequestException(
         'Original clinical note context is incomplete',
       );
     }
 
-    const now =
-      new Date().toISOString();
+    const now = new Date().toISOString();
 
-    const content:
-      ClinicalNoteContent = {
-        noteType:
-          'addendum',
+    const content: ClinicalNoteContent = {
+      noteType: 'addendum',
 
-        status:
-          'signed',
+      status: 'signed',
 
-        addendumText:
-          dto.text.trim(),
+      addendumText: dto.text.trim(),
 
-        parentNoteId:
-          noteId,
+      parentNoteId: noteId,
 
-        createdAt:
-          now,
+      createdAt: now,
 
-        updatedAt:
-          now,
+      updatedAt: now,
 
-        signedAt:
-          now,
+      signedAt: now,
 
-        practitionerId:
-          dto.practitionerId,
+      practitionerId: dto.practitionerId,
 
-        practitionerName:
-          dto.practitionerName,
-      };
+      practitionerName: dto.practitionerName,
+    };
 
-    const addendum:
-      DocumentReference = {
-        resourceType:
-          'DocumentReference',
+    const addendum: DocumentReference = {
+      resourceType: 'DocumentReference',
 
-        status:
-          'current',
+      status: 'current',
 
-        type: {
-          coding: [
-            {
-              system:
-                'http://loinc.org',
-
-              code:
-                '11506-3',
-
-              display:
-                'Progress note',
-            },
-          ],
-
-          text:
-            'Clinical Note Addendum',
-        },
-
-        subject: {
-          reference:
-            `Patient/${patientId}`,
-        },
-
-        context: {
-          encounter: [
-            {
-              reference:
-                `Encounter/${encounterId}`,
-            },
-          ],
-
-          related: [
-            {
-              reference:
-                `Organization/${hospitalId}`,
-            },
-          ],
-        },
-
-        relatesTo: [
+      type: {
+        coding: [
           {
-            code:
-              'appends',
+            system: 'http://loinc.org',
 
-            target: {
-              reference:
-                `DocumentReference/${noteId}`,
-            },
+            code: '11506-3',
+
+            display: 'Progress note',
           },
         ],
 
-        date:
-          now,
+        text: 'Clinical Note Addendum',
+      },
 
-        author:
-          dto.practitionerId
-            ? [
-                {
-                  reference:
-                    `Practitioner/${dto.practitionerId}`,
+      subject: {
+        reference: `Patient/${patientId}`,
+      },
 
-                  display:
-                    dto.practitionerName,
-                },
-              ]
-            : dto.practitionerName
-              ? [
-                  {
-                    display:
-                      dto.practitionerName,
-                  },
-                ]
-              : undefined,
-
-        description:
-          'Clinical Note Addendum',
-
-        content: [
+      context: {
+        encounter: [
           {
-            attachment: {
-              contentType:
-                'application/json',
-
-              data:
-                this.encodeContent(
-                  content,
-                ),
-
-              title:
-                'Clinical Note Addendum',
-
-              creation:
-                now,
-            },
+            reference: `Encounter/${encounterId}`,
           },
         ],
-      };
 
-    const created =
-      await medplum.createResource<DocumentReference>(
-        addendum,
-      );
+        related: [
+          {
+            reference: `Organization/${hospitalId}`,
+          },
+        ],
+      },
 
-    return this.mapNote(
-      created,
-    );
+      relatesTo: [
+        {
+          code: 'appends',
+
+          target: {
+            reference: `DocumentReference/${noteId}`,
+          },
+        },
+      ],
+
+      date: now,
+
+      author: dto.practitionerId
+        ? [
+            {
+              reference: `Practitioner/${dto.practitionerId}`,
+
+              display: dto.practitionerName,
+            },
+          ]
+        : dto.practitionerName
+          ? [
+              {
+                display: dto.practitionerName,
+              },
+            ]
+          : undefined,
+
+      description: 'Clinical Note Addendum',
+
+      content: [
+        {
+          attachment: {
+            contentType: 'application/json',
+
+            data: this.encodeContent(content),
+
+            title: 'Clinical Note Addendum',
+
+            creation: now,
+          },
+        },
+      ],
+    };
+
+    const created = await medplum.createResource<DocumentReference>(addendum);
+
+    return this.mapNote(created);
   }
 
   /* =====================================================
@@ -795,65 +501,39 @@ export class ClinicalNotesService {
     encounterId: string,
     hospitalId: string,
   ) {
-    if (
-      !patientId ||
-      !encounterId ||
-      !hospitalId
-    ) {
+    if (!patientId || !encounterId || !hospitalId) {
       throw new BadRequestException(
         'Patient, encounter and hospital are required',
       );
     }
 
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
-    let patient:
-      Patient;
+    let patient: Patient;
 
     try {
-      patient =
-        await medplum.readResource(
-          'Patient',
-          patientId,
-        );
+      patient = await medplum.readResource('Patient', patientId);
     } catch {
-      throw new NotFoundException(
-        'Patient not found',
-      );
+      throw new NotFoundException('Patient not found');
     }
 
-    let encounter:
-      Encounter;
+    let encounter: Encounter;
 
     try {
-      encounter =
-        await medplum.readResource(
-          'Encounter',
-          encounterId,
-        );
+      encounter = await medplum.readResource('Encounter', encounterId);
     } catch {
-      throw new NotFoundException(
-        'Encounter not found',
-      );
+      throw new NotFoundException('Encounter not found');
     }
 
-    if (
-      encounter.subject
-        ?.reference !==
-      `Patient/${patientId}`
-    ) {
+    if (encounter.subject?.reference !== `Patient/${patientId}`) {
       throw new BadRequestException(
         'Encounter does not belong to this patient',
       );
     }
 
     if (
-      patient.managingOrganization
-        ?.reference &&
-      patient.managingOrganization
-        .reference !==
-        `Organization/${hospitalId}`
+      patient.managingOrganization?.reference &&
+      patient.managingOrganization.reference !== `Organization/${hospitalId}`
     ) {
       throw new BadRequestException(
         'Patient does not belong to the selected hospital',
@@ -861,11 +541,8 @@ export class ClinicalNotesService {
     }
 
     if (
-      encounter.serviceProvider
-        ?.reference &&
-      encounter.serviceProvider
-        .reference !==
-        `Organization/${hospitalId}`
+      encounter.serviceProvider?.reference &&
+      encounter.serviceProvider.reference !== `Organization/${hospitalId}`
     ) {
       throw new BadRequestException(
         'Encounter does not belong to the selected hospital',
@@ -877,35 +554,19 @@ export class ClinicalNotesService {
      READ NOTE
   ===================================================== */
 
-  private async readNote(
-    noteId: string,
-  ) {
-    const medplum =
-      this.medplumService.getClient();
+  private async readNote(noteId: string) {
+    const medplum = this.medplumService.getClient();
 
-    let document:
-      DocumentReference;
+    let document: DocumentReference;
 
     try {
-      document =
-        await medplum.readResource(
-          'DocumentReference',
-          noteId,
-        );
+      document = await medplum.readResource('DocumentReference', noteId);
     } catch {
-      throw new NotFoundException(
-        'Clinical note not found',
-      );
+      throw new NotFoundException('Clinical note not found');
     }
 
-    if (
-      !this.isClinicalNote(
-        document,
-      )
-    ) {
-      throw new BadRequestException(
-        'Document is not a clinical note',
-      );
+    if (!this.isClinicalNote(document)) {
+      throw new BadRequestException('Document is not a clinical note');
     }
 
     return document;
@@ -915,19 +576,12 @@ export class ClinicalNotesService {
      IDENTIFY OUR CLINICAL NOTE
   ===================================================== */
 
-  private isClinicalNote(
-    document: DocumentReference,
-  ) {
+  private isClinicalNote(document: DocumentReference) {
     return (
-      document.type
-        ?.coding?.some(
-          (coding) =>
-            coding.system ===
-              'http://loinc.org' &&
-            coding.code ===
-              '11506-3',
-        ) ===
-      true
+      document.type?.coding?.some(
+        (coding) =>
+          coding.system === 'http://loinc.org' && coding.code === '11506-3',
+      ) === true
     );
   }
 
@@ -935,32 +589,19 @@ export class ClinicalNotesService {
      GET CONTENT
   ===================================================== */
 
-  private getContent(
-    document: DocumentReference,
-  ): ClinicalNoteContent {
-    const data =
-      document.content?.[0]
-        ?.attachment?.data;
+  private getContent(document: DocumentReference): ClinicalNoteContent {
+    const data = document.content?.[0]?.attachment?.data;
 
     if (!data) {
-      throw new BadRequestException(
-        'Clinical note content is missing',
-      );
+      throw new BadRequestException('Clinical note content is missing');
     }
 
     try {
       return JSON.parse(
-        Buffer.from(
-          data,
-          'base64',
-        ).toString(
-          'utf8',
-        ),
+        Buffer.from(data, 'base64').toString('utf8'),
       ) as ClinicalNoteContent;
     } catch {
-      throw new BadRequestException(
-        'Clinical note content is invalid',
-      );
+      throw new BadRequestException('Clinical note content is invalid');
     }
   }
 
@@ -972,9 +613,7 @@ export class ClinicalNotesService {
     document: DocumentReference,
     content: ClinicalNoteContent,
   ) {
-    if (
-      !document.content?.[0]
-    ) {
+    if (!document.content?.[0]) {
       document.content = [
         {
           attachment: {},
@@ -983,21 +622,13 @@ export class ClinicalNotesService {
     }
 
     document.content[0].attachment = {
-      ...document.content[0]
-        .attachment,
+      ...document.content[0].attachment,
 
-      contentType:
-        'application/json',
+      contentType: 'application/json',
 
-      data:
-        this.encodeContent(
-          content,
-        ),
+      data: this.encodeContent(content),
 
-      title:
-        this.getNoteTypeDisplay(
-          content.noteType,
-        ),
+      title: this.getNoteTypeDisplay(content.noteType),
     };
   }
 
@@ -1005,116 +636,64 @@ export class ClinicalNotesService {
      ENCODE CONTENT
   ===================================================== */
 
-  private encodeContent(
-    content: ClinicalNoteContent,
-  ) {
-    return Buffer.from(
-      JSON.stringify(
-        content,
-      ),
-      'utf8',
-    ).toString(
-      'base64',
-    );
+  private encodeContent(content: ClinicalNoteContent) {
+    return Buffer.from(JSON.stringify(content), 'utf8').toString('base64');
   }
 
   /* =====================================================
      MAP RESPONSE
   ===================================================== */
 
-  private mapNote(
-    document: DocumentReference,
-  ) {
-    const content =
-      this.getContent(
-        document,
-      );
+  private mapNote(document: DocumentReference) {
+    const content = this.getContent(document);
 
     return {
-      id:
-        document.id,
+      id: document.id,
 
-      resourceType:
-        document.resourceType,
+      resourceType: document.resourceType,
 
-      status:
-        content.status,
+      status: content.status,
 
-      noteType:
-        content.noteType,
+      noteType: content.noteType,
 
-      patientId:
-        document.subject
-          ?.reference
-          ?.replace(
-            'Patient/',
-            '',
-          ),
+      patientId: document.subject?.reference?.replace('Patient/', ''),
 
-      encounterId:
-        document.context
-          ?.encounter?.[0]
-          ?.reference
-          ?.replace(
-            'Encounter/',
-            '',
-          ),
+      encounterId: document.context?.encounter?.[0]?.reference?.replace(
+        'Encounter/',
+        '',
+      ),
 
-      hospitalId:
-        document.context
-          ?.related?.find(
-            (reference) =>
-              reference.reference?.startsWith(
-                'Organization/',
-              ),
-          )
-          ?.reference
-          ?.replace(
-            'Organization/',
-            '',
-          ),
+      hospitalId: document.context?.related
+        ?.find((reference) => reference.reference?.startsWith('Organization/'))
+        ?.reference?.replace('Organization/', ''),
 
-      practitionerId:
-        content.practitionerId,
+      practitionerId: content.practitionerId,
 
-      practitionerName:
-        content.practitionerName,
+      practitionerName: content.practitionerName,
 
-      chiefComplaint:
-        content.chiefComplaint,
+      chiefComplaint: content.chiefComplaint,
 
-      historyPresentIllness:
-        content.historyPresentIllness,
+      historyPresentIllness: content.historyPresentIllness,
 
-      reviewOfSystems:
-        content.reviewOfSystems,
+      reviewOfSystems: content.reviewOfSystems,
 
-      physicalExamination:
-        content.physicalExamination,
+      physicalExamination: content.physicalExamination,
 
-      assessment:
-        content.assessment,
+      assessment: content.assessment,
 
-      plan:
-        content.plan,
+      plan: content.plan,
 
-      progressNote:
-        content.progressNote,
+      progressNote: content.progressNote,
 
-      addendumText:
-        content.addendumText,
+      addendumText: content.addendumText,
 
-      parentNoteId:
-        content.parentNoteId,
+      parentNoteId: content.parentNoteId,
 
-      createdAt:
-        content.createdAt,
+      createdAt: content.createdAt,
 
-      updatedAt:
-        content.updatedAt,
+      updatedAt: content.updatedAt,
 
-      signedAt:
-        content.signedAt,
+      signedAt: content.signedAt,
     };
   }
 
@@ -1126,22 +705,14 @@ export class ClinicalNotesService {
     newValue: string | undefined,
     currentValue: string | undefined,
   ) {
-    if (
-      newValue ===
-      undefined
-    ) {
+    if (newValue === undefined) {
       return currentValue;
     }
 
-    return (
-      newValue.trim() ||
-      undefined
-    );
+    return newValue.trim() || undefined;
   }
 
-  private hasClinicalContent(
-    content: ClinicalNoteContent,
-  ) {
+  private hasClinicalContent(content: ClinicalNoteContent) {
     return Boolean(
       content.chiefComplaint ||
       content.historyPresentIllness ||
@@ -1153,9 +724,7 @@ export class ClinicalNotesService {
     );
   }
 
-  private getNoteTypeDisplay(
-    type: string,
-  ) {
+  private getNoteTypeDisplay(type: string) {
     switch (type) {
       case 'initial':
         return 'Initial Clinical Note';

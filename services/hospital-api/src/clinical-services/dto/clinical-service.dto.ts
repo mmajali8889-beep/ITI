@@ -1,5 +1,13 @@
-export type ClinicalServiceType = 'procedure' | 'consultation' | 'admission-request' | 'follow-up' | 'sick-leave' | 'document' | 'other';
-export type ClinicalServiceStatus = 'active' | 'on-hold' | 'completed' | 'revoked';
+export type ClinicalServiceType =
+  | 'procedure'
+  | 'consultation'
+  | 'admission-request'
+  | 'follow-up'
+  | 'sick-leave'
+  | 'document'
+  | 'other';
+export type ClinicalServiceStatus =
+  'active' | 'on-hold' | 'completed' | 'revoked';
 
 export class CreateClinicalServiceOrderDto {
   hospitalId!: string;

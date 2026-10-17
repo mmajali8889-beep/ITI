@@ -4,32 +4,20 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import type {
-  Device,
-  Extension,
-} from '@medplum/fhirtypes';
+import type { Device, Extension } from '@medplum/fhirtypes';
 
-import {
-  MedplumService,
-} from '../medplum/medplum.service';
+import { MedplumService } from '../medplum/medplum.service';
 
-import {
-  CreateRadiologyStationDto,
-} from './dto/create-radiology-station.dto';
+import { CreateRadiologyStationDto } from './dto/create-radiology-station.dto';
 
-import {
-  UpdateRadiologyStationDto,
-} from './dto/update-radiology-station.dto';
+import { UpdateRadiologyStationDto } from './dto/update-radiology-station.dto';
 
-import {
-  OrthancModalityRegistryService,
-} from './orthanc-modality-registry.service';
+import { OrthancModalityRegistryService } from './orthanc-modality-registry.service';
 
 const STATION_TYPE_SYSTEM =
   'http://hospital-ehr.local/fhir/CodeSystem/device-types';
 
-const STATION_TYPE_CODE =
-  'radiology-modality-station';
+const STATION_TYPE_CODE = 'radiology-modality-station';
 
 const DICOM_AET_IDENTIFIER_SYSTEM =
   'http://hospital-ehr.local/fhir/NamingSystem/dicom-ae-title';
@@ -62,7 +50,7 @@ export type RadiologyStationView = {
   id: string;
   hospitalId: string;
   name: string;
-  modality: typeof ALLOWED_MODALITIES[number];
+  modality: (typeof ALLOWED_MODALITIES)[number];
   aet: string;
   ipAddress?: string;
   port?: number;
@@ -74,448 +62,258 @@ export type RadiologyStationView = {
 @Injectable()
 export class RadiologyStationsService {
   constructor(
-    private readonly medplumService:
-      MedplumService,
+    private readonly medplumService: MedplumService,
 
-    private readonly orthancRegistry:
-      OrthancModalityRegistryService,
+    private readonly orthancRegistry: OrthancModalityRegistryService,
   ) {}
 
-  async listStations(filters: {
-    hospitalId?: string;
-    modality?: string;
-    active?: boolean;
-  } = {}) {
-    const hospitalId =
-      filters.hospitalId?.trim();
+  async listStations(
+    filters: {
+      hospitalId?: string;
+      modality?: string;
+      active?: boolean;
+    } = {},
+  ) {
+    const hospitalId = filters.hospitalId?.trim();
 
-    const modality =
-      filters.modality
-        ?.trim()
-        .toUpperCase();
+    const modality = filters.modality?.trim().toUpperCase();
 
     if (
       modality &&
       !ALLOWED_MODALITIES.includes(
-        modality as typeof ALLOWED_MODALITIES[number],
+        modality as (typeof ALLOWED_MODALITIES)[number],
       )
     ) {
-      throw new BadRequestException(
-        'Invalid radiology station modality.',
-      );
+      throw new BadRequestException('Invalid radiology station modality.');
     }
 
-    const devices =
-      await this.medplumService
-        .getClient()
-        .searchResources(
-          'Device',
-          {
-            _count: '1000',
-          },
-        );
+    const devices = await this.medplumService
+      .getClient()
+      .searchResources('Device', {
+        _count: '1000',
+      });
 
-    const stations =
-      devices
-        .filter((device) =>
-          this.isRadiologyStation(
-            device,
-          ),
-        )
-        .map((device) =>
-          this.mapStation(device),
-        )
-        .filter((station) => {
-          if (
-            hospitalId &&
-            station.hospitalId !==
-              hospitalId
-          ) {
-            return false;
-          }
+    const stations = devices
+      .filter((device) => this.isRadiologyStation(device))
+      .map((device) => this.mapStation(device))
+      .filter((station) => {
+        if (hospitalId && station.hospitalId !== hospitalId) {
+          return false;
+        }
 
-          if (
-            modality &&
-            station.modality !==
-              modality
-          ) {
-            return false;
-          }
+        if (modality && station.modality !== modality) {
+          return false;
+        }
 
-          if (
-            typeof filters.active ===
-              'boolean' &&
-            station.active !==
-              filters.active
-          ) {
-            return false;
-          }
+        if (
+          typeof filters.active === 'boolean' &&
+          station.active !== filters.active
+        ) {
+          return false;
+        }
 
-          return true;
-        })
-        .sort((a, b) => {
-          const modalityCompare =
-            a.modality.localeCompare(
-              b.modality,
-            );
+        return true;
+      })
+      .sort((a, b) => {
+        const modalityCompare = a.modality.localeCompare(b.modality);
 
-          if (modalityCompare !== 0) {
-            return modalityCompare;
-          }
+        if (modalityCompare !== 0) {
+          return modalityCompare;
+        }
 
-          return a.name.localeCompare(
-            b.name,
-          );
-        });
+        return a.name.localeCompare(b.name);
+      });
 
     return {
       total: stations.length,
       filters: {
         hospitalId,
         modality,
-        active:
-          filters.active,
+        active: filters.active,
       },
       stations,
     };
   }
 
-  async getStation(
-    stationId: string,
-  ): Promise<RadiologyStationView> {
-    const device =
-      await this.readStationDevice(
-        stationId,
-      );
+  async getStation(stationId: string): Promise<RadiologyStationView> {
+    const device = await this.readStationDevice(stationId);
 
-    return this.mapStation(
-      device,
-    );
+    return this.mapStation(device);
   }
 
-  async createStation(
-    dto:
-      CreateRadiologyStationDto,
-  ) {
-    const normalized =
-      this.normalizeCreateDto(
-        dto,
-      );
+  async createStation(dto: CreateRadiologyStationDto) {
+    const normalized = this.normalizeCreateDto(dto);
 
-    await this.assertHospitalExists(
-      normalized.hospitalId,
-    );
+    await this.assertHospitalExists(normalized.hospitalId);
 
-    await this.ensureUniqueAet(
-      normalized.hospitalId,
-      normalized.aet,
-    );
+    await this.ensureUniqueAet(normalized.hospitalId, normalized.aet);
 
     const device: Device = {
       resourceType: 'Device',
 
-      status:
-        normalized.active
-          ? 'active'
-          : 'inactive',
+      status: normalized.active ? 'active' : 'inactive',
 
       identifier: [
         {
-          system:
-            DICOM_AET_IDENTIFIER_SYSTEM,
-          value:
-            normalized.aet,
+          system: DICOM_AET_IDENTIFIER_SYSTEM,
+          value: normalized.aet,
         },
       ],
 
       deviceName: [
         {
-          name:
-            normalized.name,
-          type:
-            'user-friendly-name',
+          name: normalized.name,
+          type: 'user-friendly-name',
         },
       ],
 
       type: {
         coding: [
           {
-            system:
-              STATION_TYPE_SYSTEM,
-            code:
-              STATION_TYPE_CODE,
-            display:
-              'Radiology Modality Station',
+            system: STATION_TYPE_SYSTEM,
+            code: STATION_TYPE_CODE,
+            display: 'Radiology Modality Station',
           },
         ],
-        text:
-          'Radiology Modality Station',
+        text: 'Radiology Modality Station',
       },
 
       owner: {
-        reference:
-          `Organization/${normalized.hospitalId}`,
+        reference: `Organization/${normalized.hospitalId}`,
       },
 
-      extension:
-        this.stationExtensions(
-          normalized,
-        ),
+      extension: this.stationExtensions(normalized),
     };
 
-    const created =
-      await this.medplumService
-        .getClient()
-        .createResource(
-          device,
-        );
+    const created = await this.medplumService
+      .getClient()
+      .createResource(device);
 
-    const station =
-      this.mapStation(
-        created,
-      );
+    const station = this.mapStation(created);
 
     return {
       ...station,
-      orthanc:
-        await this.trySyncOrthanc(
-          station,
-        ),
+      orthanc: await this.trySyncOrthanc(station),
     };
   }
 
-  async updateStation(
-    stationId: string,
-    dto:
-      UpdateRadiologyStationDto,
-  ) {
-    const current =
-      await this.readStationDevice(
-        stationId,
-      );
+  async updateStation(stationId: string, dto: UpdateRadiologyStationDto) {
+    const current = await this.readStationDevice(stationId);
 
-    const currentView =
-      this.mapStation(
-        current,
-      );
+    const currentView = this.mapStation(current);
 
-    const merged =
-      this.normalizeCreateDto({
-        hospitalId:
-          dto.hospitalId ??
-          currentView.hospitalId,
+    const merged = this.normalizeCreateDto({
+      hospitalId: dto.hospitalId ?? currentView.hospitalId,
 
-        name:
-          dto.name ??
-          currentView.name,
+      name: dto.name ?? currentView.name,
 
-        modality:
-          dto.modality ??
-          currentView.modality,
+      modality: dto.modality ?? currentView.modality,
 
-        aet:
-          dto.aet ??
-          currentView.aet,
+      aet: dto.aet ?? currentView.aet,
 
-        ipAddress:
-          dto.ipAddress ??
-          currentView.ipAddress,
+      ipAddress: dto.ipAddress ?? currentView.ipAddress,
 
-        port:
-          dto.port ??
-          currentView.port,
+      port: dto.port ?? currentView.port,
 
-        room:
-          dto.room ??
-          currentView.room,
+      room: dto.room ?? currentView.room,
 
-        active:
-          dto.active ??
-          currentView.active,
-      });
+      active: dto.active ?? currentView.active,
+    });
 
-    if (
-      merged.hospitalId !==
-        currentView.hospitalId
-    ) {
-      await this.assertHospitalExists(
-        merged.hospitalId,
-      );
+    if (merged.hospitalId !== currentView.hospitalId) {
+      await this.assertHospitalExists(merged.hospitalId);
     }
 
-    await this.ensureUniqueAet(
-      merged.hospitalId,
-      merged.aet,
-      stationId,
-    );
+    await this.ensureUniqueAet(merged.hospitalId, merged.aet, stationId);
 
     const updated: Device = {
       ...current,
 
-      status:
-        merged.active
-          ? 'active'
-          : 'inactive',
+      status: merged.active ? 'active' : 'inactive',
 
       identifier: [
-        ...(current.identifier ?? [])
-          .filter(
-            (identifier) =>
-              identifier.system !==
-              DICOM_AET_IDENTIFIER_SYSTEM,
-          ),
+        ...(current.identifier ?? []).filter(
+          (identifier) => identifier.system !== DICOM_AET_IDENTIFIER_SYSTEM,
+        ),
 
         {
-          system:
-            DICOM_AET_IDENTIFIER_SYSTEM,
-          value:
-            merged.aet,
+          system: DICOM_AET_IDENTIFIER_SYSTEM,
+          value: merged.aet,
         },
       ],
 
       deviceName: [
         {
-          name:
-            merged.name,
-          type:
-            'user-friendly-name',
+          name: merged.name,
+          type: 'user-friendly-name',
         },
       ],
 
       owner: {
-        reference:
-          `Organization/${merged.hospitalId}`,
+        reference: `Organization/${merged.hospitalId}`,
       },
 
       extension: [
-        ...(current.extension ?? [])
-          .filter(
-            (extension) =>
-              !this.isStationExtension(
-                extension.url,
-              ),
-          ),
-
-        ...this.stationExtensions(
-          merged,
+        ...(current.extension ?? []).filter(
+          (extension) => !this.isStationExtension(extension.url),
         ),
+
+        ...this.stationExtensions(merged),
       ],
     };
 
-    const saved =
-      await this.medplumService
-        .getClient()
-        .updateResource(
-          updated,
-        );
+    const saved = await this.medplumService.getClient().updateResource(updated);
 
-    const station =
-      this.mapStation(
-        saved,
-      );
+    const station = this.mapStation(saved);
 
     return {
       ...station,
-      orthanc:
-        await this.trySyncOrthanc(
-          station,
-        ),
+      orthanc: await this.trySyncOrthanc(station),
     };
   }
 
-  async deactivateStation(
-    stationId: string,
-  ) {
-    const station =
-      await this.updateStation(
-        stationId,
-        {
-          active: false,
-        },
-      );
+  async deactivateStation(stationId: string) {
+    const station = await this.updateStation(stationId, {
+      active: false,
+    });
 
     return station;
   }
 
-  async syncStationToOrthanc(
-    stationId: string,
-  ) {
-    const station =
-      await this.getStation(
-        stationId,
-      );
+  async syncStationToOrthanc(stationId: string) {
+    const station = await this.getStation(stationId);
 
-    return this.orthancRegistry
-      .registerStation(
-        station,
-      );
+    return this.orthancRegistry.registerStation(station);
   }
 
-  async getStationOrthancStatus(
-    stationId: string,
-  ) {
-    const station =
-      await this.getStation(
-        stationId,
-      );
+  async getStationOrthancStatus(stationId: string) {
+    const station = await this.getStation(stationId);
 
-    return this.orthancRegistry
-      .getRegistryStatus(
-        station,
-      );
+    return this.orthancRegistry.getRegistryStatus(station);
   }
 
-  async echoStation(
-    stationId: string,
-  ) {
-    const station =
-      await this.getStation(
-        stationId,
-      );
+  async echoStation(stationId: string) {
+    const station = await this.getStation(stationId);
 
-    return this.orthancRegistry
-      .echoStation(
-        station,
-      );
+    return this.orthancRegistry.echoStation(station);
   }
 
-  async syncHospitalStations(
-    hospitalId: string,
-  ) {
-    const result =
-      await this.listStations({
-        hospitalId:
-          hospitalId?.trim(),
-      });
+  async syncHospitalStations(hospitalId: string) {
+    const result = await this.listStations({
+      hospitalId: hospitalId?.trim(),
+    });
 
-    const synced:
-      unknown[] =
-      [];
+    const synced: unknown[] = [];
 
-    for (
-      const station of
-      result.stations
-    ) {
-      if (
-        !station.active
-      ) {
+    for (const station of result.stations) {
+      if (!station.active) {
         try {
-          synced.push(
-            await this.orthancRegistry
-              .unregisterStation(
-                station,
-              ),
-          );
+          synced.push(await this.orthancRegistry.unregisterStation(station));
         } catch (error) {
           synced.push({
-            stationId:
-              station.id,
-            success:
-              false,
-            error:
-              error instanceof Error
-                ? error.message
-                : String(error),
+            stationId: station.id,
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
           });
         }
 
@@ -524,141 +322,81 @@ export class RadiologyStationsService {
 
       try {
         synced.push({
-          stationId:
-            station.id,
+          stationId: station.id,
 
-          stationName:
-            station.name,
+          stationName: station.name,
 
-          ...(
-            await this.orthancRegistry
-              .registerStation(
-                station,
-              )
-          ),
+          ...(await this.orthancRegistry.registerStation(station)),
         });
       } catch (error) {
         synced.push({
-          stationId:
-            station.id,
+          stationId: station.id,
 
-          stationName:
-            station.name,
+          stationName: station.name,
 
-          success:
-            false,
+          success: false,
 
-          error:
-            error instanceof Error
-              ? error.message
-              : String(error),
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }
 
     return {
       hospitalId,
-      total:
-        result.stations.length,
-      results:
-        synced,
+      total: result.stations.length,
+      results: synced,
     };
   }
 
-  private async trySyncOrthanc(
-    station:
-      RadiologyStationView,
-  ) {
+  private async trySyncOrthanc(station: RadiologyStationView) {
     try {
-      if (
-        !station.active
-      ) {
-        return this.orthancRegistry
-          .unregisterStation(
-            station,
-          );
+      if (!station.active) {
+        return this.orthancRegistry.unregisterStation(station);
       }
 
-      if (
-        !station.ipAddress ||
-        !station.port
-      ) {
+      if (!station.ipAddress || !station.port) {
         return {
-          registered:
-            false,
-          skipped:
-            true,
+          registered: false,
+          skipped: true,
           reason:
             'IP/hostname and DICOM port are required for Orthanc registration.',
         };
       }
 
-      return this.orthancRegistry
-        .registerStation(
-          station,
-        );
+      return this.orthancRegistry.registerStation(station);
     } catch (error) {
       return {
-        registered:
-          false,
-        syncFailed:
-          true,
-        error:
-          error instanceof Error
-            ? error.message
-            : String(error),
+        registered: false,
+        syncFailed: true,
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
 
-  private normalizeCreateDto(
-    dto:
-      CreateRadiologyStationDto,
-  ) {
-    const hospitalId =
-      dto.hospitalId
-        ?.trim();
+  private normalizeCreateDto(dto: CreateRadiologyStationDto) {
+    const hospitalId = dto.hospitalId?.trim();
 
-    const name =
-      dto.name
-        ?.trim();
+    const name = dto.name?.trim();
 
-    const modality =
-      dto.modality
-        ?.trim()
-        .toUpperCase();
+    const modality = dto.modality?.trim().toUpperCase();
 
-    const aet =
-      dto.aet
-        ?.trim()
-        .toUpperCase();
+    const aet = dto.aet?.trim().toUpperCase();
 
-    const ipAddress =
-      dto.ipAddress
-        ?.trim() ||
-      undefined;
+    const ipAddress = dto.ipAddress?.trim() || undefined;
 
-    const room =
-      dto.room
-        ?.trim() ||
-      undefined;
+    const room = dto.room?.trim() || undefined;
 
     const port =
-      dto.port === undefined ||
-      dto.port === null
+      dto.port === undefined || dto.port === null
         ? undefined
         : Number(dto.port);
 
     if (!hospitalId) {
-      throw new BadRequestException(
-        'hospitalId is required.',
-      );
+      throw new BadRequestException('hospitalId is required.');
     }
 
     if (!name) {
-      throw new BadRequestException(
-        'Station name is required.',
-      );
+      throw new BadRequestException('Station name is required.');
     }
 
     if (name.length > 16) {
@@ -670,7 +408,7 @@ export class RadiologyStationsService {
     if (
       !modality ||
       !ALLOWED_MODALITIES.includes(
-        modality as typeof ALLOWED_MODALITIES[number],
+        modality as (typeof ALLOWED_MODALITIES)[number],
       )
     ) {
       throw new BadRequestException(
@@ -679,9 +417,7 @@ export class RadiologyStationsService {
     }
 
     if (!aet) {
-      throw new BadRequestException(
-        'DICOM AE Title is required.',
-      );
+      throw new BadRequestException('DICOM AE Title is required.');
     }
 
     if (aet.length > 16) {
@@ -690,12 +426,7 @@ export class RadiologyStationsService {
       );
     }
 
-    if (
-      !/^[\x20-\x7E]+$/.test(
-        aet,
-      ) ||
-      aet.includes('\\')
-    ) {
+    if (!/^[\x20-\x7E]+$/.test(aet) || aet.includes('\\')) {
       throw new BadRequestException(
         'DICOM AE Title must contain printable ASCII characters and cannot contain a backslash.',
       );
@@ -703,11 +434,7 @@ export class RadiologyStationsService {
 
     if (
       port !== undefined &&
-      (
-        !Number.isInteger(port) ||
-        port < 1 ||
-        port > 65535
-      )
+      (!Number.isInteger(port) || port < 1 || port > 65535)
     ) {
       throw new BadRequestException(
         'DICOM port must be an integer from 1 to 65535.',
@@ -717,13 +444,12 @@ export class RadiologyStationsService {
     return {
       hospitalId,
       name,
-      modality: modality as typeof ALLOWED_MODALITIES[number],
+      modality: modality as (typeof ALLOWED_MODALITIES)[number],
       aet,
       ipAddress,
       port,
       room,
-      active:
-        dto.active !== false,
+      active: dto.active !== false,
     };
   }
 
@@ -732,20 +458,15 @@ export class RadiologyStationsService {
     aet: string,
     excludeId?: string,
   ) {
-    const result =
-      await this.listStations({
-        hospitalId,
-      });
+    const result = await this.listStations({
+      hospitalId,
+    });
 
-    const duplicate =
-      result.stations.find(
-        (station) =>
-          station.id !==
-            excludeId &&
-          station.aet
-            .toUpperCase() ===
-          aet.toUpperCase(),
-      );
+    const duplicate = result.stations.find(
+      (station) =>
+        station.id !== excludeId &&
+        station.aet.toUpperCase() === aet.toUpperCase(),
+    );
 
     if (duplicate) {
       throw new BadRequestException(
@@ -754,16 +475,11 @@ export class RadiologyStationsService {
     }
   }
 
-  private async assertHospitalExists(
-    hospitalId: string,
-  ) {
+  private async assertHospitalExists(hospitalId: string) {
     try {
       await this.medplumService
         .getClient()
-        .readResource(
-          'Organization',
-          hospitalId,
-        );
+        .readResource('Organization', hospitalId);
     } catch {
       throw new BadRequestException(
         `Hospital Organization ${hospitalId} was not found.`,
@@ -771,41 +487,22 @@ export class RadiologyStationsService {
     }
   }
 
-  private async readStationDevice(
-    stationId: string,
-  ): Promise<Device> {
-    const id =
-      stationId
-        ?.trim();
+  private async readStationDevice(stationId: string): Promise<Device> {
+    const id = stationId?.trim();
 
     if (!id) {
-      throw new BadRequestException(
-        'stationId is required.',
-      );
+      throw new BadRequestException('stationId is required.');
     }
 
-    let device:
-      Device;
+    let device: Device;
 
     try {
-      device =
-        await this.medplumService
-          .getClient()
-          .readResource(
-            'Device',
-            id,
-          );
+      device = await this.medplumService.getClient().readResource('Device', id);
     } catch {
-      throw new NotFoundException(
-        `Radiology station ${id} was not found.`,
-      );
+      throw new NotFoundException(`Radiology station ${id} was not found.`);
     }
 
-    if (
-      !this.isRadiologyStation(
-        device,
-      )
-    ) {
+    if (!this.isRadiologyStation(device)) {
       throw new NotFoundException(
         `Device ${id} is not a radiology modality station.`,
       );
@@ -814,40 +511,24 @@ export class RadiologyStationsService {
     return device;
   }
 
-  private isRadiologyStation(
-    device:
-      Device,
-  ) {
+  private isRadiologyStation(device: Device) {
     return Boolean(
-      device.type
-        ?.coding
-        ?.some(
-          (coding) =>
-            coding.system ===
-              STATION_TYPE_SYSTEM &&
-            coding.code ===
-              STATION_TYPE_CODE,
-        ),
+      device.type?.coding?.some(
+        (coding) =>
+          coding.system === STATION_TYPE_SYSTEM &&
+          coding.code === STATION_TYPE_CODE,
+      ),
     );
   }
 
-  private mapStation(
-    device:
-      Device,
-  ): RadiologyStationView {
-    const id =
-      device.id;
+  private mapStation(device: Device): RadiologyStationView {
+    const id = device.id;
 
     if (!id) {
-      throw new BadRequestException(
-        'Radiology station Device has no ID.',
-      );
+      throw new BadRequestException('Radiology station Device has no ID.');
     }
 
-    const hospitalId =
-      this.referenceId(
-        device.owner?.reference,
-      );
+    const hospitalId = this.referenceId(device.owner?.reference);
 
     if (!hospitalId) {
       throw new BadRequestException(
@@ -856,94 +537,56 @@ export class RadiologyStationsService {
     }
 
     const name =
-      device.deviceName
-        ?.find(
-          (item) =>
-            item.type ===
-              'user-friendly-name',
-        )
+      device.deviceName?.find((item) => item.type === 'user-friendly-name')
         ?.name ??
-      device.deviceName
-        ?.[0]
-        ?.name ??
+      device.deviceName?.[0]?.name ??
       'Imaging Station';
 
     const aet =
-      device.identifier
-        ?.find(
-          (identifier) =>
-            identifier.system ===
-              DICOM_AET_IDENTIFIER_SYSTEM,
-        )
-        ?.value ??
-      '';
+      device.identifier?.find(
+        (identifier) => identifier.system === DICOM_AET_IDENTIFIER_SYSTEM,
+      )?.value ?? '';
 
     const modality =
-      this.extensionString(
-        device,
-        MODALITY_EXTENSION,
-      )
-        ?.toUpperCase() ??
+      this.extensionString(device, MODALITY_EXTENSION)?.toUpperCase() ??
       'OTHER';
 
     return {
       id,
       hospitalId,
       name,
-      modality: modality as typeof ALLOWED_MODALITIES[number],
+      modality: modality as (typeof ALLOWED_MODALITIES)[number],
       aet,
 
-      ipAddress:
-        this.extensionString(
-          device,
-          IP_EXTENSION,
-        ),
+      ipAddress: this.extensionString(device, IP_EXTENSION),
 
-      port:
-        this.extensionInteger(
-          device,
-          PORT_EXTENSION,
-        ),
+      port: this.extensionInteger(device, PORT_EXTENSION),
 
-      room:
-        this.extensionString(
-          device,
-          ROOM_EXTENSION,
-        ),
+      room: this.extensionString(device, ROOM_EXTENSION),
 
-      active:
-        device.status ===
-          'active',
+      active: device.status === 'active',
 
-      updatedAt:
-        device.meta
-          ?.lastUpdated,
+      updatedAt: device.meta?.lastUpdated,
     };
   }
 
-  private stationExtensions(
-    value: {
-      modality: string;
-      ipAddress?: string;
-      port?: number;
-      room?: string;
-    },
-  ): Extension[] {
+  private stationExtensions(value: {
+    modality: string;
+    ipAddress?: string;
+    port?: number;
+    room?: string;
+  }): Extension[] {
     return [
       {
-        url:
-          MODALITY_EXTENSION,
-        valueCode:
-          value.modality,
+        url: MODALITY_EXTENSION,
+        valueCode: value.modality,
       },
 
       ...(value.ipAddress
         ? [
             {
-              url:
-                IP_EXTENSION,
-              valueString:
-                value.ipAddress,
+              url: IP_EXTENSION,
+              valueString: value.ipAddress,
             },
           ]
         : []),
@@ -951,10 +594,8 @@ export class RadiologyStationsService {
       ...(value.port !== undefined
         ? [
             {
-              url:
-                PORT_EXTENSION,
-              valueInteger:
-                value.port,
+              url: PORT_EXTENSION,
+              valueInteger: value.port,
             },
           ]
         : []),
@@ -962,80 +603,40 @@ export class RadiologyStationsService {
       ...(value.room
         ? [
             {
-              url:
-                ROOM_EXTENSION,
-              valueString:
-                value.room,
+              url: ROOM_EXTENSION,
+              valueString: value.room,
             },
           ]
         : []),
     ];
   }
 
-  private isStationExtension(
-    url?:
-      string,
-  ) {
+  private isStationExtension(url?: string) {
     return [
       MODALITY_EXTENSION,
       IP_EXTENSION,
       PORT_EXTENSION,
       ROOM_EXTENSION,
-    ].includes(
-      url ?? '',
-    );
+    ].includes(url ?? '');
   }
 
-  private extensionString(
-    device:
-      Device,
-    url:
-      string,
-  ) {
-    const extension =
-      device.extension
-        ?.find(
-          (item) =>
-            item.url ===
-            url,
-        );
+  private extensionString(device: Device, url: string) {
+    const extension = device.extension?.find((item) => item.url === url);
 
-    return (
-      extension
-        ?.valueString ??
-      extension
-        ?.valueCode
-    );
+    return extension?.valueString ?? extension?.valueCode;
   }
 
-  private extensionInteger(
-    device:
-      Device,
-    url:
-      string,
-  ) {
-    return device.extension
-      ?.find(
-        (item) =>
-          item.url ===
-            url,
-      )
-      ?.valueInteger;
+  private extensionInteger(device: Device, url: string) {
+    return device.extension?.find((item) => item.url === url)?.valueInteger;
   }
 
-  private referenceId(
-    reference?:
-      string,
-  ) {
+  private referenceId(reference?: string) {
     if (!reference) {
       return undefined;
     }
 
-    const parts =
-      reference.split('/');
+    const parts = reference.split('/');
 
-    return parts[
-      parts.length - 1
-    ];
+    return parts[parts.length - 1];
   }
 }

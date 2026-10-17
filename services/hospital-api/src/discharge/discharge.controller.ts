@@ -1,1 +1,43 @@
-import{Body,Controller,Get,Param,Post,Query}from'@nestjs/common';import{CreateDischargeDto,DischargeClearanceDto,DischargeSummaryDto,FinalizeDischargeDto,ReconcileDischargeDto}from'./dto/discharge.dto';import{DischargeService}from'./discharge.service';@Controller('api/discharge')export class DischargeController{constructor(private readonly service:DischargeService){}@Post()create(@Body()d:CreateDischargeDto){return this.service.create(d)}@Get('queue')queue(@Query('hospitalId')h:string){return this.service.queue(h)}@Post(':id/reconciliation')reconcile(@Param('id')id:string,@Body()d:ReconcileDischargeDto){return this.service.reconcile(id,d)}@Post(':id/summary')summary(@Param('id')id:string,@Body()d:DischargeSummaryDto){return this.service.summary(id,d)}@Post(':id/clearance')clear(@Param('id')id:string,@Body()d:DischargeClearanceDto){return this.service.clearance(id,d)}@Post(':id/finalize')finalize(@Param('id')id:string,@Body()d:FinalizeDischargeDto){return this.service.finalize(id,d)}}
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import {
+  CreateDischargeDto,
+  DischargeClearanceDto,
+  DischargeSummaryDto,
+  FinalizeDischargeDto,
+  ReconcileDischargeDto,
+} from './dto/discharge.dto';
+import { DischargeService } from './discharge.service';
+@Controller('api/discharge')
+export class DischargeController {
+  constructor(private readonly service: DischargeService) {}
+  @Post() create(@Body() d: CreateDischargeDto) {
+    return this.service.create(d);
+  }
+  @Get('queue') queue(@Query('hospitalId') h: string) {
+    return this.service.queue(h);
+  }
+  @Post(':id/reconciliation') reconcile(
+    @Param('id') id: string,
+    @Body() d: ReconcileDischargeDto,
+  ) {
+    return this.service.reconcile(id, d);
+  }
+  @Post(':id/summary') summary(
+    @Param('id') id: string,
+    @Body() d: DischargeSummaryDto,
+  ) {
+    return this.service.summary(id, d);
+  }
+  @Post(':id/clearance') clear(
+    @Param('id') id: string,
+    @Body() d: DischargeClearanceDto,
+  ) {
+    return this.service.clearance(id, d);
+  }
+  @Post(':id/finalize') finalize(
+    @Param('id') id: string,
+    @Body() d: FinalizeDischargeDto,
+  ) {
+    return this.service.finalize(id, d);
+  }
+}

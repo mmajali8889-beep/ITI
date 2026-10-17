@@ -11,7 +11,8 @@ import type { Encounter, Observation, Patient } from '@medplum/fhirtypes';
 
 import { MedplumService } from '../medplum/medplum.service';
 
-const VISIT_LOCK = 'https://hospital-ehr.local/fhir/StructureDefinition/visit-opening-lock';
+const VISIT_LOCK =
+  'https://hospital-ehr.local/fhir/StructureDefinition/visit-opening-lock';
 const VISIT_LOCK_TTL_MS = 15_000;
 
 import {
@@ -301,8 +302,8 @@ export class EncountersService {
                 ? 'cleared'
                 : dto.financialClass === 'insurance'
                   ? 'pending-eligibility'
-                  // Corporate/government clear once the sponsor is recorded by classification.
-                  : 'pending-classification',
+                  : // Corporate/government clear once the sponsor is recorded by classification.
+                    'pending-classification',
         },
         ...(dto.financialClass
           ? [
@@ -340,24 +341,37 @@ export class EncountersService {
    * behind by a request that failed before releasing it.
    */
   private async acquireVisitLock(patient: Patient): Promise<Patient> {
-    const held = patient.extension?.find((item) => item.url === VISIT_LOCK)?.valueDateTime;
+    const held = patient.extension?.find(
+      (item) => item.url === VISIT_LOCK,
+    )?.valueDateTime;
     if (held && Date.now() - Date.parse(held) < VISIT_LOCK_TTL_MS) {
-      throw new ConflictException({ message: 'Another visit is being opened for this patient; try again shortly', code: 'VISIT_OPENING_IN_PROGRESS' });
+      throw new ConflictException({
+        message:
+          'Another visit is being opened for this patient; try again shortly',
+        code: 'VISIT_OPENING_IN_PROGRESS',
+      });
     }
     return this.medplumService.updateIfUnchanged<Patient>({
       ...patient,
-      extension: [...(patient.extension ?? []).filter((item) => item.url !== VISIT_LOCK), { url: VISIT_LOCK, valueDateTime: new Date().toISOString() }],
+      extension: [
+        ...(patient.extension ?? []).filter((item) => item.url !== VISIT_LOCK),
+        { url: VISIT_LOCK, valueDateTime: new Date().toISOString() },
+      ],
     });
   }
 
   private async releaseVisitLock(patientId: string): Promise<void> {
     const medplum = this.medplumService.getClient();
-    const patient = await medplum.readResource('Patient', patientId).catch(() => undefined);
+    const patient = await medplum
+      .readResource('Patient', patientId)
+      .catch(() => undefined);
     if (!patient?.extension?.some((item) => item.url === VISIT_LOCK)) return;
-    await this.medplumService.updateIfUnchanged<Patient>({
-      ...patient,
-      extension: patient.extension.filter((item) => item.url !== VISIT_LOCK),
-    }).catch(() => undefined); // the TTL clears it if this loses a race
+    await this.medplumService
+      .updateIfUnchanged<Patient>({
+        ...patient,
+        extension: patient.extension.filter((item) => item.url !== VISIT_LOCK),
+      })
+      .catch(() => undefined); // the TTL clears it if this loses a race
   }
 
   // =====================================================

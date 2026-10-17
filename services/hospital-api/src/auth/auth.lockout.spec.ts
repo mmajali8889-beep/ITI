@@ -114,11 +114,17 @@ describe('AuthService per-account lockout', () => {
     process.env.ENABLED_HOSPITAL_CODES = 'HOSP-01'; // the mocked hospital is HOSP-A
     const service = new AuthService();
     for (let i = 0; i < 6; i += 1) {
-      const error = (await attempt(service, GOOD).catch((e: unknown) => e)) as HttpException;
+      const error = (await attempt(service, GOOD).catch(
+        (e: unknown) => e,
+      )) as HttpException;
       expect(error).toBeInstanceOf(UnauthorizedException);
-      expect(error.getResponse()).toMatchObject({ code: 'HOSPITAL_NOT_ENABLED' });
+      expect(error.getResponse()).toMatchObject({
+        code: 'HOSPITAL_NOT_ENABLED',
+      });
     }
     process.env.ENABLED_HOSPITAL_CODES = 'HOSP-01,HOSP-A';
-    await expect(attempt(service, GOOD)).resolves.toMatchObject({ hospitalId: 'hospital-a' });
+    await expect(attempt(service, GOOD)).resolves.toMatchObject({
+      hospitalId: 'hospital-a',
+    });
   });
 });

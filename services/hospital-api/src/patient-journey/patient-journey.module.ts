@@ -1,1 +1,10 @@
-import{Module}from'@nestjs/common';import{MedplumModule}from'../medplum/medplum.module';import{PatientJourneyController}from'./patient-journey.controller';import{PatientJourneyService}from'./patient-journey.service';@Module({imports:[MedplumModule],controllers:[PatientJourneyController],providers:[PatientJourneyService]})export class PatientJourneyModule{}
+import { Module } from '@nestjs/common';
+import { MedplumModule } from '../medplum/medplum.module';
+import { PatientJourneyController } from './patient-journey.controller';
+import { PatientJourneyService } from './patient-journey.service';
+@Module({
+  imports: [MedplumModule],
+  controllers: [PatientJourneyController],
+  providers: [PatientJourneyService],
+})
+export class PatientJourneyModule {}

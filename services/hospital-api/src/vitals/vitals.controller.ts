@@ -7,20 +7,13 @@ import {
   Query,
 } from '@nestjs/common';
 
-import {
-  VitalsService,
-} from './vitals.service';
+import { VitalsService } from './vitals.service';
 
-import {
-  CreateVitalsDto,
-} from './dto/create-vitals.dto';
+import { CreateVitalsDto } from './dto/create-vitals.dto';
 
 @Controller('api/vitals')
 export class VitalsController {
-  constructor(
-    private readonly vitalsService:
-      VitalsService,
-  ) {}
+  constructor(private readonly vitalsService: VitalsService) {}
 
   // =====================================================
   // CREATE VITAL SIGNS
@@ -33,9 +26,7 @@ export class VitalsController {
     @Body()
     dto: CreateVitalsDto,
   ) {
-    return this.vitalsService.create(
-      dto,
-    );
+    return this.vitalsService.create(dto);
   }
 
   // =====================================================
@@ -57,19 +48,13 @@ export class VitalsController {
     patientId?: string,
   ) {
     if (encounterId) {
-      return this.vitalsService.findByEncounter(
-        encounterId,
-      );
+      return this.vitalsService.findByEncounter(encounterId);
     }
 
     if (patientId) {
-      return this.vitalsService.findByPatient(
-        patientId,
-      );
+      return this.vitalsService.findByPatient(patientId);
     }
 
-    throw new BadRequestException(
-      'encounterId or patientId is required',
-    );
+    throw new BadRequestException('encounterId or patientId is required');
   }
 }

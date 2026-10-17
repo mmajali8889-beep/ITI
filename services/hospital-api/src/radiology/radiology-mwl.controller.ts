@@ -8,25 +8,17 @@ import {
   Query,
 } from '@nestjs/common';
 
-import {
-  RadiologyMwlService,
-} from './radiology-mwl.service';
+import { RadiologyMwlService } from './radiology-mwl.service';
 
-import {
-  PublishRadiologyWorklistDto,
-} from './dto/publish-radiology-worklist.dto';
+import { PublishRadiologyWorklistDto } from './dto/publish-radiology-worklist.dto';
 
 @Controller('api/radiology/mwl')
 export class RadiologyMwlController {
-  constructor(
-    private readonly mwlService:
-      RadiologyMwlService,
-  ) {}
+  constructor(private readonly mwlService: RadiologyMwlService) {}
 
   @Get('status')
   getStatus() {
-    return this.mwlService
-      .getStatus();
+    return this.mwlService.getStatus();
   }
 
   @Get('worklists')
@@ -34,10 +26,7 @@ export class RadiologyMwlController {
     @Query('format')
     format?: string,
   ) {
-    return this.mwlService
-      .listWorklists(
-        format || 'Short',
-      );
+    return this.mwlService.listWorklists(format || 'Short');
   }
 
   @Get('orders/:orderId')
@@ -45,10 +34,7 @@ export class RadiologyMwlController {
     @Param('orderId')
     orderId: string,
   ) {
-    return this.mwlService
-      .getOrderWorklist(
-        orderId,
-      );
+    return this.mwlService.getOrderWorklist(orderId);
   }
 
   @Post('orders/:orderId/publish')
@@ -57,14 +43,9 @@ export class RadiologyMwlController {
     orderId: string,
 
     @Body()
-    dto:
-      PublishRadiologyWorklistDto,
+    dto: PublishRadiologyWorklistDto,
   ) {
-    return this.mwlService
-      .publishOrder(
-        orderId,
-        dto || {},
-      );
+    return this.mwlService.publishOrder(orderId, dto || {});
   }
 
   @Delete('worklists/:worklistId')
@@ -72,9 +53,6 @@ export class RadiologyMwlController {
     @Param('worklistId')
     worklistId: string,
   ) {
-    return this.mwlService
-      .deleteWorklist(
-        worklistId,
-      );
+    return this.mwlService.deleteWorklist(worklistId);
   }
 }

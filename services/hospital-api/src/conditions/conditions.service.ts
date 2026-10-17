@@ -4,15 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import type {
-  Condition,
-  Encounter,
-  Patient,
-} from '@medplum/fhirtypes';
+import type { Condition, Encounter, Patient } from '@medplum/fhirtypes';
 
-import {
-  MedplumService,
-} from '../medplum/medplum.service';
+import { MedplumService } from '../medplum/medplum.service';
 
 import {
   CreateConditionDto,
@@ -21,54 +15,44 @@ import {
 
 @Injectable()
 export class ConditionsService {
-  constructor(
-    private readonly medplumService:
-      MedplumService,
-  ) {}
+  constructor(private readonly medplumService: MedplumService) {}
 
   // =====================================================
   // CREATE CONDITION
   // =====================================================
 
-  async create(
-    dto: CreateConditionDto,
-  ) {
-    const medplum =
-      this.medplumService.getClient();
+  async create(dto: CreateConditionDto) {
+    const medplum = this.medplumService.getClient();
 
     // ===================================================
     // BASIC VALIDATION
     // ===================================================
 
     if (!dto.patientId) {
-      throw new BadRequestException(
-        'Patient ID is required',
-      );
+      throw new BadRequestException('Patient ID is required');
     }
 
     if (!dto.hospitalId) {
-      throw new BadRequestException(
-        'Hospital ID is required',
-      );
+      throw new BadRequestException('Hospital ID is required');
     }
 
     if (!dto.category) {
-      throw new BadRequestException(
-        'Condition category is required',
-      );
+      throw new BadRequestException('Condition category is required');
     }
 
     const codeSystem = dto.codeSystem ?? 'ICD-10';
-    const diagnosisCode = (dto.diagnosisCode ?? dto.icd10Code)?.trim().toUpperCase();
+    const diagnosisCode = (dto.diagnosisCode ?? dto.icd10Code)
+      ?.trim()
+      .toUpperCase();
 
     if (!['ICD-10', 'ICD-11'].includes(codeSystem)) {
-      throw new BadRequestException('Diagnosis code system must be ICD-10 or ICD-11');
+      throw new BadRequestException(
+        'Diagnosis code system must be ICD-10 or ICD-11',
+      );
     }
 
     if (!diagnosisCode) {
-      throw new BadRequestException(
-        'Diagnosis code is required',
-      );
+      throw new BadRequestException('Diagnosis code is required');
     }
 
     if (!this.isValidDiagnosisCode(codeSystem, diagnosisCode)) {
@@ -76,39 +60,24 @@ export class ConditionsService {
     }
 
     if (!dto.description) {
-      throw new BadRequestException(
-        'Diagnosis description is required',
-      );
+      throw new BadRequestException('Diagnosis description is required');
     }
 
     // ===================================================
     // VALID CATEGORY
     // ===================================================
 
-    const validCategories = [
-      'encounter-diagnosis',
-      'problem-list-item',
-    ];
+    const validCategories = ['encounter-diagnosis', 'problem-list-item'];
 
-    if (
-      !validCategories.includes(
-        dto.category,
-      )
-    ) {
-      throw new BadRequestException(
-        'Invalid condition category',
-      );
+    if (!validCategories.includes(dto.category)) {
+      throw new BadRequestException('Invalid condition category');
     }
 
     // ===================================================
     // ENCOUNTER REQUIRED FOR ENCOUNTER DIAGNOSIS
     // ===================================================
 
-    if (
-      dto.category ===
-        'encounter-diagnosis' &&
-      !dto.encounterId
-    ) {
+    if (dto.category === 'encounter-diagnosis' && !dto.encounterId) {
       throw new BadRequestException(
         'Encounter ID is required for encounter diagnosis',
       );
@@ -121,15 +90,9 @@ export class ConditionsService {
     let patient: Patient;
 
     try {
-      patient =
-        await medplum.readResource(
-          'Patient',
-          dto.patientId,
-        );
+      patient = await medplum.readResource('Patient', dto.patientId);
     } catch {
-      throw new NotFoundException(
-        'Patient not found',
-      );
+      throw new NotFoundException('Patient not found');
     }
 
     // ===================================================
@@ -137,8 +100,7 @@ export class ConditionsService {
     // ===================================================
 
     if (
-      patient.managingOrganization
-        ?.reference !==
+      patient.managingOrganization?.reference !==
       `Organization/${dto.hospitalId}`
     ) {
       throw new BadRequestException(
@@ -150,35 +112,23 @@ export class ConditionsService {
     // VERIFY ENCOUNTER
     // ===================================================
 
-    let encounter:
-      Encounter | undefined;
+    let encounter: Encounter | undefined;
 
     if (dto.encounterId) {
       try {
-        encounter =
-          await medplum.readResource(
-            'Encounter',
-            dto.encounterId,
-          );
+        encounter = await medplum.readResource('Encounter', dto.encounterId);
       } catch {
-        throw new NotFoundException(
-          'Encounter not found',
-        );
+        throw new NotFoundException('Encounter not found');
       }
 
-      if (
-        encounter.subject
-          ?.reference !==
-        `Patient/${dto.patientId}`
-      ) {
+      if (encounter.subject?.reference !== `Patient/${dto.patientId}`) {
         throw new BadRequestException(
           'Encounter does not belong to this patient',
         );
       }
 
       if (
-        encounter.serviceProvider
-          ?.reference !==
+        encounter.serviceProvider?.reference !==
         `Organization/${dto.hospitalId}`
       ) {
         throw new BadRequestException(
@@ -192,38 +142,23 @@ export class ConditionsService {
     // ===================================================
 
     if (
-      dto.category ===
-        'encounter-diagnosis' &&
-      dto.diagnosisRank ===
-        'primary' &&
+      dto.category === 'encounter-diagnosis' &&
+      dto.diagnosisRank === 'primary' &&
       dto.encounterId
     ) {
-      const existing =
-        await medplum.searchResources(
-          'Condition',
-          {
-            encounter:
-              `Encounter/${dto.encounterId}`,
-            _count:
-              '100',
-          },
-        );
+      const existing = await medplum.searchResources('Condition', {
+        encounter: `Encounter/${dto.encounterId}`,
+        _count: '100',
+      });
 
-      const hasPrimary =
-        [...existing].some(
-          (
-            condition,
-          ) =>
-            condition.extension?.some(
-              (
-                extension,
-              ) =>
-                extension.url ===
-                  'https://hospital-ehr.local/fhir/StructureDefinition/diagnosis-rank' &&
-                extension.valueCode ===
-                  'primary',
-            ),
-        );
+      const hasPrimary = [...existing].some((condition) =>
+        condition.extension?.some(
+          (extension) =>
+            extension.url ===
+              'https://hospital-ehr.local/fhir/StructureDefinition/diagnosis-rank' &&
+            extension.valueCode === 'primary',
+        ),
+      );
 
       if (hasPrimary) {
         throw new BadRequestException(
@@ -236,99 +171,76 @@ export class ConditionsService {
     // CLINICAL STATUS
     // ===================================================
 
-    const clinicalStatus =
-      dto.clinicalStatus ??
-      'active';
+    const clinicalStatus = dto.clinicalStatus ?? 'active';
 
     // ===================================================
     // VERIFICATION STATUS
     // ===================================================
 
-    const verificationStatus =
-      dto.verificationStatus ??
-      'confirmed';
+    const verificationStatus = dto.verificationStatus ?? 'confirmed';
 
     // ===================================================
     // BUILD CONDITION
     // ===================================================
 
-    const condition:
-      Condition = {
-        resourceType:
-          'Condition',
+    const condition: Condition = {
+      resourceType: 'Condition',
 
-        subject: {
-          reference:
-            `Patient/${dto.patientId}`,
-        },
+      subject: {
+        reference: `Patient/${dto.patientId}`,
+      },
 
-        clinicalStatus: {
-          coding: [
-            {
-              system:
-                'http://terminology.hl7.org/CodeSystem/condition-clinical',
-              code:
-                clinicalStatus,
-              display:
-                this.getClinicalStatusDisplay(
-                  clinicalStatus,
-                ),
-            },
-          ],
-        },
-
-        verificationStatus: {
-          coding: [
-            {
-              system:
-                'http://terminology.hl7.org/CodeSystem/condition-ver-status',
-              code:
-                verificationStatus,
-              display:
-                this.getVerificationStatusDisplay(
-                  verificationStatus,
-                ),
-            },
-          ],
-        },
-
-        category: [
+      clinicalStatus: {
+        coding: [
           {
-            coding: [
-              {
-                system:
-                  'http://terminology.hl7.org/CodeSystem/condition-category',
-                code:
-                  dto.category,
-                display:
-                  dto.category ===
-                  'encounter-diagnosis'
-                    ? 'Encounter Diagnosis'
-                    : 'Problem List Item',
-              },
-            ],
+            system: 'http://terminology.hl7.org/CodeSystem/condition-clinical',
+            code: clinicalStatus,
+            display: this.getClinicalStatusDisplay(clinicalStatus),
+          },
+        ],
+      },
+
+      verificationStatus: {
+        coding: [
+          {
+            system:
+              'http://terminology.hl7.org/CodeSystem/condition-ver-status',
+            code: verificationStatus,
+            display: this.getVerificationStatusDisplay(verificationStatus),
+          },
+        ],
+      },
+
+      category: [
+        {
+          coding: [
+            {
+              system:
+                'http://terminology.hl7.org/CodeSystem/condition-category',
+              code: dto.category,
+              display:
+                dto.category === 'encounter-diagnosis'
+                  ? 'Encounter Diagnosis'
+                  : 'Problem List Item',
+            },
+          ],
+        },
+      ],
+
+      code: {
+        coding: [
+          {
+            system: this.codeSystemUri(codeSystem),
+            code: diagnosisCode,
+            display: dto.description,
           },
         ],
 
-        code: {
-          coding: [
-            {
-              system:
-                this.codeSystemUri(codeSystem),
-              code:
-                diagnosisCode,
-              display:
-                dto.description,
-            },
-          ],
+        text: dto.description,
+      },
 
-          text:
-            dto.description,
-        },
-
-        recordedDate:
-          new Date().toISOString(),
-      };
+      recordedDate: new Date().toISOString(),
+    };
 
     // ===================================================
     // ENCOUNTER REFERENCE
@@ -336,8 +248,7 @@ export class ConditionsService {
 
     if (dto.encounterId) {
       condition.encounter = {
-        reference:
-          `Encounter/${dto.encounterId}`,
+        reference: `Encounter/${dto.encounterId}`,
       };
     }
 
@@ -346,23 +257,13 @@ export class ConditionsService {
     // ===================================================
 
     if (dto.onsetDateTime) {
-      const parsed =
-        new Date(
-          dto.onsetDateTime,
-        );
+      const parsed = new Date(dto.onsetDateTime);
 
-      if (
-        Number.isNaN(
-          parsed.getTime(),
-        )
-      ) {
-        throw new BadRequestException(
-          'Invalid onset date',
-        );
+      if (Number.isNaN(parsed.getTime())) {
+        throw new BadRequestException('Invalid onset date');
       }
 
-      condition.onsetDateTime =
-        parsed.toISOString();
+      condition.onsetDateTime = parsed.toISOString();
     }
 
     // ===================================================
@@ -371,8 +272,7 @@ export class ConditionsService {
 
     if (dto.severity) {
       condition.severity = {
-        text:
-          dto.severity,
+        text: dto.severity,
       };
     }
 
@@ -383,8 +283,7 @@ export class ConditionsService {
     if (dto.note) {
       condition.note = [
         {
-          text:
-            dto.note,
+          text: dto.note,
         },
       ];
     }
@@ -397,21 +296,17 @@ export class ConditionsService {
 
     if (dto.diagnosisRank) {
       condition.extension.push({
-        url:
-          'https://hospital-ehr.local/fhir/StructureDefinition/diagnosis-rank',
+        url: 'https://hospital-ehr.local/fhir/StructureDefinition/diagnosis-rank',
 
-        valueCode:
-          dto.diagnosisRank,
+        valueCode: dto.diagnosisRank,
       });
     }
 
     condition.extension.push({
-      url:
-        'https://hospital-ehr.local/fhir/StructureDefinition/condition-hospital',
+      url: 'https://hospital-ehr.local/fhir/StructureDefinition/condition-hospital',
 
       valueReference: {
-        reference:
-          `Organization/${dto.hospitalId}`,
+        reference: `Organization/${dto.hospitalId}`,
       },
     });
 
@@ -419,91 +314,46 @@ export class ConditionsService {
     // SAVE CONDITION
     // ===================================================
 
-    const created =
-      await medplum.createResource<Condition>(
-        condition,
-      );
+    const created = await medplum.createResource<Condition>(condition);
 
-    return this.mapCondition(
-      created,
-    );
+    return this.mapCondition(created);
   }
 
   // =====================================================
   // GET CONDITIONS BY ENCOUNTER
   // =====================================================
 
-  async findByEncounter(
-    encounterId: string,
-    hospitalId: string,
-  ) {
+  async findByEncounter(encounterId: string, hospitalId: string) {
     if (!encounterId) {
-      throw new BadRequestException(
-        'Encounter ID is required',
-      );
+      throw new BadRequestException('Encounter ID is required');
     }
 
     if (!hospitalId) throw new BadRequestException('Hospital ID is required');
 
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
-    const result =
-      await medplum.searchResources(
-        'Condition',
-        {
-          encounter:
-            `Encounter/${encounterId}`,
+    const result = await medplum.searchResources('Condition', {
+      encounter: `Encounter/${encounterId}`,
 
-          _count:
-            '100',
-        },
-      );
+      _count: '100',
+    });
 
-    const conditions:
-      Condition[] = [...result].filter(
-        (condition) => this.conditionHospitalId(condition) === hospitalId,
-      );
-
-    conditions.sort(
-      (
-        a,
-        b,
-      ) => {
-        const aDate =
-          a.recordedDate
-            ? new Date(
-                a.recordedDate,
-              ).getTime()
-            : 0;
-
-        const bDate =
-          b.recordedDate
-            ? new Date(
-                b.recordedDate,
-              ).getTime()
-            : 0;
-
-        return (
-          bDate -
-          aDate
-        );
-      },
+    const conditions: Condition[] = [...result].filter(
+      (condition) => this.conditionHospitalId(condition) === hospitalId,
     );
 
-    return {
-      total:
-        conditions.length,
+    conditions.sort((a, b) => {
+      const aDate = a.recordedDate ? new Date(a.recordedDate).getTime() : 0;
 
-      conditions:
-        conditions.map(
-          (
-            condition,
-          ) =>
-            this.mapCondition(
-              condition,
-            ),
-        ),
+      const bDate = b.recordedDate ? new Date(b.recordedDate).getTime() : 0;
+
+      return bDate - aDate;
+    });
+
+    return {
+      total: conditions.length,
+
+      conditions: conditions.map((condition) => this.mapCondition(condition)),
     };
   }
 
@@ -511,54 +361,31 @@ export class ConditionsService {
   // GET PATIENT PROBLEM LIST
   // =====================================================
 
-  async findPatientProblems(
-    patientId: string,
-    hospitalId: string,
-  ) {
+  async findPatientProblems(patientId: string, hospitalId: string) {
     if (!patientId) {
-      throw new BadRequestException(
-        'Patient ID is required',
-      );
+      throw new BadRequestException('Patient ID is required');
     }
 
     if (!hospitalId) throw new BadRequestException('Hospital ID is required');
 
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
-    const result =
-      await medplum.searchResources(
-        'Condition',
-        {
-          subject:
-            `Patient/${patientId}`,
+    const result = await medplum.searchResources('Condition', {
+      subject: `Patient/${patientId}`,
 
-          category:
-            'problem-list-item',
+      category: 'problem-list-item',
 
-          _count:
-            '200',
-        },
-      );
+      _count: '200',
+    });
 
-    const conditions:
-      Condition[] = [...result].filter(
-        (condition) => this.conditionHospitalId(condition) === hospitalId,
-      );
+    const conditions: Condition[] = [...result].filter(
+      (condition) => this.conditionHospitalId(condition) === hospitalId,
+    );
 
     return {
-      total:
-        conditions.length,
+      total: conditions.length,
 
-      conditions:
-        conditions.map(
-          (
-            condition,
-          ) =>
-            this.mapCondition(
-              condition,
-            ),
-        ),
+      conditions: conditions.map((condition) => this.mapCondition(condition)),
     };
   }
 
@@ -566,41 +393,26 @@ export class ConditionsService {
   // GET CONDITION BY ID
   // =====================================================
 
-  async findById(
-    conditionId: string,
-    hospitalId: string,
-  ) {
+  async findById(conditionId: string, hospitalId: string) {
     if (!conditionId) {
-      throw new BadRequestException(
-        'Condition ID is required',
-      );
+      throw new BadRequestException('Condition ID is required');
     }
 
     if (!hospitalId) throw new BadRequestException('Hospital ID is required');
 
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
-    let condition:
-      Condition;
+    let condition: Condition;
 
     try {
-      condition =
-        await medplum.readResource(
-          'Condition',
-          conditionId,
-        );
+      condition = await medplum.readResource('Condition', conditionId);
     } catch {
-      throw new NotFoundException(
-        'Condition not found',
-      );
+      throw new NotFoundException('Condition not found');
     }
 
     this.assertConditionHospital(condition, hospitalId);
 
-    return this.mapCondition(
-      condition,
-    );
+    return this.mapCondition(condition);
   }
 
   // =====================================================
@@ -622,32 +434,18 @@ export class ConditionsService {
       'resolved',
     ];
 
-    if (
-      !allowedStatuses.includes(
-        clinicalStatus,
-      )
-    ) {
-      throw new BadRequestException(
-        'Invalid clinical status',
-      );
+    if (!allowedStatuses.includes(clinicalStatus)) {
+      throw new BadRequestException('Invalid clinical status');
     }
 
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
-    let condition:
-      Condition;
+    let condition: Condition;
 
     try {
-      condition =
-        await medplum.readResource(
-          'Condition',
-          conditionId,
-        );
+      condition = await medplum.readResource('Condition', conditionId);
     } catch {
-      throw new NotFoundException(
-        'Condition not found',
-      );
+      throw new NotFoundException('Condition not found');
     }
 
     this.assertConditionHospital(condition, hospitalId);
@@ -655,124 +453,78 @@ export class ConditionsService {
     condition.clinicalStatus = {
       coding: [
         {
-          system:
-            'http://terminology.hl7.org/CodeSystem/condition-clinical',
+          system: 'http://terminology.hl7.org/CodeSystem/condition-clinical',
 
-          code:
-            clinicalStatus,
+          code: clinicalStatus,
 
-          display:
-            this.getClinicalStatusDisplay(
-              clinicalStatus,
-            ),
+          display: this.getClinicalStatusDisplay(clinicalStatus),
         },
       ],
     };
 
-    if (
-      clinicalStatus ===
-      'resolved'
-    ) {
-      condition.abatementDateTime =
-        new Date().toISOString();
+    if (clinicalStatus === 'resolved') {
+      condition.abatementDateTime = new Date().toISOString();
     } else {
-      condition.abatementDateTime =
-        undefined;
+      condition.abatementDateTime = undefined;
     }
 
-    const updated =
-      await medplum.updateResource<Condition>(
-        condition,
-      );
+    const updated = await medplum.updateResource<Condition>(condition);
 
-    return this.mapCondition(
-      updated,
-    );
+    return this.mapCondition(updated);
   }
 
   // =====================================================
   // MAP CONDITION
   // =====================================================
 
-  private mapCondition(
-    condition:
-      Condition,
-  ) {
-    const category =
-      condition.category?.[0]
-        ?.coding?.[0]
-        ?.code;
+  private mapCondition(condition: Condition) {
+    const category = condition.category?.[0]?.coding?.[0]?.code;
 
-    const clinicalStatus =
-      condition.clinicalStatus
-        ?.coding?.[0]
-        ?.code;
+    const clinicalStatus = condition.clinicalStatus?.coding?.[0]?.code;
 
-    const verificationStatus =
-      condition.verificationStatus
-        ?.coding?.[0]
-        ?.code;
+    const verificationStatus = condition.verificationStatus?.coding?.[0]?.code;
 
-    const diagnosisCoding = condition.code?.coding?.find((coding) =>
-      coding.system === 'http://hl7.org/fhir/sid/icd-10' ||
-      coding.system === 'http://id.who.int/icd/release/11/mms') ?? condition.code?.coding?.[0];
+    const diagnosisCoding =
+      condition.code?.coding?.find(
+        (coding) =>
+          coding.system === 'http://hl7.org/fhir/sid/icd-10' ||
+          coding.system === 'http://id.who.int/icd/release/11/mms',
+      ) ?? condition.code?.coding?.[0];
     const diagnosisCode = diagnosisCoding?.code;
-    const codeSystem = diagnosisCoding?.system === 'http://id.who.int/icd/release/11/mms' ? 'ICD-11' : 'ICD-10';
+    const codeSystem =
+      diagnosisCoding?.system === 'http://id.who.int/icd/release/11/mms'
+        ? 'ICD-11'
+        : 'ICD-10';
     const icd10Code = codeSystem === 'ICD-10' ? diagnosisCode : undefined;
 
     const description =
-      condition.code?.text ??
-      condition.code
-        ?.coding?.[0]
-        ?.display;
+      condition.code?.text ?? condition.code?.coding?.[0]?.display;
 
-    const diagnosisRank =
-      condition.extension?.find(
-        (
-          extension,
-        ) =>
+    const diagnosisRank = condition.extension?.find(
+      (extension) =>
+        extension.url ===
+        'https://hospital-ehr.local/fhir/StructureDefinition/diagnosis-rank',
+    )?.valueCode;
+
+    const hospitalId = condition.extension
+      ?.find(
+        (extension) =>
           extension.url ===
-          'https://hospital-ehr.local/fhir/StructureDefinition/diagnosis-rank',
-      )?.valueCode;
+          'https://hospital-ehr.local/fhir/StructureDefinition/condition-hospital',
+      )
+      ?.valueReference?.reference?.replace('Organization/', '');
 
-    const hospitalId =
-      condition.extension
-        ?.find(
-          (
-            extension,
-          ) =>
-            extension.url ===
-            'https://hospital-ehr.local/fhir/StructureDefinition/condition-hospital',
-        )
-        ?.valueReference
-        ?.reference
-        ?.replace(
-          'Organization/',
-          '',
-        );
+    const patientId = condition.subject?.reference?.replace('Patient/', '');
 
-    const patientId =
-      condition.subject
-        ?.reference
-        ?.replace(
-          'Patient/',
-          '',
-        );
-
-    const encounterId =
-      condition.encounter
-        ?.reference
-        ?.replace(
-          'Encounter/',
-          '',
-        );
+    const encounterId = condition.encounter?.reference?.replace(
+      'Encounter/',
+      '',
+    );
 
     return {
-      id:
-        condition.id,
+      id: condition.id,
 
-      resourceType:
-        condition.resourceType,
+      resourceType: condition.resourceType,
 
       patientId,
 
@@ -796,22 +548,15 @@ export class ConditionsService {
 
       verificationStatus,
 
-      severity:
-        condition.severity
-          ?.text,
+      severity: condition.severity?.text,
 
-      onsetDateTime:
-        condition.onsetDateTime,
+      onsetDateTime: condition.onsetDateTime,
 
-      recordedDate:
-        condition.recordedDate,
+      recordedDate: condition.recordedDate,
 
-      abatementDateTime:
-        condition.abatementDateTime,
+      abatementDateTime: condition.abatementDateTime,
 
-      note:
-        condition.note?.[0]
-          ?.text,
+      note: condition.note?.[0]?.text,
     };
   }
 
@@ -820,13 +565,19 @@ export class ConditionsService {
   // =====================================================
 
   private conditionHospitalId(condition: Condition): string | undefined {
-    return condition.extension?.find(
-      (extension) => extension.url ===
-        'https://hospital-ehr.local/fhir/StructureDefinition/condition-hospital',
-    )?.valueReference?.reference?.replace('Organization/', '');
+    return condition.extension
+      ?.find(
+        (extension) =>
+          extension.url ===
+          'https://hospital-ehr.local/fhir/StructureDefinition/condition-hospital',
+      )
+      ?.valueReference?.reference?.replace('Organization/', '');
   }
 
-  private assertConditionHospital(condition: Condition, hospitalId: string): void {
+  private assertConditionHospital(
+    condition: Condition,
+    hospitalId: string,
+  ): void {
     if (this.conditionHospitalId(condition) !== hospitalId) {
       throw new NotFoundException('Condition not found');
     }
@@ -838,7 +589,10 @@ export class ConditionsService {
       : 'http://hl7.org/fhir/sid/icd-10';
   }
 
-  private isValidDiagnosisCode(system: DiagnosisCodeSystem, code: string): boolean {
+  private isValidDiagnosisCode(
+    system: DiagnosisCodeSystem,
+    code: string,
+  ): boolean {
     if (system === 'ICD-10') {
       return /^[A-TV-Z][0-9][0-9A-Z](?:\.[0-9A-Z]{1,4})?$/i.test(code);
     }
@@ -848,9 +602,7 @@ export class ConditionsService {
     return /^[0-9A-Z][0-9A-Z-]{2,11}(?:\.[0-9A-Z]{1,5})?$/i.test(code);
   }
 
-  private getClinicalStatusDisplay(
-    value: string,
-  ) {
+  private getClinicalStatusDisplay(value: string) {
     switch (value) {
       case 'active':
         return 'Active';
@@ -875,9 +627,7 @@ export class ConditionsService {
     }
   }
 
-  private getVerificationStatusDisplay(
-    value: string,
-  ) {
+  private getVerificationStatusDisplay(value: string) {
     switch (value) {
       case 'unconfirmed':
         return 'Unconfirmed';

@@ -1,1 +1,34 @@
-import{Body,Controller,Get,Param,Post,Query}from'@nestjs/common';import{AdmitIcuDto,CreateIcuDailyPlanDto,IcuDispositionDto,RecordIcuInfusionDto,RecordIcuObservationDto}from'./dto/icu.dto';import{IcuService}from'./icu.service';@Controller('api/icu')export class IcuController{constructor(private readonly service:IcuService){}@Post('admissions')admit(@Body()dto:AdmitIcuDto){return this.service.admit(dto);}@Get('dashboard')dashboard(@Query('hospitalId')hospitalId:string){return this.service.dashboard(hospitalId);}@Post('observations')observation(@Body()dto:RecordIcuObservationDto){return this.service.observation(dto);}@Post('infusions')infusion(@Body()dto:RecordIcuInfusionDto){return this.service.infusion(dto);}@Post('daily-plans')plan(@Body()dto:CreateIcuDailyPlanDto){return this.service.dailyPlan(dto);}@Post('admissions/:id/disposition')disposition(@Param('id')id:string,@Body()dto:IcuDispositionDto){return this.service.disposition(id,dto);}}
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import {
+  AdmitIcuDto,
+  CreateIcuDailyPlanDto,
+  IcuDispositionDto,
+  RecordIcuInfusionDto,
+  RecordIcuObservationDto,
+} from './dto/icu.dto';
+import { IcuService } from './icu.service';
+@Controller('api/icu')
+export class IcuController {
+  constructor(private readonly service: IcuService) {}
+  @Post('admissions') admit(@Body() dto: AdmitIcuDto) {
+    return this.service.admit(dto);
+  }
+  @Get('dashboard') dashboard(@Query('hospitalId') hospitalId: string) {
+    return this.service.dashboard(hospitalId);
+  }
+  @Post('observations') observation(@Body() dto: RecordIcuObservationDto) {
+    return this.service.observation(dto);
+  }
+  @Post('infusions') infusion(@Body() dto: RecordIcuInfusionDto) {
+    return this.service.infusion(dto);
+  }
+  @Post('daily-plans') plan(@Body() dto: CreateIcuDailyPlanDto) {
+    return this.service.dailyPlan(dto);
+  }
+  @Post('admissions/:id/disposition') disposition(
+    @Param('id') id: string,
+    @Body() dto: IcuDispositionDto,
+  ) {
+    return this.service.disposition(id, dto);
+  }
+}

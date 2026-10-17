@@ -3,17 +3,178 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MedplumService } from '../medplum/medplum.service';
 import { NursingService } from './nursing.service';
 
-describe('NursingService ward workflow',()=>{
- let service:NursingService;
- const patient={resourceType:'Patient',id:'p1',managingOrganization:{reference:'Organization/h1'}};
- const encounter={resourceType:'Encounter',id:'e1',status:'in-progress',class:{code:'IMP'},subject:{reference:'Patient/p1',display:'Mona Ali'},serviceProvider:{reference:'Organization/h1'},period:{start:'2026-09-25T08:00:00Z'},location:[{status:'active',location:{reference:'Location/b1'}}]};
- const bed={resourceType:'Location',id:'b1',status:'active',managingOrganization:{reference:'Organization/h1'},identifier:[{value:'B-01'}],extension:[{url:'https://hospital-ehr.local/fhir/StructureDefinition/ward-code',valueString:'WARD-A'},{url:'https://hospital-ehr.local/fhir/StructureDefinition/ward-name',valueString:'Medical Ward'},{url:'https://hospital-ehr.local/fhir/StructureDefinition/room-number',valueString:'101'}]};
- const task={resourceType:'Task',id:'t1',status:'ready',intent:'order',code:{coding:[{code:'nursing-care'}]},for:{reference:'Patient/p1'},encounter:{reference:'Encounter/e1'},restriction:{period:{end:'2020-01-01T00:00:00Z'}},extension:[{url:'https://hospital-ehr.local/fhir/StructureDefinition/nursing-hospital',valueReference:{reference:'Organization/h1'}},{url:'https://hospital-ehr.local/fhir/StructureDefinition/task-title',valueString:'Reassess pain'}]};
- const medplum={readResource:jest.fn(),searchResources:jest.fn(),createResource:jest.fn(),updateResource:jest.fn()};
- beforeEach(async()=>{jest.resetAllMocks();medplum.readResource.mockImplementation(async(type:string)=>type==='Patient'?{...patient}:type==='Encounter'?{...encounter}:{...task});medplum.searchResources.mockResolvedValue([]);medplum.createResource.mockImplementation(async(resource:any)=>({...resource,id:'new'}));medplum.updateResource.mockImplementation(async(resource:any)=>resource);const module:TestingModule=await Test.createTestingModule({providers:[NursingService,{provide:MedplumService,useValue:{getClient:()=>medplum}}]}).compile();service=module.get(NursingService);});
+describe('NursingService ward workflow', () => {
+  let service: NursingService;
+  const patient = {
+    resourceType: 'Patient',
+    id: 'p1',
+    managingOrganization: { reference: 'Organization/h1' },
+  };
+  const encounter = {
+    resourceType: 'Encounter',
+    id: 'e1',
+    status: 'in-progress',
+    class: { code: 'IMP' },
+    subject: { reference: 'Patient/p1', display: 'Mona Ali' },
+    serviceProvider: { reference: 'Organization/h1' },
+    period: { start: '2026-09-25T08:00:00Z' },
+    location: [{ status: 'active', location: { reference: 'Location/b1' } }],
+  };
+  const bed = {
+    resourceType: 'Location',
+    id: 'b1',
+    status: 'active',
+    managingOrganization: { reference: 'Organization/h1' },
+    identifier: [{ value: 'B-01' }],
+    extension: [
+      {
+        url: 'https://hospital-ehr.local/fhir/StructureDefinition/ward-code',
+        valueString: 'WARD-A',
+      },
+      {
+        url: 'https://hospital-ehr.local/fhir/StructureDefinition/ward-name',
+        valueString: 'Medical Ward',
+      },
+      {
+        url: 'https://hospital-ehr.local/fhir/StructureDefinition/room-number',
+        valueString: '101',
+      },
+    ],
+  };
+  const task = {
+    resourceType: 'Task',
+    id: 't1',
+    status: 'ready',
+    intent: 'order',
+    code: { coding: [{ code: 'nursing-care' }] },
+    for: { reference: 'Patient/p1' },
+    encounter: { reference: 'Encounter/e1' },
+    restriction: { period: { end: '2020-01-01T00:00:00Z' } },
+    extension: [
+      {
+        url: 'https://hospital-ehr.local/fhir/StructureDefinition/nursing-hospital',
+        valueReference: { reference: 'Organization/h1' },
+      },
+      {
+        url: 'https://hospital-ehr.local/fhir/StructureDefinition/task-title',
+        valueString: 'Reassess pain',
+      },
+    ],
+  };
+  const medplum = {
+    readResource: jest.fn(),
+    searchResources: jest.fn(),
+    createResource: jest.fn(),
+    updateResource: jest.fn(),
+  };
+  beforeEach(async () => {
+    jest.resetAllMocks();
+    medplum.readResource.mockImplementation(async (type: string) =>
+      type === 'Patient'
+        ? { ...patient }
+        : type === 'Encounter'
+          ? { ...encounter }
+          : { ...task },
+    );
+    medplum.searchResources.mockResolvedValue([]);
+    medplum.createResource.mockImplementation(async (resource: any) => ({
+      ...resource,
+      id: 'new',
+    }));
+    medplum.updateResource.mockImplementation(
+      async (resource: any) => resource,
+    );
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        NursingService,
+        { provide: MedplumService, useValue: { getClient: () => medplum } },
+      ],
+    }).compile();
+    service = module.get(NursingService);
+  });
 
- it('records a scored fall risk against the active inpatient encounter',async()=>{await service.recordObservation({hospitalId:'h1',patientId:'p1',encounterId:'e1',nurseName:'Nurse Sara',type:'fall-risk',score:7});expect(medplum.createResource).toHaveBeenCalledWith(expect.objectContaining({resourceType:'Observation',valueQuantity:{value:7,unit:undefined},encounter:{reference:'Encounter/e1'}}));});
- it('rejects documentation when the encounter is not inpatient',async()=>{medplum.readResource.mockImplementation(async(type:string)=>type==='Patient'?patient:{...encounter,class:{code:'AMB'}});await expect(service.createNote({hospitalId:'h1',patientId:'p1',encounterId:'e1',nurseName:'Nurse Sara',note:'Stable'})).rejects.toBeInstanceOf(ConflictException);});
- it('marks overdue tasks and pending admission work on the dashboard',async()=>{medplum.searchResources.mockImplementation(async(type:string)=>type==='Encounter'?[encounter]:type==='Location'?[bed]:type==='Task'?[task]:[]);const result=await service.dashboard('h1');expect(result.summary).toMatchObject({patients:1,tasksDue:1,overdue:1,assessmentsPending:1,carePlansPending:1});expect(result.patients[0]).toMatchObject({patientName:'Mona Ali',wardCode:'WARD-A',bedName:'B-01',overdueCount:1});});
- it('completes only a hospital-scoped nursing task',async()=>{medplum.readResource.mockResolvedValue({...task,extension:[...task.extension]});await expect(service.completeTask('t1',{hospitalId:'h1',nurseName:'Nurse Sara',completionNote:'Done'})).resolves.toMatchObject({status:'completed',overdue:false});expect(medplum.updateResource).toHaveBeenCalledWith(expect.objectContaining({status:'completed'}));medplum.readResource.mockResolvedValue({...task,extension:[{...task.extension[0],valueReference:{reference:'Organization/h2'}}]});await expect(service.completeTask('t1',{hospitalId:'h1',nurseName:'Nurse Sara'})).rejects.toBeInstanceOf(NotFoundException);});
+  it('records a scored fall risk against the active inpatient encounter', async () => {
+    await service.recordObservation({
+      hospitalId: 'h1',
+      patientId: 'p1',
+      encounterId: 'e1',
+      nurseName: 'Nurse Sara',
+      type: 'fall-risk',
+      score: 7,
+    });
+    expect(medplum.createResource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resourceType: 'Observation',
+        valueQuantity: { value: 7, unit: undefined },
+        encounter: { reference: 'Encounter/e1' },
+      }),
+    );
+  });
+  it('rejects documentation when the encounter is not inpatient', async () => {
+    medplum.readResource.mockImplementation(async (type: string) =>
+      type === 'Patient' ? patient : { ...encounter, class: { code: 'AMB' } },
+    );
+    await expect(
+      service.createNote({
+        hospitalId: 'h1',
+        patientId: 'p1',
+        encounterId: 'e1',
+        nurseName: 'Nurse Sara',
+        note: 'Stable',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+  it('marks overdue tasks and pending admission work on the dashboard', async () => {
+    medplum.searchResources.mockImplementation(async (type: string) =>
+      type === 'Encounter'
+        ? [encounter]
+        : type === 'Location'
+          ? [bed]
+          : type === 'Task'
+            ? [task]
+            : [],
+    );
+    const result = await service.dashboard('h1');
+    expect(result.summary).toMatchObject({
+      patients: 1,
+      tasksDue: 1,
+      overdue: 1,
+      assessmentsPending: 1,
+      carePlansPending: 1,
+    });
+    expect(result.patients[0]).toMatchObject({
+      patientName: 'Mona Ali',
+      wardCode: 'WARD-A',
+      bedName: 'B-01',
+      overdueCount: 1,
+    });
+  });
+  it('completes only a hospital-scoped nursing task', async () => {
+    medplum.readResource.mockResolvedValue({
+      ...task,
+      extension: [...task.extension],
+    });
+    await expect(
+      service.completeTask('t1', {
+        hospitalId: 'h1',
+        nurseName: 'Nurse Sara',
+        completionNote: 'Done',
+      }),
+    ).resolves.toMatchObject({ status: 'completed', overdue: false });
+    expect(medplum.updateResource).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'completed' }),
+    );
+    medplum.readResource.mockResolvedValue({
+      ...task,
+      extension: [
+        {
+          ...task.extension[0],
+          valueReference: { reference: 'Organization/h2' },
+        },
+      ],
+    });
+    await expect(
+      service.completeTask('t1', { hospitalId: 'h1', nurseName: 'Nurse Sara' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
 });

@@ -47,9 +47,7 @@ const VERIFIED_AT_EXTENSION_URL =
 
 @Injectable()
 export class RadiologyReportsService {
-  private readonly logger = new Logger(
-    RadiologyReportsService.name,
-  );
+  private readonly logger = new Logger(RadiologyReportsService.name);
 
   constructor(
     private readonly medplumService: MedplumService,
@@ -86,8 +84,7 @@ export class RadiologyReportsService {
       );
     }
 
-    const examCode =
-      order.code?.coding?.[0]?.code ?? 'RAD';
+    const examCode = order.code?.coding?.[0]?.code ?? 'RAD';
     const examName =
       order.code?.text ??
       order.code?.coding?.[0]?.display ??
@@ -116,8 +113,7 @@ export class RadiologyReportsService {
         coding: [
           {
             system:
-              order.code?.coding?.[0]?.system ??
-              LOCAL_RADIOLOGY_CODE_SYSTEM,
+              order.code?.coding?.[0]?.system ?? LOCAL_RADIOLOGY_CODE_SYSTEM,
             code: examCode,
             display: examName,
           },
@@ -148,10 +144,8 @@ export class RadiologyReportsService {
           ? [
               dto.radiologistId
                 ? {
-                    reference:
-                      `Practitioner/${dto.radiologistId}`,
-                    display:
-                      dto.radiologistName?.trim() || undefined,
+                    reference: `Practitioner/${dto.radiologistId}`,
+                    display: dto.radiologistName?.trim() || undefined,
                   }
                 : {
                     display: dto.radiologistName?.trim(),
@@ -163,8 +157,7 @@ export class RadiologyReportsService {
               },
             ],
 
-      conclusion:
-        dto.impression?.trim() || undefined,
+      conclusion: dto.impression?.trim() || undefined,
 
       extension: this.buildReportExtensions({
         hospitalId: dto.hospitalId,
@@ -179,26 +172,19 @@ export class RadiologyReportsService {
     const medplum = this.medplumService.getClient();
     const created = await medplum.createResource(report);
 
-    await this.syncWorkflowBestEffort(
-      dto.orderId,
-      'reporting',
-    );
+    await this.syncWorkflowBestEffort(dto.orderId, 'reporting');
     await this.syncWorkflowBestEffort(dto.orderId, 'preliminary');
 
     return this.mapReport(created);
   }
 
   async findReport(reportId: string) {
-    return this.mapReport(
-      await this.readReport(reportId),
-    );
+    return this.mapReport(await this.readReport(reportId));
   }
 
   async findByOrder(orderId: string) {
     if (!orderId?.trim()) {
-      throw new BadRequestException(
-        'Radiology order ID is required',
-      );
+      throw new BadRequestException('Radiology order ID is required');
     }
 
     await this.readOrder(orderId);
@@ -210,9 +196,7 @@ export class RadiologyReportsService {
 
   async findByEncounter(encounterId: string) {
     if (!encounterId?.trim()) {
-      throw new BadRequestException(
-        'Encounter ID is required',
-      );
+      throw new BadRequestException('Encounter ID is required');
     }
 
     const encounter = await this.readEncounter(encounterId);
@@ -226,49 +210,37 @@ export class RadiologyReportsService {
     }
 
     const medplum = this.medplumService.getClient();
-    const resources = await medplum.searchResources(
-      'DiagnosticReport',
-      {
-        subject: `Patient/${patientId}`,
-        _count: '500',
-      },
-    );
+    const resources = await medplum.searchResources('DiagnosticReport', {
+      subject: `Patient/${patientId}`,
+      _count: '500',
+    });
 
     const encounterReference = `Encounter/${encounterId}`;
 
     return this.reportCollection(
       resources.filter(
-        (report) =>
-          report.encounter?.reference === encounterReference,
+        (report) => report.encounter?.reference === encounterReference,
       ),
     );
   }
 
   async findByPatient(patientId: string) {
     if (!patientId?.trim()) {
-      throw new BadRequestException(
-        'Patient ID is required',
-      );
+      throw new BadRequestException('Patient ID is required');
     }
 
     await this.readPatient(patientId);
 
     const medplum = this.medplumService.getClient();
-    const resources = await medplum.searchResources(
-      'DiagnosticReport',
-      {
-        subject: `Patient/${patientId}`,
-        _count: '500',
-      },
-    );
+    const resources = await medplum.searchResources('DiagnosticReport', {
+      subject: `Patient/${patientId}`,
+      _count: '500',
+    });
 
     return this.reportCollection(resources);
   }
 
-  async updateReport(
-    reportId: string,
-    dto: UpdateRadiologyReportDto,
-  ) {
+  async updateReport(reportId: string, dto: UpdateRadiologyReportDto) {
     const report = await this.readReport(reportId);
 
     if (
@@ -281,10 +253,7 @@ export class RadiologyReportsService {
       );
     }
 
-    if (
-      report.status === 'cancelled' ||
-      report.status === 'entered-in-error'
-    ) {
+    if (report.status === 'cancelled' || report.status === 'entered-in-error') {
       throw new BadRequestException(
         `Cannot edit report with status ${report.status}`,
       );
@@ -321,10 +290,7 @@ export class RadiologyReportsService {
       findings:
         dto.findings !== undefined
           ? dto.findings
-          : this.extensionValueString(
-              report.extension,
-              FINDINGS_EXTENSION_URL,
-            ),
+          : this.extensionValueString(report.extension, FINDINGS_EXTENSION_URL),
       recommendations:
         dto.recommendations !== undefined
           ? dto.recommendations
@@ -348,20 +314,15 @@ export class RadiologyReportsService {
           ? [
               dto.radiologistId
                 ? {
-                    reference:
-                      `Practitioner/${dto.radiologistId}`,
-                    display:
-                      dto.radiologistName?.trim() || undefined,
+                    reference: `Practitioner/${dto.radiologistId}`,
+                    display: dto.radiologistName?.trim() || undefined,
                   }
                 : {
                     display: dto.radiologistName?.trim(),
                   },
             ]
           : report.performer,
-      extension: this.mergePreservedExtensions(
-        report.extension,
-        extension,
-      ),
+      extension: this.mergePreservedExtensions(report.extension, extension),
     });
 
     const orderId = this.extractReferenceId(
@@ -369,27 +330,24 @@ export class RadiologyReportsService {
       'ServiceRequest',
     );
 
-    await this.syncWorkflowBestEffort(
-      orderId,
-      'reporting',
-    );
+    await this.syncWorkflowBestEffort(orderId, 'reporting');
 
     return this.mapReport(updated);
   }
 
-  async finalizeReport(
-    reportId: string,
-    dto: FinalizeRadiologyReportDto,
-  ) {
+  async finalizeReport(reportId: string, dto: FinalizeRadiologyReportDto) {
     const report = await this.readReport(reportId);
 
-    if (!dto.verificationConfirmed) throw new BadRequestException('Radiology sign-off confirmation is required');
-    if (!dto.verifierName?.trim()) throw new BadRequestException('Verifier name is required for radiology sign-off');
+    if (!dto.verificationConfirmed)
+      throw new BadRequestException(
+        'Radiology sign-off confirmation is required',
+      );
+    if (!dto.verifierName?.trim())
+      throw new BadRequestException(
+        'Verifier name is required for radiology sign-off',
+      );
 
-    if (
-      report.status === 'cancelled' ||
-      report.status === 'entered-in-error'
-    ) {
+    if (report.status === 'cancelled' || report.status === 'entered-in-error') {
       throw new BadRequestException(
         `Cannot finalize report with status ${report.status}`,
       );
@@ -415,8 +373,7 @@ export class RadiologyReportsService {
       return this.mapReport(report);
     }
 
-    const impression =
-      this.clean(dto.impression) ?? report.conclusion;
+    const impression = this.clean(dto.impression) ?? report.conclusion;
     const findings = this.extensionValueString(
       report.extension,
       FINDINGS_EXTENSION_URL,
@@ -435,7 +392,10 @@ export class RadiologyReportsService {
     }
 
     // Check before saving: a refused finalization must leave the report as it was.
-    const reportOrderId = this.extractReferenceId(report.basedOn?.[0]?.reference, 'ServiceRequest');
+    const reportOrderId = this.extractReferenceId(
+      report.basedOn?.[0]?.reference,
+      'ServiceRequest',
+    );
     if (reportOrderId) {
       await this.radiologyService.assertImagesInPacs(reportOrderId);
     }
@@ -463,19 +423,13 @@ export class RadiologyReportsService {
     );
 
     if (orderId) {
-      await this.radiologyService.updateWorkflowStatus(
-        orderId,
-        'final',
-      );
+      await this.radiologyService.updateWorkflowStatus(orderId, 'final');
     }
 
     return this.mapReport(updated);
   }
 
-  async amendReport(
-    reportId: string,
-    dto: UpdateRadiologyReportDto,
-  ) {
+  async amendReport(reportId: string, dto: UpdateRadiologyReportDto) {
     const report = await this.readReport(reportId);
 
     if (
@@ -491,10 +445,7 @@ export class RadiologyReportsService {
     const findings =
       dto.findings !== undefined
         ? this.clean(dto.findings)
-        : this.extensionValueString(
-            report.extension,
-            FINDINGS_EXTENSION_URL,
-          );
+        : this.extensionValueString(report.extension, FINDINGS_EXTENSION_URL);
     const impression =
       dto.impression !== undefined
         ? this.clean(dto.impression)
@@ -506,10 +457,7 @@ export class RadiologyReportsService {
       );
     }
 
-    const updatedEditable = await this.updateFinalReportExtensions(
-      report,
-      dto,
-    );
+    const updatedEditable = await this.updateFinalReportExtensions(report, dto);
 
     const medplum = this.medplumService.getClient();
     const updated = await medplum.updateResource<DiagnosticReport>({
@@ -556,10 +504,7 @@ export class RadiologyReportsService {
       findings:
         dto.findings !== undefined
           ? dto.findings
-          : this.extensionValueString(
-              report.extension,
-              FINDINGS_EXTENSION_URL,
-            ),
+          : this.extensionValueString(report.extension, FINDINGS_EXTENSION_URL),
       recommendations:
         dto.recommendations !== undefined
           ? dto.recommendations
@@ -576,20 +521,15 @@ export class RadiologyReportsService {
           ? [
               dto.radiologistId
                 ? {
-                    reference:
-                      `Practitioner/${dto.radiologistId}`,
-                    display:
-                      dto.radiologistName?.trim() || undefined,
+                    reference: `Practitioner/${dto.radiologistId}`,
+                    display: dto.radiologistName?.trim() || undefined,
                   }
                 : {
                     display: dto.radiologistName?.trim(),
                   },
             ]
           : report.performer,
-      extension: this.mergePreservedExtensions(
-        report.extension,
-        rebuilt,
-      ),
+      extension: this.mergePreservedExtensions(report.extension, rebuilt),
     } as DiagnosticReport;
   }
 
@@ -607,46 +547,33 @@ export class RadiologyReportsService {
     }
 
     const medplum = this.medplumService.getClient();
-    const resources = await medplum.searchResources(
-      'DiagnosticReport',
-      {
-        subject: `Patient/${patientId}`,
-        _count: '500',
-      },
-    );
+    const resources = await medplum.searchResources('DiagnosticReport', {
+      subject: `Patient/${patientId}`,
+      _count: '500',
+    });
 
     const orderReference = `ServiceRequest/${orderId}`;
 
     return resources.filter(
       (report) =>
         report.basedOn?.some(
-          (reference) =>
-            reference.reference === orderReference,
+          (reference) => reference.reference === orderReference,
         ) ?? false,
     );
   }
 
-  private async readReport(
-    reportId: string,
-  ): Promise<DiagnosticReport> {
+  private async readReport(reportId: string): Promise<DiagnosticReport> {
     if (!reportId?.trim()) {
-      throw new BadRequestException(
-        'Radiology report ID is required',
-      );
+      throw new BadRequestException('Radiology report ID is required');
     }
 
     const medplum = this.medplumService.getClient();
 
     try {
-      const report = await medplum.readResource(
-        'DiagnosticReport',
-        reportId,
-      );
+      const report = await medplum.readResource('DiagnosticReport', reportId);
 
       if (!this.isRadiologyReport(report)) {
-        throw new NotFoundException(
-          'Radiology report not found',
-        );
+        throw new NotFoundException('Radiology report not found');
       }
 
       return report;
@@ -655,63 +582,42 @@ export class RadiologyReportsService {
         throw error;
       }
 
-      throw new NotFoundException(
-        'Radiology report not found',
-      );
+      throw new NotFoundException('Radiology report not found');
     }
   }
 
-  private async readPatient(
-    patientId: string,
-  ): Promise<Patient> {
+  private async readPatient(patientId: string): Promise<Patient> {
     const medplum = this.medplumService.getClient();
 
     try {
-      return await medplum.readResource(
-        'Patient',
-        patientId,
-      );
+      return await medplum.readResource('Patient', patientId);
     } catch {
       throw new NotFoundException('Patient not found');
     }
   }
 
-  private async readEncounter(
-    encounterId: string,
-  ): Promise<Encounter> {
+  private async readEncounter(encounterId: string): Promise<Encounter> {
     const medplum = this.medplumService.getClient();
 
     try {
-      return await medplum.readResource(
-        'Encounter',
-        encounterId,
-      );
+      return await medplum.readResource('Encounter', encounterId);
     } catch {
       throw new NotFoundException('Encounter not found');
     }
   }
 
-  private async readOrder(
-    orderId: string,
-  ): Promise<ServiceRequest> {
+  private async readOrder(orderId: string): Promise<ServiceRequest> {
     if (!orderId?.trim()) {
-      throw new BadRequestException(
-        'Radiology order ID is required',
-      );
+      throw new BadRequestException('Radiology order ID is required');
     }
 
     const medplum = this.medplumService.getClient();
 
     try {
-      const order = await medplum.readResource(
-        'ServiceRequest',
-        orderId,
-      );
+      const order = await medplum.readResource('ServiceRequest', orderId);
 
       if (!this.isRadiologyOrder(order)) {
-        throw new NotFoundException(
-          'Radiology order not found',
-        );
+        throw new NotFoundException('Radiology order not found');
       }
 
       return order;
@@ -720,37 +626,25 @@ export class RadiologyReportsService {
         throw error;
       }
 
-      throw new NotFoundException(
-        'Radiology order not found',
-      );
+      throw new NotFoundException('Radiology order not found');
     }
   }
 
-  private validateCreateDto(
-    dto: CreateRadiologyReportDto,
-  ) {
+  private validateCreateDto(dto: CreateRadiologyReportDto) {
     if (!dto.orderId?.trim()) {
-      throw new BadRequestException(
-        'Radiology order ID is required',
-      );
+      throw new BadRequestException('Radiology order ID is required');
     }
 
     if (!dto.patientId?.trim()) {
-      throw new BadRequestException(
-        'Patient ID is required',
-      );
+      throw new BadRequestException('Patient ID is required');
     }
 
     if (!dto.encounterId?.trim()) {
-      throw new BadRequestException(
-        'Encounter ID is required',
-      );
+      throw new BadRequestException('Encounter ID is required');
     }
 
     if (!dto.hospitalId?.trim()) {
-      throw new BadRequestException(
-        'Hospital ID is required',
-      );
+      throw new BadRequestException('Hospital ID is required');
     }
   }
 
@@ -762,19 +656,13 @@ export class RadiologyReportsService {
     encounterId: string,
     hospitalId: string,
   ) {
-    if (
-      encounter.subject?.reference !==
-      `Patient/${patientId}`
-    ) {
+    if (encounter.subject?.reference !== `Patient/${patientId}`) {
       throw new BadRequestException(
         'Encounter does not belong to this patient',
       );
     }
 
-    if (
-      order.subject?.reference !==
-      `Patient/${patientId}`
-    ) {
+    if (order.subject?.reference !== `Patient/${patientId}`) {
       throw new BadRequestException(
         'Radiology order does not belong to this patient',
       );
@@ -782,8 +670,7 @@ export class RadiologyReportsService {
 
     if (
       order.encounter?.reference &&
-      order.encounter.reference !==
-        `Encounter/${encounterId}`
+      order.encounter.reference !== `Encounter/${encounterId}`
     ) {
       throw new BadRequestException(
         'Radiology order does not belong to this encounter',
@@ -795,10 +682,7 @@ export class RadiologyReportsService {
       'Organization',
     );
 
-    if (
-      encounterHospitalId &&
-      encounterHospitalId !== hospitalId
-    ) {
+    if (encounterHospitalId && encounterHospitalId !== hospitalId) {
       throw new BadRequestException(
         'Encounter does not belong to this hospital',
       );
@@ -809,57 +693,40 @@ export class RadiologyReportsService {
       'Organization',
     );
 
-    if (
-      patientHospitalId &&
-      patientHospitalId !== hospitalId
-    ) {
-      throw new BadRequestException(
-        'Patient does not belong to this hospital',
-      );
+    if (patientHospitalId && patientHospitalId !== hospitalId) {
+      throw new BadRequestException('Patient does not belong to this hospital');
     }
   }
 
-  private isRadiologyOrder(
-    order: ServiceRequest,
-  ) {
+  private isRadiologyOrder(order: ServiceRequest) {
     return (
-      order.category?.some(
-        (category) =>
-          category.coding?.some(
-            (coding) =>
-              coding.code === RADIOLOGY_ORDER_CATEGORY_CODE ||
-              coding.display === 'Imaging',
-          ),
+      order.category?.some((category) =>
+        category.coding?.some(
+          (coding) =>
+            coding.code === RADIOLOGY_ORDER_CATEGORY_CODE ||
+            coding.display === 'Imaging',
+        ),
       ) ?? false
     );
   }
 
-  private isRadiologyReport(
-    report: DiagnosticReport,
-  ) {
+  private isRadiologyReport(report: DiagnosticReport) {
     return (
-      report.category?.some(
-        (category) =>
-          category.coding?.some(
-            (coding) =>
-              coding.code === RADIOLOGY_CATEGORY_CODE ||
-              coding.display === 'Radiology',
-          ),
+      report.category?.some((category) =>
+        category.coding?.some(
+          (coding) =>
+            coding.code === RADIOLOGY_CATEGORY_CODE ||
+            coding.display === 'Radiology',
+        ),
       ) ?? false
     );
   }
 
-  private reportCollection(
-    resources: DiagnosticReport[],
-  ) {
+  private reportCollection(resources: DiagnosticReport[]) {
     const reports = resources
       .filter((report) => this.isRadiologyReport(report))
       .map((report) => this.mapReport(report))
-      .sort(
-        (a, b) =>
-          this.dateValue(b.issuedAt) -
-          this.dateValue(a.issuedAt),
-      );
+      .sort((a, b) => this.dateValue(b.issuedAt) - this.dateValue(a.issuedAt));
 
     return {
       total: reports.length,
@@ -867,12 +734,9 @@ export class RadiologyReportsService {
     };
   }
 
-  private mapReport(
-    report: DiagnosticReport,
-  ) {
+  private mapReport(report: DiagnosticReport) {
     const verifier = report.extension?.find(
-      (extension) =>
-        extension.url === VERIFIED_BY_EXTENSION_URL,
+      (extension) => extension.url === VERIFIED_BY_EXTENSION_URL,
     )?.valueReference;
 
     return {
@@ -886,10 +750,7 @@ export class RadiologyReportsService {
         report.code?.coding?.[0]?.display ??
         'Radiology Report',
 
-      patientId: this.extractReferenceId(
-        report.subject?.reference,
-        'Patient',
-      ),
+      patientId: this.extractReferenceId(report.subject?.reference, 'Patient'),
       encounterId: this.extractReferenceId(
         report.encounter?.reference,
         'Encounter',
@@ -932,10 +793,7 @@ export class RadiologyReportsService {
       ),
       radiologistName: report.performer?.[0]?.display,
 
-      verifierId: this.extractReferenceId(
-        verifier?.reference,
-        'Practitioner',
-      ),
+      verifierId: this.extractReferenceId(verifier?.reference, 'Practitioner'),
       verifierName: verifier?.display,
       verifiedAt: this.extensionValueString(
         report.extension,
@@ -983,11 +841,7 @@ export class RadiologyReportsService {
       COMPARISON_EXTENSION_URL,
       input.comparison,
     );
-    this.pushStringExtension(
-      extension,
-      FINDINGS_EXTENSION_URL,
-      input.findings,
-    );
+    this.pushStringExtension(extension, FINDINGS_EXTENSION_URL, input.findings);
     this.pushStringExtension(
       extension,
       RECOMMENDATIONS_EXTENSION_URL,
@@ -1070,9 +924,7 @@ export class RadiologyReportsService {
     extension: Extension[] | undefined,
     url: string,
   ) {
-    const item = extension?.find(
-      (candidate) => candidate.url === url,
-    );
+    const item = extension?.find((candidate) => candidate.url === url);
 
     return item?.valueString ?? item?.valueCode;
   }
@@ -1082,22 +934,15 @@ export class RadiologyReportsService {
     url: string,
     resourceType: string,
   ) {
-    const reference = extension?.find(
-      (candidate) => candidate.url === url,
-    )?.valueReference?.reference;
+    const reference = extension?.find((candidate) => candidate.url === url)
+      ?.valueReference?.reference;
 
-    return this.extractReferenceId(
-      reference,
-      resourceType,
-    );
+    return this.extractReferenceId(reference, resourceType);
   }
 
-  private orderModality(
-    order: ServiceRequest,
-  ) {
+  private orderModality(order: ServiceRequest) {
     const item = order.extension?.find(
-      (extension) =>
-        extension.url === MODALITY_EXTENSION_URL,
+      (extension) => extension.url === MODALITY_EXTENSION_URL,
     );
 
     return item?.valueCode ?? item?.valueString;
@@ -1114,10 +959,7 @@ export class RadiologyReportsService {
       return name.text.trim();
     }
 
-    const generatedName = [
-      name.given?.join(' '),
-      name.family,
-    ]
+    const generatedName = [name.given?.join(' '), name.family]
       .filter(Boolean)
       .join(' ')
       .trim();
@@ -1134,15 +976,9 @@ export class RadiologyReportsService {
     }
 
     try {
-      await this.radiologyService.updateWorkflowStatus(
-        orderId,
-        workflowStatus,
-      );
+      await this.radiologyService.updateWorkflowStatus(orderId, workflowStatus);
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : String(error);
+      const message = error instanceof Error ? error.message : String(error);
 
       this.logger.warn(
         `Radiology report saved, but order ${orderId} could not advance to ${workflowStatus}: ${message}`,

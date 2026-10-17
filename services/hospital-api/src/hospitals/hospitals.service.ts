@@ -4,21 +4,18 @@ import { isHospitalEnabled } from './enabled-hospitals';
 
 @Injectable()
 export class HospitalsService {
-  constructor(
-    private readonly medplumService: MedplumService,
-  ) {}
+  constructor(private readonly medplumService: MedplumService) {}
 
   async findAll() {
     const medplum = this.medplumService.getClient();
 
-    const organizations =
-      await medplum.searchResources('Organization', {
-        active: 'true',
-        // Filter server-side: departments are Organizations too, and the
-        // default page size (20) would otherwise drop hospitals.
-        type: 'https://hospital-ehr.local/organization-type|hospital',
-        _count: '200',
-      });
+    const organizations = await medplum.searchResources('Organization', {
+      active: 'true',
+      // Filter server-side: departments are Organizations too, and the
+      // default page size (20) would otherwise drop hospitals.
+      type: 'https://hospital-ehr.local/organization-type|hospital',
+      _count: '200',
+    });
 
     return organizations
       .filter((organization) =>

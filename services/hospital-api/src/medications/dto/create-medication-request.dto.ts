@@ -7,11 +7,7 @@ export type MedicationRequestStatus =
   | 'draft'
   | 'unknown';
 
-export type MedicationRequestPriority =
-  | 'routine'
-  | 'urgent'
-  | 'asap'
-  | 'stat';
+export type MedicationRequestPriority = 'routine' | 'urgent' | 'asap' | 'stat';
 
 export class CreateMedicationRequestDto {
   patientId!: string;

@@ -4,58 +4,37 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import type {
-  Encounter,
-  Observation,
-  Patient,
-  Task,
-} from '@medplum/fhirtypes';
+import type { Encounter, Observation, Patient, Task } from '@medplum/fhirtypes';
 
-import {
-  MedplumService,
-} from '../medplum/medplum.service';
+import { MedplumService } from '../medplum/medplum.service';
 
-import {
-  CreateVitalsDto,
-} from './dto/create-vitals.dto';
+import { CreateVitalsDto } from './dto/create-vitals.dto';
 
 @Injectable()
 export class VitalsService {
-  constructor(
-    private readonly medplumService:
-      MedplumService,
-  ) {}
+  constructor(private readonly medplumService: MedplumService) {}
 
   // =====================================================
   // CREATE VITAL SIGNS
   // =====================================================
 
-  async create(
-    dto: CreateVitalsDto,
-  ) {
-    const medplum =
-      this.medplumService.getClient();
+  async create(dto: CreateVitalsDto) {
+    const medplum = this.medplumService.getClient();
 
     // ===================================================
     // VALIDATION
     // ===================================================
 
     if (!dto.patientId) {
-      throw new BadRequestException(
-        'Patient ID is required',
-      );
+      throw new BadRequestException('Patient ID is required');
     }
 
     if (!dto.encounterId) {
-      throw new BadRequestException(
-        'Encounter ID is required',
-      );
+      throw new BadRequestException('Encounter ID is required');
     }
 
     if (!dto.hospitalId) {
-      throw new BadRequestException(
-        'Hospital ID is required',
-      );
+      throw new BadRequestException('Hospital ID is required');
     }
 
     // ===================================================
@@ -65,15 +44,9 @@ export class VitalsService {
     let patient: Patient;
 
     try {
-      patient =
-        await medplum.readResource(
-          'Patient',
-          dto.patientId,
-        );
+      patient = await medplum.readResource('Patient', dto.patientId);
     } catch {
-      throw new NotFoundException(
-        'Patient not found',
-      );
+      throw new NotFoundException('Patient not found');
     }
 
     // ===================================================
@@ -83,26 +56,16 @@ export class VitalsService {
     let encounter: Encounter;
 
     try {
-      encounter =
-        await medplum.readResource(
-          'Encounter',
-          dto.encounterId,
-        );
+      encounter = await medplum.readResource('Encounter', dto.encounterId);
     } catch {
-      throw new NotFoundException(
-        'Encounter not found',
-      );
+      throw new NotFoundException('Encounter not found');
     }
 
     // ===================================================
     // VERIFY ENCOUNTER -> PATIENT
     // ===================================================
 
-    if (
-      encounter.subject
-        ?.reference !==
-      `Patient/${dto.patientId}`
-    ) {
+    if (encounter.subject?.reference !== `Patient/${dto.patientId}`) {
       throw new BadRequestException(
         'Encounter does not belong to this patient',
       );
@@ -113,9 +76,7 @@ export class VitalsService {
     // ===================================================
 
     if (
-      encounter.serviceProvider
-        ?.reference !==
-      `Organization/${dto.hospitalId}`
+      encounter.serviceProvider?.reference !== `Organization/${dto.hospitalId}`
     ) {
       throw new BadRequestException(
         'Encounter does not belong to the selected hospital',
@@ -126,48 +87,58 @@ export class VitalsService {
     // EFFECTIVE DATE/TIME
     // ===================================================
 
-    let effectiveDateTime:
-      string;
+    let effectiveDateTime: string;
 
     try {
-      effectiveDateTime =
-        dto.effectiveDateTime
-          ? new Date(
-              dto.effectiveDateTime,
-            ).toISOString()
-          : new Date().toISOString();
+      effectiveDateTime = dto.effectiveDateTime
+        ? new Date(dto.effectiveDateTime).toISOString()
+        : new Date().toISOString();
     } catch {
-      throw new BadRequestException(
-        'Invalid effective date/time',
-      );
+      throw new BadRequestException('Invalid effective date/time');
     }
 
     // ===================================================
     // VALIDATE VITAL VALUES
     // ===================================================
 
-    this.validateVitals(
-      dto,
-    );
+    this.validateVitals(dto);
 
     if (![1, 2, 3, 4, 5].includes(dto.triageLevel)) {
       throw new BadRequestException('Triage level must be between 1 and 5');
     }
     dto.chiefComplaint = dto.chiefComplaint?.trim();
     dto.triageNotes = dto.triageNotes?.trim();
-    if (!dto.chiefComplaint || dto.chiefComplaint.length < 3 || dto.chiefComplaint.length > 500) {
-      throw new BadRequestException('Chief complaint must contain 3 to 500 characters');
+    if (
+      !dto.chiefComplaint ||
+      dto.chiefComplaint.length < 3 ||
+      dto.chiefComplaint.length > 500
+    ) {
+      throw new BadRequestException(
+        'Chief complaint must contain 3 to 500 characters',
+      );
     }
     if (!dto.triageConfirmed) {
       throw new BadRequestException('Triage confirmation is required');
     }
-    if (!['reviewed-no-known', 'reviewed-known', 'unable'].includes(dto.allergyCheck)) {
+    if (
+      !['reviewed-no-known', 'reviewed-known', 'unable'].includes(
+        dto.allergyCheck,
+      )
+    ) {
       throw new BadRequestException('Allergy check is required');
     }
     if (!['reviewed', 'unavailable'].includes(dto.medicationHistory)) {
       throw new BadRequestException('Medication history review is required');
     }
-    const allowedRiskFlags = ['fall', 'sepsis', 'suicide', 'violence', 'infection', 'deterioration', 'other'];
+    const allowedRiskFlags = [
+      'fall',
+      'sepsis',
+      'suicide',
+      'violence',
+      'infection',
+      'deterioration',
+      'other',
+    ];
     if (dto.riskFlags?.some((flag) => !allowedRiskFlags.includes(flag))) {
       throw new BadRequestException('Invalid risk assessment flag');
     }
@@ -178,37 +149,24 @@ export class VitalsService {
     // BUILD OBSERVATIONS
     // ===================================================
 
-    const observations:
-      Observation[] = [];
+    const observations: Observation[] = [];
 
     // ===================================================
     // BLOOD PRESSURE
     // LOINC 85354-9
     // ===================================================
 
-    if (
-      dto.systolic !==
-        undefined ||
-      dto.diastolic !==
-        undefined
-    ) {
-      if (
-        dto.systolic ===
-          undefined ||
-        dto.diastolic ===
-          undefined
-      ) {
+    if (dto.systolic !== undefined || dto.diastolic !== undefined) {
+      if (dto.systolic === undefined || dto.diastolic === undefined) {
         throw new BadRequestException(
           'Both systolic and diastolic blood pressure values are required',
         );
       }
 
       observations.push({
-        resourceType:
-          'Observation',
+        resourceType: 'Observation',
 
-        status:
-          'final',
+        status: 'final',
 
         category: [
           {
@@ -217,53 +175,43 @@ export class VitalsService {
                 system:
                   'http://terminology.hl7.org/CodeSystem/observation-category',
 
-                code:
-                  'vital-signs',
+                code: 'vital-signs',
 
-                display:
-                  'Vital Signs',
+                display: 'Vital Signs',
               },
             ],
 
-            text:
-              'Vital Signs',
+            text: 'Vital Signs',
           },
         ],
 
         code: {
           coding: [
             {
-              system:
-                'http://loinc.org',
+              system: 'http://loinc.org',
 
-              code:
-                '85354-9',
+              code: '85354-9',
 
-              display:
-                'Blood pressure panel',
+              display: 'Blood pressure panel',
             },
           ],
 
-          text:
-            'Blood Pressure',
+          text: 'Blood Pressure',
         },
 
         subject: {
-          reference:
-            `Patient/${dto.patientId}`,
+          reference: `Patient/${dto.patientId}`,
         },
 
         encounter: {
-          reference:
-            `Encounter/${dto.encounterId}`,
+          reference: `Encounter/${dto.encounterId}`,
         },
 
         effectiveDateTime,
 
         performer: [
           {
-            reference:
-              `Organization/${dto.hospitalId}`,
+            reference: `Organization/${dto.hospitalId}`,
           },
         ],
 
@@ -272,33 +220,25 @@ export class VitalsService {
             code: {
               coding: [
                 {
-                  system:
-                    'http://loinc.org',
+                  system: 'http://loinc.org',
 
-                  code:
-                    '8480-6',
+                  code: '8480-6',
 
-                  display:
-                    'Systolic blood pressure',
+                  display: 'Systolic blood pressure',
                 },
               ],
 
-              text:
-                'Systolic Blood Pressure',
+              text: 'Systolic Blood Pressure',
             },
 
             valueQuantity: {
-              value:
-                dto.systolic,
+              value: dto.systolic,
 
-              unit:
-                'mmHg',
+              unit: 'mmHg',
 
-              system:
-                'http://unitsofmeasure.org',
+              system: 'http://unitsofmeasure.org',
 
-              code:
-                'mm[Hg]',
+              code: 'mm[Hg]',
             },
           },
 
@@ -306,33 +246,25 @@ export class VitalsService {
             code: {
               coding: [
                 {
-                  system:
-                    'http://loinc.org',
+                  system: 'http://loinc.org',
 
-                  code:
-                    '8462-4',
+                  code: '8462-4',
 
-                  display:
-                    'Diastolic blood pressure',
+                  display: 'Diastolic blood pressure',
                 },
               ],
 
-              text:
-                'Diastolic Blood Pressure',
+              text: 'Diastolic Blood Pressure',
             },
 
             valueQuantity: {
-              value:
-                dto.diastolic,
+              value: dto.diastolic,
 
-              unit:
-                'mmHg',
+              unit: 'mmHg',
 
-              system:
-                'http://unitsofmeasure.org',
+              system: 'http://unitsofmeasure.org',
 
-              code:
-                'mm[Hg]',
+              code: 'mm[Hg]',
             },
           },
         ],
@@ -344,43 +276,29 @@ export class VitalsService {
     // LOINC 8867-4
     // ===================================================
 
-    if (
-      dto.pulse !==
-      undefined
-    ) {
+    if (dto.pulse !== undefined) {
       observations.push(
-        this.createQuantityObservation(
-          {
-            patientId:
-              dto.patientId,
+        this.createQuantityObservation({
+          patientId: dto.patientId,
 
-            encounterId:
-              dto.encounterId,
+          encounterId: dto.encounterId,
 
-            hospitalId:
-              dto.hospitalId,
+          hospitalId: dto.hospitalId,
 
-            effectiveDateTime,
+          effectiveDateTime,
 
-            code:
-              '8867-4',
+          code: '8867-4',
 
-            display:
-              'Heart rate',
+          display: 'Heart rate',
 
-            text:
-              'Pulse',
+          text: 'Pulse',
 
-            value:
-              dto.pulse,
+          value: dto.pulse,
 
-            unit:
-              'beats/min',
+          unit: 'beats/min',
 
-            ucumCode:
-              '/min',
-          },
-        ),
+          ucumCode: '/min',
+        }),
       );
     }
 
@@ -389,43 +307,29 @@ export class VitalsService {
     // LOINC 8310-5
     // ===================================================
 
-    if (
-      dto.temperature !==
-      undefined
-    ) {
+    if (dto.temperature !== undefined) {
       observations.push(
-        this.createQuantityObservation(
-          {
-            patientId:
-              dto.patientId,
+        this.createQuantityObservation({
+          patientId: dto.patientId,
 
-            encounterId:
-              dto.encounterId,
+          encounterId: dto.encounterId,
 
-            hospitalId:
-              dto.hospitalId,
+          hospitalId: dto.hospitalId,
 
-            effectiveDateTime,
+          effectiveDateTime,
 
-            code:
-              '8310-5',
+          code: '8310-5',
 
-            display:
-              'Body temperature',
+          display: 'Body temperature',
 
-            text:
-              'Temperature',
+          text: 'Temperature',
 
-            value:
-              dto.temperature,
+          value: dto.temperature,
 
-            unit:
-              '°C',
+          unit: '°C',
 
-            ucumCode:
-              'Cel',
-          },
-        ),
+          ucumCode: 'Cel',
+        }),
       );
     }
 
@@ -434,43 +338,29 @@ export class VitalsService {
     // LOINC 9279-1
     // ===================================================
 
-    if (
-      dto.respiratoryRate !==
-      undefined
-    ) {
+    if (dto.respiratoryRate !== undefined) {
       observations.push(
-        this.createQuantityObservation(
-          {
-            patientId:
-              dto.patientId,
+        this.createQuantityObservation({
+          patientId: dto.patientId,
 
-            encounterId:
-              dto.encounterId,
+          encounterId: dto.encounterId,
 
-            hospitalId:
-              dto.hospitalId,
+          hospitalId: dto.hospitalId,
 
-            effectiveDateTime,
+          effectiveDateTime,
 
-            code:
-              '9279-1',
+          code: '9279-1',
 
-            display:
-              'Respiratory rate',
+          display: 'Respiratory rate',
 
-            text:
-              'Respiratory Rate',
+          text: 'Respiratory Rate',
 
-            value:
-              dto.respiratoryRate,
+          value: dto.respiratoryRate,
 
-            unit:
-              'breaths/min',
+          unit: 'breaths/min',
 
-            ucumCode:
-              '/min',
-          },
-        ),
+          ucumCode: '/min',
+        }),
       );
     }
 
@@ -479,43 +369,29 @@ export class VitalsService {
     // LOINC 59408-5
     // ===================================================
 
-    if (
-      dto.spo2 !==
-      undefined
-    ) {
+    if (dto.spo2 !== undefined) {
       observations.push(
-        this.createQuantityObservation(
-          {
-            patientId:
-              dto.patientId,
+        this.createQuantityObservation({
+          patientId: dto.patientId,
 
-            encounterId:
-              dto.encounterId,
+          encounterId: dto.encounterId,
 
-            hospitalId:
-              dto.hospitalId,
+          hospitalId: dto.hospitalId,
 
-            effectiveDateTime,
+          effectiveDateTime,
 
-            code:
-              '59408-5',
+          code: '59408-5',
 
-            display:
-              'Oxygen saturation in arterial blood by pulse oximetry',
+          display: 'Oxygen saturation in arterial blood by pulse oximetry',
 
-            text:
-              'SpO2',
+          text: 'SpO2',
 
-            value:
-              dto.spo2,
+          value: dto.spo2,
 
-            unit:
-              '%',
+          unit: '%',
 
-            ucumCode:
-              '%',
-          },
-        ),
+          ucumCode: '%',
+        }),
       );
     }
 
@@ -524,43 +400,29 @@ export class VitalsService {
     // LOINC 29463-7
     // ===================================================
 
-    if (
-      dto.weight !==
-      undefined
-    ) {
+    if (dto.weight !== undefined) {
       observations.push(
-        this.createQuantityObservation(
-          {
-            patientId:
-              dto.patientId,
+        this.createQuantityObservation({
+          patientId: dto.patientId,
 
-            encounterId:
-              dto.encounterId,
+          encounterId: dto.encounterId,
 
-            hospitalId:
-              dto.hospitalId,
+          hospitalId: dto.hospitalId,
 
-            effectiveDateTime,
+          effectiveDateTime,
 
-            code:
-              '29463-7',
+          code: '29463-7',
 
-            display:
-              'Body weight',
+          display: 'Body weight',
 
-            text:
-              'Weight',
+          text: 'Weight',
 
-            value:
-              dto.weight,
+          value: dto.weight,
 
-            unit:
-              'kg',
+          unit: 'kg',
 
-            ucumCode:
-              'kg',
-          },
-        ),
+          ucumCode: 'kg',
+        }),
       );
     }
 
@@ -569,43 +431,29 @@ export class VitalsService {
     // LOINC 8302-2
     // ===================================================
 
-    if (
-      dto.height !==
-      undefined
-    ) {
+    if (dto.height !== undefined) {
       observations.push(
-        this.createQuantityObservation(
-          {
-            patientId:
-              dto.patientId,
+        this.createQuantityObservation({
+          patientId: dto.patientId,
 
-            encounterId:
-              dto.encounterId,
+          encounterId: dto.encounterId,
 
-            hospitalId:
-              dto.hospitalId,
+          hospitalId: dto.hospitalId,
 
-            effectiveDateTime,
+          effectiveDateTime,
 
-            code:
-              '8302-2',
+          code: '8302-2',
 
-            display:
-              'Body height',
+          display: 'Body height',
 
-            text:
-              'Height',
+          text: 'Height',
 
-            value:
-              dto.height,
+          value: dto.height,
 
-            unit:
-              'cm',
+          unit: 'cm',
 
-            ucumCode:
-              'cm',
-          },
-        ),
+          ucumCode: 'cm',
+        }),
       );
     }
 
@@ -615,62 +463,38 @@ export class VitalsService {
     // ===================================================
 
     if (
-      dto.weight !==
-        undefined &&
-      dto.height !==
-        undefined &&
+      dto.weight !== undefined &&
+      dto.height !== undefined &&
       dto.height > 0
     ) {
-      const heightMeters =
-        dto.height / 100;
+      const heightMeters = dto.height / 100;
 
-      const bmi =
-        dto.weight /
-        (
-          heightMeters *
-          heightMeters
-        );
+      const bmi = dto.weight / (heightMeters * heightMeters);
 
-      const roundedBmi =
-        Number(
-          bmi.toFixed(
-            1,
-          ),
-        );
+      const roundedBmi = Number(bmi.toFixed(1));
 
       observations.push(
-        this.createQuantityObservation(
-          {
-            patientId:
-              dto.patientId,
+        this.createQuantityObservation({
+          patientId: dto.patientId,
 
-            encounterId:
-              dto.encounterId,
+          encounterId: dto.encounterId,
 
-            hospitalId:
-              dto.hospitalId,
+          hospitalId: dto.hospitalId,
 
-            effectiveDateTime,
+          effectiveDateTime,
 
-            code:
-              '39156-5',
+          code: '39156-5',
 
-            display:
-              'Body mass index',
+          display: 'Body mass index',
 
-            text:
-              'BMI',
+          text: 'BMI',
 
-            value:
-              roundedBmi,
+          value: roundedBmi,
 
-            unit:
-              'kg/m²',
+          unit: 'kg/m²',
 
-            ucumCode:
-              'kg/m2',
-          },
-        ),
+          ucumCode: 'kg/m2',
+        }),
       );
     }
 
@@ -679,16 +503,11 @@ export class VitalsService {
     // LOINC 72514-3
     // ===================================================
 
-    if (
-      dto.painScore !==
-      undefined
-    ) {
+    if (dto.painScore !== undefined) {
       observations.push({
-        resourceType:
-          'Observation',
+        resourceType: 'Observation',
 
-        status:
-          'final',
+        status: 'final',
 
         category: [
           {
@@ -697,58 +516,47 @@ export class VitalsService {
                 system:
                   'http://terminology.hl7.org/CodeSystem/observation-category',
 
-                code:
-                  'vital-signs',
+                code: 'vital-signs',
 
-                display:
-                  'Vital Signs',
+                display: 'Vital Signs',
               },
             ],
 
-            text:
-              'Vital Signs',
+            text: 'Vital Signs',
           },
         ],
 
         code: {
           coding: [
             {
-              system:
-                'http://loinc.org',
+              system: 'http://loinc.org',
 
-              code:
-                '72514-3',
+              code: '72514-3',
 
-              display:
-                'Pain severity - 0-10 verbal numeric rating',
+              display: 'Pain severity - 0-10 verbal numeric rating',
             },
           ],
 
-          text:
-            'Pain Score',
+          text: 'Pain Score',
         },
 
         subject: {
-          reference:
-            `Patient/${dto.patientId}`,
+          reference: `Patient/${dto.patientId}`,
         },
 
         encounter: {
-          reference:
-            `Encounter/${dto.encounterId}`,
+          reference: `Encounter/${dto.encounterId}`,
         },
 
         effectiveDateTime,
 
         performer: [
           {
-            reference:
-              `Organization/${dto.hospitalId}`,
+            reference: `Organization/${dto.hospitalId}`,
           },
         ],
 
-        valueInteger:
-          dto.painScore,
+        valueInteger: dto.painScore,
       });
     }
 
@@ -756,13 +564,8 @@ export class VitalsService {
     // AT LEAST ONE VITAL REQUIRED
     // ===================================================
 
-    if (
-      observations.length ===
-      0
-    ) {
-      throw new BadRequestException(
-        'At least one vital sign is required',
-      );
+    if (observations.length === 0) {
+      throw new BadRequestException('At least one vital sign is required');
     }
 
     // ===================================================
@@ -773,21 +576,12 @@ export class VitalsService {
     // inferring never[] for an empty array.
     // ===================================================
 
-    const created:
-      Observation[] = [];
+    const created: Observation[] = [];
 
-    for (
-      const observation
-      of observations
-    ) {
-      const result =
-        await medplum.createResource<Observation>(
-          observation,
-        );
+    for (const observation of observations) {
+      const result = await medplum.createResource<Observation>(observation);
 
-      created.push(
-        result,
-      );
+      created.push(result);
     }
 
     const alerts = this.detectCriticalAlerts(dto);
@@ -808,56 +602,164 @@ export class VitalsService {
     ]);
     encounter.status = 'triaged';
     encounter.priority = {
-      coding: [{
-        system: 'http://terminology.hl7.org/CodeSystem/v3-ActPriority',
-        code: dto.triageLevel <= 2 ? 'EM' : dto.triageLevel === 3 ? 'UR' : 'R',
-      }],
+      coding: [
+        {
+          system: 'http://terminology.hl7.org/CodeSystem/v3-ActPriority',
+          code:
+            dto.triageLevel <= 2 ? 'EM' : dto.triageLevel === 3 ? 'UR' : 'R',
+        },
+      ],
       text: `Triage level ${dto.triageLevel}`,
     };
     encounter.extension = [
-      ...(encounter.extension ?? []).filter((item) => !triageExtensionUrls.has(item.url)),
-      { url: 'https://hospital-ehr.local/fhir/StructureDefinition/triage-level', valueInteger: dto.triageLevel },
-      { url: 'https://hospital-ehr.local/fhir/StructureDefinition/chief-complaint', valueString: dto.chiefComplaint },
-      { url: 'https://hospital-ehr.local/fhir/StructureDefinition/isolation-required', valueBoolean: dto.isolationRequired ?? false },
-      { url: 'https://hospital-ehr.local/fhir/StructureDefinition/triage-completed-at', valueDateTime: effectiveDateTime },
-      { url: 'https://hospital-ehr.local/fhir/StructureDefinition/allergy-check', valueCode: dto.allergyCheck },
-      { url: 'https://hospital-ehr.local/fhir/StructureDefinition/medication-history-review', valueCode: dto.medicationHistory },
-      ...(dto.currentMedications ? [{ url: 'https://hospital-ehr.local/fhir/StructureDefinition/current-medications', valueString: dto.currentMedications }] : []),
-      ...(dto.riskFlags?.length ? [{ url: 'https://hospital-ehr.local/fhir/StructureDefinition/triage-risk-flags', valueString: dto.riskFlags.join('|') }] : []),
-      ...(dto.riskAssessmentNotes ? [{ url: 'https://hospital-ehr.local/fhir/StructureDefinition/risk-assessment-notes', valueString: dto.riskAssessmentNotes }] : []),
-      ...(dto.consciousness ? [{ url: 'https://hospital-ehr.local/fhir/StructureDefinition/consciousness', valueCode: dto.consciousness }] : []),
-      ...(dto.mobility ? [{ url: 'https://hospital-ehr.local/fhir/StructureDefinition/mobility', valueCode: dto.mobility }] : []),
-      ...(dto.triageNotes ? [{ url: 'https://hospital-ehr.local/fhir/StructureDefinition/triage-notes', valueString: dto.triageNotes }] : []),
-      ...(alerts.length ? [{ url: 'https://hospital-ehr.local/fhir/StructureDefinition/triage-alerts', valueString: alerts.join(' | ') }] : []),
+      ...(encounter.extension ?? []).filter(
+        (item) => !triageExtensionUrls.has(item.url),
+      ),
+      {
+        url: 'https://hospital-ehr.local/fhir/StructureDefinition/triage-level',
+        valueInteger: dto.triageLevel,
+      },
+      {
+        url: 'https://hospital-ehr.local/fhir/StructureDefinition/chief-complaint',
+        valueString: dto.chiefComplaint,
+      },
+      {
+        url: 'https://hospital-ehr.local/fhir/StructureDefinition/isolation-required',
+        valueBoolean: dto.isolationRequired ?? false,
+      },
+      {
+        url: 'https://hospital-ehr.local/fhir/StructureDefinition/triage-completed-at',
+        valueDateTime: effectiveDateTime,
+      },
+      {
+        url: 'https://hospital-ehr.local/fhir/StructureDefinition/allergy-check',
+        valueCode: dto.allergyCheck,
+      },
+      {
+        url: 'https://hospital-ehr.local/fhir/StructureDefinition/medication-history-review',
+        valueCode: dto.medicationHistory,
+      },
+      ...(dto.currentMedications
+        ? [
+            {
+              url: 'https://hospital-ehr.local/fhir/StructureDefinition/current-medications',
+              valueString: dto.currentMedications,
+            },
+          ]
+        : []),
+      ...(dto.riskFlags?.length
+        ? [
+            {
+              url: 'https://hospital-ehr.local/fhir/StructureDefinition/triage-risk-flags',
+              valueString: dto.riskFlags.join('|'),
+            },
+          ]
+        : []),
+      ...(dto.riskAssessmentNotes
+        ? [
+            {
+              url: 'https://hospital-ehr.local/fhir/StructureDefinition/risk-assessment-notes',
+              valueString: dto.riskAssessmentNotes,
+            },
+          ]
+        : []),
+      ...(dto.consciousness
+        ? [
+            {
+              url: 'https://hospital-ehr.local/fhir/StructureDefinition/consciousness',
+              valueCode: dto.consciousness,
+            },
+          ]
+        : []),
+      ...(dto.mobility
+        ? [
+            {
+              url: 'https://hospital-ehr.local/fhir/StructureDefinition/mobility',
+              valueCode: dto.mobility,
+            },
+          ]
+        : []),
+      ...(dto.triageNotes
+        ? [
+            {
+              url: 'https://hospital-ehr.local/fhir/StructureDefinition/triage-notes',
+              valueString: dto.triageNotes,
+            },
+          ]
+        : []),
+      ...(alerts.length
+        ? [
+            {
+              url: 'https://hospital-ehr.local/fhir/StructureDefinition/triage-alerts',
+              valueString: alerts.join(' | '),
+            },
+          ]
+        : []),
     ];
     await medplum.updateResource<Encounter>(encounter);
 
-    const existingQueueTasks = (await medplum.searchResources('Task', {
-      encounter: `Encounter/${dto.encounterId}`,
-      status: 'ready,in-progress',
-      _count: '20',
-    })) ?? [];
-    let queueTask = existingQueueTasks.find((item) => item.code?.coding?.some((coding) => coding.code === 'doctor-queue'));
+    const existingQueueTasks =
+      (await medplum.searchResources('Task', {
+        encounter: `Encounter/${dto.encounterId}`,
+        status: 'ready,in-progress',
+        _count: '20',
+      })) ?? [];
+    let queueTask = existingQueueTasks.find((item) =>
+      item.code?.coding?.some((coding) => coding.code === 'doctor-queue'),
+    );
     if (!queueTask) {
       const task: Task = {
         resourceType: 'Task',
         status: 'ready',
         intent: 'order',
-        priority: dto.triageLevel <= 2 ? 'stat' : dto.triageLevel === 3 ? 'urgent' : 'routine',
-        code: { coding: [{ system: 'https://hospital-ehr.local/CodeSystem/workflow-task', code: 'doctor-queue', display: 'Doctor Queue' }], text: 'Doctor assessment queue' },
-        for: { reference: `Patient/${dto.patientId}`, display: patient.name?.[0]?.text },
+        priority:
+          dto.triageLevel <= 2
+            ? 'stat'
+            : dto.triageLevel === 3
+              ? 'urgent'
+              : 'routine',
+        code: {
+          coding: [
+            {
+              system: 'https://hospital-ehr.local/CodeSystem/workflow-task',
+              code: 'doctor-queue',
+              display: 'Doctor Queue',
+            },
+          ],
+          text: 'Doctor assessment queue',
+        },
+        for: {
+          reference: `Patient/${dto.patientId}`,
+          display: patient.name?.[0]?.text,
+        },
         encounter: { reference: `Encounter/${dto.encounterId}` },
         authoredOn: effectiveDateTime,
         owner: dto.assignedPractitionerId
-          ? { reference: `Practitioner/${dto.assignedPractitionerId}`, display: dto.assignedPractitionerName }
+          ? {
+              reference: `Practitioner/${dto.assignedPractitionerId}`,
+              display: dto.assignedPractitionerName,
+            }
           : { reference: `Organization/${dto.hospitalId}` },
         requester: dto.triageNurseId
-          ? { reference: `Practitioner/${dto.triageNurseId}`, display: dto.triageNurseName }
+          ? {
+              reference: `Practitioner/${dto.triageNurseId}`,
+              display: dto.triageNurseName,
+            }
           : { reference: `Organization/${dto.hospitalId}` },
         input: [
           { type: { text: 'Triage level' }, valueInteger: dto.triageLevel },
-          { type: { text: 'Chief complaint' }, valueString: dto.chiefComplaint },
-          ...(dto.riskFlags?.length ? [{ type: { text: 'Risk flags' }, valueString: dto.riskFlags.join('|') }] : []),
+          {
+            type: { text: 'Chief complaint' },
+            valueString: dto.chiefComplaint,
+          },
+          ...(dto.riskFlags?.length
+            ? [
+                {
+                  type: { text: 'Risk flags' },
+                  valueString: dto.riskFlags.join('|'),
+                },
+              ]
+            : []),
         ],
       };
       queueTask = await medplum.createResource<Task>(task);
@@ -868,15 +770,11 @@ export class VitalsService {
     // ===================================================
 
     return {
-      count:
-        created.length,
+      count: created.length,
 
       effectiveDateTime,
 
-      vitals:
-        this.mapVitals(
-          created,
-        ),
+      vitals: this.mapVitals(created),
 
       triage: {
         level: dto.triageLevel,
@@ -893,13 +791,32 @@ export class VitalsService {
 
   private detectCriticalAlerts(dto: CreateVitalsDto): string[] {
     const alerts: string[] = [];
-    if (dto.systolic !== undefined && (dto.systolic < 80 || dto.systolic >= 180)) alerts.push('Critical systolic blood pressure');
-    if (dto.diastolic !== undefined && (dto.diastolic < 50 || dto.diastolic >= 120)) alerts.push('Critical diastolic blood pressure');
-    if (dto.pulse !== undefined && (dto.pulse < 40 || dto.pulse > 130)) alerts.push('Critical heart rate');
-    if (dto.temperature !== undefined && (dto.temperature < 35 || dto.temperature >= 40)) alerts.push('Critical temperature');
-    if (dto.respiratoryRate !== undefined && (dto.respiratoryRate < 8 || dto.respiratoryRate > 30)) alerts.push('Critical respiratory rate');
-    if (dto.spo2 !== undefined && dto.spo2 < 90) alerts.push('Critical oxygen saturation');
-    if (dto.consciousness && dto.consciousness !== 'alert') alerts.push('Altered level of consciousness');
+    if (
+      dto.systolic !== undefined &&
+      (dto.systolic < 80 || dto.systolic >= 180)
+    )
+      alerts.push('Critical systolic blood pressure');
+    if (
+      dto.diastolic !== undefined &&
+      (dto.diastolic < 50 || dto.diastolic >= 120)
+    )
+      alerts.push('Critical diastolic blood pressure');
+    if (dto.pulse !== undefined && (dto.pulse < 40 || dto.pulse > 130))
+      alerts.push('Critical heart rate');
+    if (
+      dto.temperature !== undefined &&
+      (dto.temperature < 35 || dto.temperature >= 40)
+    )
+      alerts.push('Critical temperature');
+    if (
+      dto.respiratoryRate !== undefined &&
+      (dto.respiratoryRate < 8 || dto.respiratoryRate > 30)
+    )
+      alerts.push('Critical respiratory rate');
+    if (dto.spo2 !== undefined && dto.spo2 < 90)
+      alerts.push('Critical oxygen saturation');
+    if (dto.consciousness && dto.consciousness !== 'alert')
+      alerts.push('Altered level of consciousness');
     return alerts;
   }
 
@@ -907,102 +824,61 @@ export class VitalsService {
   // GET VITALS BY ENCOUNTER
   // =====================================================
 
-  async findByEncounter(
-  
-    encounterId: string,
-  ) {
+  async findByEncounter(encounterId: string) {
     if (!encounterId) {
-      throw new BadRequestException(
-        'Encounter ID is required',
-      );
+      throw new BadRequestException('Encounter ID is required');
     }
 
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
-    const searchResult =
-      await medplum.searchResources(
-        'Observation',
-        {
-          encounter:
-            `Encounter/${encounterId}`,
+    const searchResult = await medplum.searchResources('Observation', {
+      encounter: `Encounter/${encounterId}`,
 
-          category:
-            'vital-signs',
+      category: 'vital-signs',
 
-          _count:
-            '200',
-        },
-      );
+      _count: '200',
+    });
 
     // Convert Medplum ResourceArray to normal array.
 
-    const observations:
-      Observation[] = [
-        ...searchResult,
-      ];
+    const observations: Observation[] = [...searchResult];
 
-    observations.sort(
-      (
-        a,
-        b,
-      ) => {
-        const aTime =
-          this.getObservationTime(
-            a,
-          );
+    observations.sort((a, b) => {
+      const aTime = this.getObservationTime(a);
 
-        const bTime =
-          this.getObservationTime(
-            b,
-          );
+      const bTime = this.getObservationTime(b);
 
-        return bTime - aTime;
-      },
-    );
+      return bTime - aTime;
+    });
 
     return {
-      total:
-        observations.length,
+      total: observations.length,
 
-      vitals:
-        this.mapVitals(
-          observations,
-        ),
+      vitals: this.mapVitals(observations),
     };
   }
-    // =====================================================
+  // =====================================================
   // GET VITALS BY PATIENT
   //
   // Returns vital signs from ALL encounters
   // for the selected patient.
   // =====================================================
 
-  async findByPatient(
-    patientId: string,
-  ) {
+  async findByPatient(patientId: string) {
     if (!patientId) {
-      throw new BadRequestException(
-        'Patient ID is required',
-      );
+      throw new BadRequestException('Patient ID is required');
     }
 
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
     // ===================================================
     // VERIFY PATIENT EXISTS
     // ===================================================
 
     try {
-      await medplum.readResource(
-        'Patient',
-        patientId,
-      );
+      await medplum.readResource('Patient', patientId);
     } catch {
-      throw new NotFoundException(
-        'Patient not found',
-      );
+      throw new NotFoundException('Patient not found');
     }
 
     // ===================================================
@@ -1013,52 +889,31 @@ export class VitalsService {
     // category = vital-signs
     // ===================================================
 
-    const searchResult =
-      await medplum.searchResources(
-        'Observation',
-        {
-          patient:
-            `Patient/${patientId}`,
+    const searchResult = await medplum.searchResources('Observation', {
+      patient: `Patient/${patientId}`,
 
-          category:
-            'vital-signs',
+      category: 'vital-signs',
 
-          _count:
-            '1000',
-        },
-      );
+      _count: '1000',
+    });
 
     // ===================================================
     // MEDPLUM ResourceArray -> Observation[]
     // ===================================================
 
-    const observations:
-      Observation[] = [
-        ...searchResult,
-      ];
+    const observations: Observation[] = [...searchResult];
 
     // ===================================================
     // SORT NEWEST -> OLDEST
     // ===================================================
 
-    observations.sort(
-      (
-        a,
-        b,
-      ) => {
-        const aTime =
-          this.getObservationTime(
-            a,
-          );
+    observations.sort((a, b) => {
+      const aTime = this.getObservationTime(a);
 
-        const bTime =
-          this.getObservationTime(
-            b,
-          );
+      const bTime = this.getObservationTime(b);
 
-        return bTime - aTime;
-      },
-    );
+      return bTime - aTime;
+    });
 
     // ===================================================
     // MAP OBSERVATIONS
@@ -1067,10 +922,7 @@ export class VitalsService {
     // Encounter Vitals.
     // ===================================================
 
-    const vitals =
-      this.mapVitals(
-        observations,
-      );
+    const vitals = this.mapVitals(observations);
 
     // ===================================================
     // ADD ENCOUNTER ID
@@ -1079,30 +931,20 @@ export class VitalsService {
     // the encounter where the measurement was recorded.
     // ===================================================
 
-    const mappedVitals =
-      vitals.map(
-        (
-          vital,
-          index,
-        ) => {
-          const observation =
-            observations[index];
+    const mappedVitals = vitals.map((vital, index) => {
+      const observation = observations[index];
 
-          const encounterId =
-            observation.encounter
-              ?.reference
-              ?.replace(
-                'Encounter/',
-                '',
-              );
-
-          return {
-            ...vital,
-
-            encounterId,
-          };
-        },
+      const encounterId = observation.encounter?.reference?.replace(
+        'Encounter/',
+        '',
       );
+
+      return {
+        ...vital,
+
+        encounterId,
+      };
+    });
 
     // ===================================================
     // LATEST VITALS
@@ -1111,22 +953,11 @@ export class VitalsService {
     // is already sorted newest -> oldest.
     // ===================================================
 
-    const latest:
-      Record<
-        string,
-        (typeof mappedVitals)[number]
-      > = {};
+    const latest: Record<string, (typeof mappedVitals)[number]> = {};
 
-    for (
-      const vital
-      of mappedVitals
-    ) {
-      if (
-        vital.type &&
-        !latest[vital.type]
-      ) {
-        latest[vital.type] =
-          vital;
+    for (const vital of mappedVitals) {
+      if (vital.type && !latest[vital.type]) {
+        latest[vital.type] = vital;
       }
     }
 
@@ -1135,15 +966,13 @@ export class VitalsService {
     // ===================================================
 
     return {
-      total:
-        mappedVitals.length,
+      total: mappedVitals.length,
 
       patientId,
 
       latest,
 
-      vitals:
-        mappedVitals,
+      vitals: mappedVitals,
     };
   }
 
@@ -1151,45 +980,31 @@ export class VitalsService {
   // CREATE GENERIC QUANTITY OBSERVATION
   // =====================================================
 
-  private createQuantityObservation(
-    options: {
-      patientId:
-        string;
+  private createQuantityObservation(options: {
+    patientId: string;
 
-      encounterId:
-        string;
+    encounterId: string;
 
-      hospitalId:
-        string;
+    hospitalId: string;
 
-      effectiveDateTime:
-        string;
+    effectiveDateTime: string;
 
-      code:
-        string;
+    code: string;
 
-      display:
-        string;
+    display: string;
 
-      text:
-        string;
+    text: string;
 
-      value:
-        number;
+    value: number;
 
-      unit:
-        string;
+    unit: string;
 
-      ucumCode:
-        string;
-    },
-  ): Observation {
+    ucumCode: string;
+  }): Observation {
     return {
-      resourceType:
-        'Observation',
+      resourceType: 'Observation',
 
-      status:
-        'final',
+      status: 'final',
 
       category: [
         {
@@ -1198,69 +1013,54 @@ export class VitalsService {
               system:
                 'http://terminology.hl7.org/CodeSystem/observation-category',
 
-              code:
-                'vital-signs',
+              code: 'vital-signs',
 
-              display:
-                'Vital Signs',
+              display: 'Vital Signs',
             },
           ],
 
-          text:
-            'Vital Signs',
+          text: 'Vital Signs',
         },
       ],
 
       code: {
         coding: [
           {
-            system:
-              'http://loinc.org',
+            system: 'http://loinc.org',
 
-            code:
-              options.code,
+            code: options.code,
 
-            display:
-              options.display,
+            display: options.display,
           },
         ],
 
-        text:
-          options.text,
+        text: options.text,
       },
 
       subject: {
-        reference:
-          `Patient/${options.patientId}`,
+        reference: `Patient/${options.patientId}`,
       },
 
       encounter: {
-        reference:
-          `Encounter/${options.encounterId}`,
+        reference: `Encounter/${options.encounterId}`,
       },
 
-      effectiveDateTime:
-        options.effectiveDateTime,
+      effectiveDateTime: options.effectiveDateTime,
 
       performer: [
         {
-          reference:
-            `Organization/${options.hospitalId}`,
+          reference: `Organization/${options.hospitalId}`,
         },
       ],
 
       valueQuantity: {
-        value:
-          options.value,
+        value: options.value,
 
-        unit:
-          options.unit,
+        unit: options.unit,
 
-        system:
-          'http://unitsofmeasure.org',
+        system: 'http://unitsofmeasure.org',
 
-        code:
-          options.ucumCode,
+        code: options.ucumCode,
       },
     };
   }
@@ -1269,184 +1069,104 @@ export class VitalsService {
   // MAP OBSERVATIONS
   // =====================================================
 
-  private mapVitals(
-    observations:
-      Observation[],
-  ) {
-    return observations.map(
-      (
-        observation,
-      ) => {
-        const code =
-          observation.code
-            ?.coding?.[0]
-            ?.code;
+  private mapVitals(observations: Observation[]) {
+    return observations.map((observation) => {
+      const code = observation.code?.coding?.[0]?.code;
 
-        const text =
-          observation.code
-            ?.text ??
-          observation.code
-            ?.coding?.[0]
-            ?.display ??
-          code ??
-          'Observation';
+      const text =
+        observation.code?.text ??
+        observation.code?.coding?.[0]?.display ??
+        code ??
+        'Observation';
 
-        const time =
-          observation
-            .effectiveDateTime ??
-          observation.issued;
+      const time = observation.effectiveDateTime ?? observation.issued;
 
-        // ===============================================
-        // BLOOD PRESSURE
-        // ===============================================
+      // ===============================================
+      // BLOOD PRESSURE
+      // ===============================================
 
-        if (
-          code ===
-          '85354-9'
-        ) {
-          const systolic =
-            observation.component
-              ?.find(
-                (
-                  component,
-                ) =>
-                  component.code
-                    ?.coding
-                    ?.some(
-                      (
-                        coding,
-                      ) =>
-                        coding.code ===
-                        '8480-6',
-                    ),
-              )
-              ?.valueQuantity
-              ?.value;
+      if (code === '85354-9') {
+        const systolic = observation.component?.find((component) =>
+          component.code?.coding?.some((coding) => coding.code === '8480-6'),
+        )?.valueQuantity?.value;
 
-          const diastolic =
-            observation.component
-              ?.find(
-                (
-                  component,
-                ) =>
-                  component.code
-                    ?.coding
-                    ?.some(
-                      (
-                        coding,
-                      ) =>
-                        coding.code ===
-                        '8462-4',
-                    ),
-              )
-              ?.valueQuantity
-              ?.value;
-
-          return {
-            id:
-              observation.id,
-
-            type:
-              'blood-pressure',
-
-            code,
-
-            label:
-              'Blood Pressure',
-
-            systolic,
-
-            diastolic,
-
-            value:
-              systolic !==
-                undefined &&
-              diastolic !==
-                undefined
-                ? `${systolic}/${diastolic}`
-                : undefined,
-
-            unit:
-              'mmHg',
-
-            effectiveDateTime:
-              time,
-          };
-        }
-
-        // ===============================================
-        // PAIN SCORE
-        // ===============================================
-
-        if (
-          code ===
-          '72514-3'
-        ) {
-          return {
-            id:
-              observation.id,
-
-            type:
-              'pain-score',
-
-            code,
-
-            label:
-              'Pain Score',
-
-            value:
-              observation.valueInteger,
-
-            unit:
-              '/10',
-
-            effectiveDateTime:
-              time,
-          };
-        }
-
-        // ===============================================
-        // QUANTITY OBSERVATION
-        // ===============================================
+        const diastolic = observation.component?.find((component) =>
+          component.code?.coding?.some((coding) => coding.code === '8462-4'),
+        )?.valueQuantity?.value;
 
         return {
-          id:
-            observation.id,
+          id: observation.id,
 
-          type:
-            this.getVitalType(
-              code,
-            ),
+          type: 'blood-pressure',
 
           code,
 
-          label:
-            text,
+          label: 'Blood Pressure',
+
+          systolic,
+
+          diastolic,
 
           value:
-            observation
-              .valueQuantity
-              ?.value,
+            systolic !== undefined && diastolic !== undefined
+              ? `${systolic}/${diastolic}`
+              : undefined,
 
-          unit:
-            observation
-              .valueQuantity
-              ?.unit,
+          unit: 'mmHg',
 
-          effectiveDateTime:
-            time,
+          effectiveDateTime: time,
         };
-      },
-    );
+      }
+
+      // ===============================================
+      // PAIN SCORE
+      // ===============================================
+
+      if (code === '72514-3') {
+        return {
+          id: observation.id,
+
+          type: 'pain-score',
+
+          code,
+
+          label: 'Pain Score',
+
+          value: observation.valueInteger,
+
+          unit: '/10',
+
+          effectiveDateTime: time,
+        };
+      }
+
+      // ===============================================
+      // QUANTITY OBSERVATION
+      // ===============================================
+
+      return {
+        id: observation.id,
+
+        type: this.getVitalType(code),
+
+        code,
+
+        label: text,
+
+        value: observation.valueQuantity?.value,
+
+        unit: observation.valueQuantity?.unit,
+
+        effectiveDateTime: time,
+      };
+    });
   }
 
   // =====================================================
   // MAP LOINC -> INTERNAL VITAL TYPE
   // =====================================================
 
-  private getVitalType(
-    code?: string,
-  ) {
+  private getVitalType(code?: string) {
     switch (code) {
       case '8867-4':
         return 'pulse';
@@ -1478,29 +1198,16 @@ export class VitalsService {
   // OBSERVATION TIME
   // =====================================================
 
-  private getObservationTime(
-    observation:
-      Observation,
-  ) {
-    const value =
-      observation
-        .effectiveDateTime ??
-      observation.issued;
+  private getObservationTime(observation: Observation) {
+    const value = observation.effectiveDateTime ?? observation.issued;
 
     if (!value) {
       return 0;
     }
 
-    const timestamp =
-      new Date(
-        value,
-      ).getTime();
+    const timestamp = new Date(value).getTime();
 
-    if (
-      Number.isNaN(
-        timestamp,
-      )
-    ) {
+    if (Number.isNaN(timestamp)) {
       return 0;
     }
 
@@ -1511,137 +1218,56 @@ export class VitalsService {
   // VALIDATE VITAL RANGES
   // =====================================================
 
-  private validateVitals(
-    dto: CreateVitalsDto,
-  ) {
+  private validateVitals(dto: CreateVitalsDto) {
     if (
-      dto.systolic !==
-        undefined &&
-      (
-        dto.systolic <=
-          0 ||
-        dto.systolic >
-          350
-      )
+      dto.systolic !== undefined &&
+      (dto.systolic <= 0 || dto.systolic > 350)
     ) {
-      throw new BadRequestException(
-        'Invalid systolic blood pressure',
-      );
+      throw new BadRequestException('Invalid systolic blood pressure');
     }
 
     if (
-      dto.diastolic !==
-        undefined &&
-      (
-        dto.diastolic <=
-          0 ||
-        dto.diastolic >
-          250
-      )
+      dto.diastolic !== undefined &&
+      (dto.diastolic <= 0 || dto.diastolic > 250)
     ) {
-      throw new BadRequestException(
-        'Invalid diastolic blood pressure',
-      );
+      throw new BadRequestException('Invalid diastolic blood pressure');
+    }
+
+    if (dto.pulse !== undefined && (dto.pulse <= 0 || dto.pulse > 300)) {
+      throw new BadRequestException('Invalid pulse value');
     }
 
     if (
-      dto.pulse !==
-        undefined &&
-      (
-        dto.pulse <= 0 ||
-        dto.pulse >
-          300
-      )
+      dto.temperature !== undefined &&
+      (dto.temperature < 20 || dto.temperature > 50)
     ) {
-      throw new BadRequestException(
-        'Invalid pulse value',
-      );
+      throw new BadRequestException('Invalid body temperature');
     }
 
     if (
-      dto.temperature !==
-        undefined &&
-      (
-        dto.temperature <
-          20 ||
-        dto.temperature >
-          50
-      )
+      dto.respiratoryRate !== undefined &&
+      (dto.respiratoryRate <= 0 || dto.respiratoryRate > 100)
     ) {
-      throw new BadRequestException(
-        'Invalid body temperature',
-      );
+      throw new BadRequestException('Invalid respiratory rate');
+    }
+
+    if (dto.spo2 !== undefined && (dto.spo2 < 0 || dto.spo2 > 100)) {
+      throw new BadRequestException('SpO2 must be between 0 and 100');
+    }
+
+    if (dto.weight !== undefined && (dto.weight <= 0 || dto.weight > 1000)) {
+      throw new BadRequestException('Invalid patient weight');
+    }
+
+    if (dto.height !== undefined && (dto.height <= 0 || dto.height > 300)) {
+      throw new BadRequestException('Invalid patient height');
     }
 
     if (
-      dto.respiratoryRate !==
-        undefined &&
-      (
-        dto.respiratoryRate <=
-          0 ||
-        dto.respiratoryRate >
-          100
-      )
+      dto.painScore !== undefined &&
+      (dto.painScore < 0 || dto.painScore > 10)
     ) {
-      throw new BadRequestException(
-        'Invalid respiratory rate',
-      );
-    }
-
-    if (
-      dto.spo2 !==
-        undefined &&
-      (
-        dto.spo2 < 0 ||
-        dto.spo2 > 100
-      )
-    ) {
-      throw new BadRequestException(
-        'SpO2 must be between 0 and 100',
-      );
-    }
-
-    if (
-      dto.weight !==
-        undefined &&
-      (
-        dto.weight <= 0 ||
-        dto.weight >
-          1000
-      )
-    ) {
-      throw new BadRequestException(
-        'Invalid patient weight',
-      );
-    }
-
-    if (
-      dto.height !==
-        undefined &&
-      (
-        dto.height <= 0 ||
-        dto.height >
-          300
-      )
-    ) {
-      throw new BadRequestException(
-        'Invalid patient height',
-      );
-    }
-
-    if (
-      dto.painScore !==
-        undefined &&
-      (
-        dto.painScore <
-          0 ||
-        dto.painScore >
-          10
-      )
-    ) {
-      throw new BadRequestException(
-        'Pain score must be between 0 and 10',
-      );
+      throw new BadRequestException('Pain score must be between 0 and 10');
     }
   }
 }

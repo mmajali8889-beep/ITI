@@ -179,13 +179,28 @@ export class DischargeService {
     };
     const made = await this.medplumService.getClient().createResource(c);
     const appointment: Appointment = {
-      resourceType: 'Appointment', status: 'proposed', description: d.followUp.trim(),
+      resourceType: 'Appointment',
+      status: 'proposed',
+      description: d.followUp.trim(),
       reasonCode: [{ text: 'Post-discharge follow-up' }],
-      participant: [{ actor: { reference: t.for?.reference, display: t.for?.display }, status: 'needs-action' }],
+      participant: [
+        {
+          actor: { reference: t.for?.reference, display: t.for?.display },
+          status: 'needs-action',
+        },
+      ],
       created: new Date().toISOString(),
-      extension: [{ url: HOSPITAL, valueReference: { reference: ORG(d.hospitalId) } }, { url: `${BASE}/appointment-encounter`, valueReference: { reference: t.encounter?.reference } }],
+      extension: [
+        { url: HOSPITAL, valueReference: { reference: ORG(d.hospitalId) } },
+        {
+          url: `${BASE}/appointment-encounter`,
+          valueReference: { reference: t.encounter?.reference },
+        },
+      ],
     };
-    const followUp = await this.medplumService.getClient().createResource(appointment);
+    const followUp = await this.medplumService
+      .getClient()
+      .createResource(appointment);
     t.extension = this.replace(t, SUMMARY, `Composition/${made.id}`);
     t.extension = this.replace(t, FOLLOWUP, `Appointment/${followUp.id}`);
     return this.map(await this.medplumService.getClient().updateResource(t));
@@ -353,7 +368,10 @@ export class DischargeService {
       authoredOn: t.authoredOn,
       reconciliationComplete: Boolean(ext(t, RECON)),
       summaryId: ext(t, SUMMARY)?.valueString?.replace('Composition/', ''),
-      followUpAppointmentId: ext(t, FOLLOWUP)?.valueString?.replace('Appointment/', ''),
+      followUpAppointmentId: ext(t, FOLLOWUP)?.valueString?.replace(
+        'Appointment/',
+        '',
+      ),
       clearances: clear,
       ready: Boolean(
         ext(t, RECON) &&

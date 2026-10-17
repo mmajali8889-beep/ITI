@@ -1,26 +1,12 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 
-import {
-  AllergiesService,
-} from './allergies.service';
+import { AllergiesService } from './allergies.service';
 
-import {
-  CreateAllergyDto,
-} from './dto/create-allergy.dto';
+import { CreateAllergyDto } from './dto/create-allergy.dto';
 
 @Controller('api/allergies')
 export class AllergiesController {
-  constructor(
-    private readonly allergiesService:
-      AllergiesService,
-  ) {}
+  constructor(private readonly allergiesService: AllergiesService) {}
 
   // =====================================================
   // CREATE ALLERGY
@@ -32,9 +18,7 @@ export class AllergiesController {
     @Body()
     dto: CreateAllergyDto,
   ) {
-    return this.allergiesService.create(
-      dto,
-    );
+    return this.allergiesService.create(dto);
   }
 
   // =====================================================
@@ -47,9 +31,7 @@ export class AllergiesController {
     @Param('patientId')
     patientId: string,
   ) {
-    return this.allergiesService.findByPatient(
-      patientId,
-    );
+    return this.allergiesService.findByPatient(patientId);
   }
 
   // =====================================================
@@ -62,9 +44,7 @@ export class AllergiesController {
     @Param('allergyId')
     allergyId: string,
   ) {
-    return this.allergiesService.findById(
-      allergyId,
-    );
+    return this.allergiesService.findById(allergyId);
   }
 
   // =====================================================
@@ -82,9 +62,6 @@ export class AllergiesController {
       clinicalStatus: string;
     },
   ) {
-    return this.allergiesService.updateStatus(
-      allergyId,
-      body.clinicalStatus,
-    );
+    return this.allergiesService.updateStatus(allergyId, body.clinicalStatus);
   }
 }

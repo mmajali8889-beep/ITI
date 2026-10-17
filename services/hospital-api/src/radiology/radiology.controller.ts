@@ -9,44 +9,28 @@ import {
   Query,
 } from '@nestjs/common';
 
-import {
-  CreateRadiologyOrderDto,
-} from './dto/create-radiology-order.dto';
+import { CreateRadiologyOrderDto } from './dto/create-radiology-order.dto';
 
-import {
-  UpdateRadiologyOrderStatusDto,
-} from './dto/update-radiology-order-status.dto';
+import { UpdateRadiologyOrderStatusDto } from './dto/update-radiology-order-status.dto';
 
-import {
-  UpdateRadiologyWorkflowDto,
-} from './dto/update-radiology-workflow.dto';
+import { UpdateRadiologyWorkflowDto } from './dto/update-radiology-workflow.dto';
 
-import {
-  RadiologyWorklistQueryDto,
-} from './dto/radiology-worklist-query.dto';
+import { RadiologyWorklistQueryDto } from './dto/radiology-worklist-query.dto';
 
-import {
-  AssignRadiologistDto,
-} from './dto/assign-radiologist.dto';
+import { AssignRadiologistDto } from './dto/assign-radiologist.dto';
 
-import {
-  RadiologyService,
-} from './radiology.service';
+import { RadiologyService } from './radiology.service';
 
 @Controller('api/radiology')
 export class RadiologyController {
-  constructor(
-    private readonly radiologyService:
-      RadiologyService,
-  ) {}
+  constructor(private readonly radiologyService: RadiologyService) {}
 
   @Post('orders')
   createOrder(
     @Body()
     dto: CreateRadiologyOrderDto,
   ) {
-    return this.radiologyService
-      .createOrder(dto);
+    return this.radiologyService.createOrder(dto);
   }
 
   @Get('orders')
@@ -54,8 +38,7 @@ export class RadiologyController {
     @Query()
     query: RadiologyWorklistQueryDto,
   ) {
-    return this.radiologyService
-      .getAllOrders(query);
+    return this.radiologyService.getAllOrders(query);
   }
 
   @Get('orders/by-accession/:accessionNumber')
@@ -63,10 +46,7 @@ export class RadiologyController {
     @Param('accessionNumber')
     accessionNumber: string,
   ) {
-    return this.radiologyService
-      .getOrderByAccession(
-        accessionNumber,
-      );
+    return this.radiologyService.getOrderByAccession(accessionNumber);
   }
 
   @Get('orders/:orderId')
@@ -74,8 +54,7 @@ export class RadiologyController {
     @Param('orderId')
     orderId: string,
   ) {
-    return this.radiologyService
-      .getOrder(orderId);
+    return this.radiologyService.getOrder(orderId);
   }
 
   @Get('encounter/:encounterId')
@@ -83,10 +62,7 @@ export class RadiologyController {
     @Param('encounterId')
     encounterId: string,
   ) {
-    return this.radiologyService
-      .getEncounterOrders(
-        encounterId,
-      );
+    return this.radiologyService.getEncounterOrders(encounterId);
   }
 
   @Get('patient/:patientId')
@@ -94,10 +70,7 @@ export class RadiologyController {
     @Param('patientId')
     patientId: string,
   ) {
-    return this.radiologyService
-      .getPatientOrders(
-        patientId,
-      );
+    return this.radiologyService.getPatientOrders(patientId);
   }
 
   @Patch('orders/:orderId/status')
@@ -108,12 +81,11 @@ export class RadiologyController {
     @Body()
     dto: UpdateRadiologyOrderStatusDto,
   ) {
-    return this.radiologyService
-      .updateOrderStatus(
-        orderId,
-        dto.status,
-        dto.hospitalId,
-      );
+    return this.radiologyService.updateOrderStatus(
+      orderId,
+      dto.status,
+      dto.hospitalId,
+    );
   }
 
   @Patch('orders/:orderId/workflow')
@@ -124,11 +96,10 @@ export class RadiologyController {
     @Body()
     dto: UpdateRadiologyWorkflowDto,
   ) {
-    return this.radiologyService
-      .updateWorkflowStatus(
-        orderId,
-        dto.workflowStatus,
-      );
+    return this.radiologyService.updateWorkflowStatus(
+      orderId,
+      dto.workflowStatus,
+    );
   }
 
   @Patch('orders/:orderId/assignment')
@@ -139,11 +110,7 @@ export class RadiologyController {
     @Body()
     dto: AssignRadiologistDto,
   ) {
-    return this.radiologyService
-      .assignRadiologist(
-        orderId,
-        dto,
-      );
+    return this.radiologyService.assignRadiologist(orderId, dto);
   }
 
   @Delete('orders/:orderId/assignment')
@@ -154,10 +121,6 @@ export class RadiologyController {
     @Query('hospitalId')
     hospitalId: string,
   ) {
-    return this.radiologyService
-      .unassignRadiologist(
-        orderId,
-        hospitalId,
-      );
+    return this.radiologyService.unassignRadiologist(orderId, hospitalId);
   }
 }

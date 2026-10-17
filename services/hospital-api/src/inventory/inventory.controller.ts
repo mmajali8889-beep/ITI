@@ -1,2 +1,78 @@
-import{Body,Controller,Get,Param,Post,Query}from'@nestjs/common';import{Roles}from'../auth/roles.decorator';import{InventoryService}from'./inventory.service';import{ApprovePurchaseRequestDto,CreateInventoryItemDto,CreatePurchaseOrderDto,CreatePurchaseRequestDto,ReceiveGoodsDto,StockMovementDto}from'./dto/inventory.dto';
-@Controller('api/inventory')export class InventoryController{constructor(private readonly service:InventoryService){}@Get('dashboard')dashboard(@Query('hospitalId')h:string){return this.service.dashboard(h)}@Get('items')items(@Query('hospitalId')h:string){return this.service.items(h)}@Roles('pharmacist','lab-supervisor','administrator','system-administrator','supply-chain-officer')@Post('items')createItem(@Body()d:CreateInventoryItemDto){return this.service.createItem(d)}@Get('purchase-requests')requests(@Query('hospitalId')h:string){return this.service.requests(h)}@Roles('pharmacist','lab-supervisor','administrator','system-administrator','supply-chain-officer')@Post('purchase-requests')request(@Body()d:CreatePurchaseRequestDto){return this.service.createRequest(d)}@Roles('administrator','system-administrator','supply-chain-officer')@Post('purchase-requests/:id/approve')approve(@Param('id')id:string,@Body()d:ApprovePurchaseRequestDto){return this.service.approve(id,d)}@Roles('administrator','system-administrator','supply-chain-officer')@Post('purchase-requests/:id/purchase-order')order(@Param('id')id:string,@Body()d:CreatePurchaseOrderDto){return this.service.purchaseOrder(id,d)}@Roles('pharmacist','lab-supervisor','administrator','system-administrator','supply-chain-officer')@Post('purchase-orders/:id/receive')receive(@Param('id')id:string,@Body()d:ReceiveGoodsDto){return this.service.receive(id,d)}@Roles('pharmacist','lab-supervisor','administrator','system-administrator','supply-chain-officer')@Post('movements')movement(@Body()d:StockMovementDto){return this.service.move(d)}}
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Roles } from '../auth/roles.decorator';
+import { InventoryService } from './inventory.service';
+import {
+  ApprovePurchaseRequestDto,
+  CreateInventoryItemDto,
+  CreatePurchaseOrderDto,
+  CreatePurchaseRequestDto,
+  ReceiveGoodsDto,
+  StockMovementDto,
+} from './dto/inventory.dto';
+@Controller('api/inventory')
+export class InventoryController {
+  constructor(private readonly service: InventoryService) {}
+  @Get('dashboard') dashboard(@Query('hospitalId') h: string) {
+    return this.service.dashboard(h);
+  }
+  @Get('items') items(@Query('hospitalId') h: string) {
+    return this.service.items(h);
+  }
+  @Roles(
+    'pharmacist',
+    'lab-supervisor',
+    'administrator',
+    'system-administrator',
+    'supply-chain-officer',
+  )
+  @Post('items')
+  createItem(@Body() d: CreateInventoryItemDto) {
+    return this.service.createItem(d);
+  }
+  @Get('purchase-requests') requests(@Query('hospitalId') h: string) {
+    return this.service.requests(h);
+  }
+  @Roles(
+    'pharmacist',
+    'lab-supervisor',
+    'administrator',
+    'system-administrator',
+    'supply-chain-officer',
+  )
+  @Post('purchase-requests')
+  request(@Body() d: CreatePurchaseRequestDto) {
+    return this.service.createRequest(d);
+  }
+  @Roles('administrator', 'system-administrator', 'supply-chain-officer')
+  @Post('purchase-requests/:id/approve')
+  approve(@Param('id') id: string, @Body() d: ApprovePurchaseRequestDto) {
+    return this.service.approve(id, d);
+  }
+  @Roles('administrator', 'system-administrator', 'supply-chain-officer')
+  @Post('purchase-requests/:id/purchase-order')
+  order(@Param('id') id: string, @Body() d: CreatePurchaseOrderDto) {
+    return this.service.purchaseOrder(id, d);
+  }
+  @Roles(
+    'pharmacist',
+    'lab-supervisor',
+    'administrator',
+    'system-administrator',
+    'supply-chain-officer',
+  )
+  @Post('purchase-orders/:id/receive')
+  receive(@Param('id') id: string, @Body() d: ReceiveGoodsDto) {
+    return this.service.receive(id, d);
+  }
+  @Roles(
+    'pharmacist',
+    'lab-supervisor',
+    'administrator',
+    'system-administrator',
+    'supply-chain-officer',
+  )
+  @Post('movements')
+  movement(@Body() d: StockMovementDto) {
+    return this.service.move(d);
+  }
+}

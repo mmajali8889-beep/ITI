@@ -1,5 +1,6 @@
 export type FinancialClass = 'cash' | 'insurance' | 'corporate' | 'government';
-export type CoverageStatus = 'active' | 'cancelled' | 'draft' | 'entered-in-error';
+export type CoverageStatus =
+  'active' | 'cancelled' | 'draft' | 'entered-in-error';
 
 export class CreateCoverageDto {
   hospitalId!: string;

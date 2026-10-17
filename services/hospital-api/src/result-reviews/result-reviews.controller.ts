@@ -7,10 +7,15 @@ export class ResultReviewsController {
   constructor(private readonly service: ResultReviewsService) {}
 
   @Post()
-  record(@Body() dto: RecordResultReviewDto) { return this.service.record(dto); }
+  record(@Body() dto: RecordResultReviewDto) {
+    return this.service.record(dto);
+  }
 
   @Get('encounter/:encounterId')
-  byEncounter(@Param('encounterId') encounterId: string, @Query('hospitalId') hospitalId: string) {
+  byEncounter(
+    @Param('encounterId') encounterId: string,
+    @Query('hospitalId') hospitalId: string,
+  ) {
     return this.service.byEncounter(encounterId, hospitalId);
   }
 }

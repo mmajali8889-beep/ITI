@@ -41,7 +41,15 @@ export class CreateVitalsDto {
 
   currentMedications?: string;
 
-  riskFlags?: Array<'fall' | 'sepsis' | 'suicide' | 'violence' | 'infection' | 'deterioration' | 'other'>;
+  riskFlags?: Array<
+    | 'fall'
+    | 'sepsis'
+    | 'suicide'
+    | 'violence'
+    | 'infection'
+    | 'deterioration'
+    | 'other'
+  >;
 
   riskAssessmentNotes?: string;
 

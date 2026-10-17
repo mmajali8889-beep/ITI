@@ -1,26 +1,14 @@
-import {
-  Module,
-} from '@nestjs/common';
+import { Module } from '@nestjs/common';
 
-import {
-  ClinicalNotesController,
-} from './clinical-notes.controller';
+import { ClinicalNotesController } from './clinical-notes.controller';
 
-import {
-  ClinicalNotesService,
-} from './clinical-notes.service';
+import { ClinicalNotesService } from './clinical-notes.service';
 
 @Module({
-  controllers: [
-    ClinicalNotesController,
-  ],
+  controllers: [ClinicalNotesController],
 
-  providers: [
-    ClinicalNotesService,
-  ],
+  providers: [ClinicalNotesService],
 
-  exports: [
-    ClinicalNotesService,
-  ],
+  exports: [ClinicalNotesService],
 })
 export class ClinicalNotesModule {}

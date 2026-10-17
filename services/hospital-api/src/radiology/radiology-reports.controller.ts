@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 
 import { CreateRadiologyReportDto } from './dto/create-radiology-report.dto';
 import { FinalizeRadiologyReportDto } from './dto/finalize-radiology-report.dto';
@@ -19,37 +12,27 @@ export class RadiologyReportsController {
   ) {}
 
   @Post()
-  createReport(
-    @Body() dto: CreateRadiologyReportDto,
-  ) {
+  createReport(@Body() dto: CreateRadiologyReportDto) {
     return this.radiologyReportsService.createReport(dto);
   }
 
   @Get('order/:orderId')
-  findByOrder(
-    @Param('orderId') orderId: string,
-  ) {
+  findByOrder(@Param('orderId') orderId: string) {
     return this.radiologyReportsService.findByOrder(orderId);
   }
 
   @Get('encounter/:encounterId')
-  findByEncounter(
-    @Param('encounterId') encounterId: string,
-  ) {
+  findByEncounter(@Param('encounterId') encounterId: string) {
     return this.radiologyReportsService.findByEncounter(encounterId);
   }
 
   @Get('patient/:patientId')
-  findByPatient(
-    @Param('patientId') patientId: string,
-  ) {
+  findByPatient(@Param('patientId') patientId: string) {
     return this.radiologyReportsService.findByPatient(patientId);
   }
 
   @Get(':reportId')
-  findReport(
-    @Param('reportId') reportId: string,
-  ) {
+  findReport(@Param('reportId') reportId: string) {
     return this.radiologyReportsService.findReport(reportId);
   }
 

@@ -43,7 +43,13 @@ describe('EncountersService reception workflow', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EncountersService,
-        { provide: MedplumService, useValue: { getClient: () => medplum, updateIfUnchanged: async (r: unknown) => r } },
+        {
+          provide: MedplumService,
+          useValue: {
+            getClient: () => medplum,
+            updateIfUnchanged: async (r: unknown) => r,
+          },
+        },
       ],
     }).compile();
     service = module.get(EncountersService);

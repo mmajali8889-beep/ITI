@@ -1,9 +1,10 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import type {
-  Encounter,
-  Patient,
-  ServiceRequest,
-} from '@medplum/fhirtypes';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import type { Encounter, Patient, ServiceRequest } from '@medplum/fhirtypes';
 
 import { MedplumService } from '../medplum/medplum.service';
 import { CreateRadiologyOrderDto } from './dto/create-radiology-order.dto';
@@ -19,10 +20,14 @@ import { ImagingStudyService } from './imaging-study.service';
  * PACS sync). "acquired" is not gated: the modality may have captured images
  * that have not reached the PACS yet.
  */
-const REQUIRES_PACS_IMAGES = new Set<RadiologyWorkflowStatus>(['images-available', 'reporting', 'preliminary', 'final']);
+const REQUIRES_PACS_IMAGES = new Set<RadiologyWorkflowStatus>([
+  'images-available',
+  'reporting',
+  'preliminary',
+  'final',
+]);
 
-const RADIOLOGY_CATEGORY_SYSTEM =
-  'http://snomed.info/sct';
+const RADIOLOGY_CATEGORY_SYSTEM = 'http://snomed.info/sct';
 const RADIOLOGY_CATEGORY_CODE = '363679005';
 
 const LOCAL_RADIOLOGY_CODE_SYSTEM =
@@ -56,12 +61,7 @@ const ASSIGNED_BY_NAME_EXTENSION_URL =
   'http://hospital-ehr.local/fhir/StructureDefinition/radiology-assigned-by-name';
 
 type OrderStatus =
-  | 'draft'
-  | 'active'
-  | 'on-hold'
-  | 'revoked'
-  | 'completed'
-  | 'entered-in-error';
+  'draft' | 'active' | 'on-hold' | 'revoked' | 'completed' | 'entered-in-error';
 
 const WORKFLOW_RANK: Record<RadiologyWorkflowStatus, number> = {
   ordered: 0,
@@ -88,10 +88,15 @@ export class RadiologyService {
    * to it. Without this, "images available" and a final report could be
    * recorded for an exam with no images at all.
    */
-  async assertImagesInPacs(orderId: string, order?: ServiceRequest): Promise<void> {
+  async assertImagesInPacs(
+    orderId: string,
+    order?: ServiceRequest,
+  ): Promise<void> {
     const { studies } = await this.imagingStudyService.getByOrder(orderId);
     if (studies.length > 0) return;
-    const accession = this.accessionNumber(order ?? (await this.readOrder(orderId)));
+    const accession = this.accessionNumber(
+      order ?? (await this.readOrder(orderId)),
+    );
     throw new ConflictException({
       code: 'IMAGES_NOT_IN_PACS',
       accessionNumber: accession,
@@ -175,26 +180,25 @@ export class RadiologyService {
         ? [{ text: dto.clinicalIndication.trim() }]
         : undefined,
 
-      bodySite: dto.bodySiteName?.trim() || dto.bodySiteCode?.trim()
-        ? [
-            {
-              coding: dto.bodySiteCode?.trim()
-                ? [
-                    {
-                      system: 'http://snomed.info/sct',
-                      code: dto.bodySiteCode.trim(),
-                      display: dto.bodySiteName?.trim() || undefined,
-                    },
-                  ]
-                : undefined,
-              text: dto.bodySiteName?.trim() || undefined,
-            },
-          ]
-        : undefined,
+      bodySite:
+        dto.bodySiteName?.trim() || dto.bodySiteCode?.trim()
+          ? [
+              {
+                coding: dto.bodySiteCode?.trim()
+                  ? [
+                      {
+                        system: 'http://snomed.info/sct',
+                        code: dto.bodySiteCode.trim(),
+                        display: dto.bodySiteName?.trim() || undefined,
+                      },
+                    ]
+                  : undefined,
+                text: dto.bodySiteName?.trim() || undefined,
+              },
+            ]
+          : undefined,
 
-      note: dto.notes?.trim()
-        ? [{ text: dto.notes.trim() }]
-        : undefined,
+      note: dto.notes?.trim() ? [{ text: dto.notes.trim() }] : undefined,
 
       extension: [
         {
@@ -254,9 +258,7 @@ export class RadiologyService {
     return this.mapOrder(order);
   }
 
-  async getAllOrders(
-    query: RadiologyWorklistQueryDto = {},
-  ) {
+  async getAllOrders(query: RadiologyWorklistQueryDto = {}) {
     const allowedStatuses: OrderStatus[] = [
       'draft',
       'active',
@@ -266,8 +268,9 @@ export class RadiologyService {
       'entered-in-error',
     ];
 
-    const allowedWorkflows =
-      Object.keys(WORKFLOW_RANK) as RadiologyWorkflowStatus[];
+    const allowedWorkflows = Object.keys(
+      WORKFLOW_RANK,
+    ) as RadiologyWorkflowStatus[];
 
     const allowedModalities = [
       'XR',
@@ -281,100 +284,54 @@ export class RadiologyService {
       'OTHER',
     ];
 
-    const allowedPriorities = [
-      'routine',
-      'urgent',
-      'asap',
-      'stat',
-    ];
+    const allowedPriorities = ['routine', 'urgent', 'asap', 'stat'];
 
-    const status =
-      query.status?.trim() as OrderStatus | undefined;
+    const status = query.status?.trim() as OrderStatus | undefined;
 
-    if (
-      status &&
-      !allowedStatuses.includes(status)
-    ) {
-      throw new BadRequestException(
-        'Invalid radiology order status filter',
-      );
+    if (status && !allowedStatuses.includes(status)) {
+      throw new BadRequestException('Invalid radiology order status filter');
     }
 
-    const workflowStatus =
-      query.workflowStatus?.trim() as
-        | RadiologyWorkflowStatus
-        | undefined;
+    const workflowStatus = query.workflowStatus?.trim() as
+      RadiologyWorkflowStatus | undefined;
 
-    if (
-      workflowStatus &&
-      !allowedWorkflows.includes(workflowStatus)
-    ) {
-      throw new BadRequestException(
-        'Invalid radiology workflow status filter',
-      );
+    if (workflowStatus && !allowedWorkflows.includes(workflowStatus)) {
+      throw new BadRequestException('Invalid radiology workflow status filter');
     }
 
-    const modality =
-      query.modality?.trim().toUpperCase();
+    const modality = query.modality?.trim().toUpperCase();
 
-    if (
-      modality &&
-      !allowedModalities.includes(modality)
-    ) {
-      throw new BadRequestException(
-        'Invalid radiology modality filter',
-      );
+    if (modality && !allowedModalities.includes(modality)) {
+      throw new BadRequestException('Invalid radiology modality filter');
     }
 
-    const priority =
-      query.priority?.trim().toLowerCase();
+    const priority = query.priority?.trim().toLowerCase();
 
-    if (
-      priority &&
-      !allowedPriorities.includes(priority)
-    ) {
-      throw new BadRequestException(
-        'Invalid radiology priority filter',
-      );
+    if (priority && !allowedPriorities.includes(priority)) {
+      throw new BadRequestException('Invalid radiology priority filter');
     }
 
-    const limit =
-      this.worklistLimit(query.limit);
+    const limit = this.worklistLimit(query.limit);
 
-    const resources =
-      await this.medplumService
-        .getClient()
-        .searchResources(
-          'ServiceRequest',
-          {
-            _count: '1000',
-          },
-        );
+    const resources = await this.medplumService
+      .getClient()
+      .searchResources('ServiceRequest', {
+        _count: '1000',
+      });
 
-    const hospitalId =
-      query.hospitalId?.trim();
+    const hospitalId = query.hospitalId?.trim();
 
-    const patientId =
-      query.patientId?.trim();
+    const patientId = query.patientId?.trim();
 
-    const encounterId =
-      query.encounterId?.trim();
+    const encounterId = query.encounterId?.trim();
 
-    const accessionNeedle =
-      query.accessionNumber
-        ?.trim()
-        .toLowerCase();
+    const accessionNeedle = query.accessionNumber?.trim().toLowerCase();
 
-    const searchNeedle =
-      query.q
-        ?.trim()
-        .toLowerCase();
+    const searchNeedle = query.q?.trim().toLowerCase();
 
-    const radiologistId =
-      query.radiologistId?.trim();
+    const radiologistId = query.radiologistId?.trim();
 
-    const assignment =
-      query.assignment?.trim().toLowerCase();
+    const assignment = query.assignment?.trim().toLowerCase();
 
     if (
       assignment &&
@@ -387,90 +344,52 @@ export class RadiologyService {
     }
 
     const filtered = resources
-      .filter((resource) =>
-        this.isRadiologyOrder(resource),
-      )
-      .map((resource) =>
-        this.mapOrder(resource),
-      )
+      .filter((resource) => this.isRadiologyOrder(resource))
+      .map((resource) => this.mapOrder(resource))
       .filter((order) => {
-        if (
-          hospitalId &&
-          order.hospitalId !== hospitalId
-        ) {
+        if (hospitalId && order.hospitalId !== hospitalId) {
           return false;
         }
 
-        if (
-          patientId &&
-          order.patientId !== patientId
-        ) {
+        if (patientId && order.patientId !== patientId) {
           return false;
         }
 
-        if (
-          encounterId &&
-          order.encounterId !== encounterId
-        ) {
+        if (encounterId && order.encounterId !== encounterId) {
           return false;
         }
 
-        if (
-          status &&
-          order.status !== status
-        ) {
+        if (status && order.status !== status) {
           return false;
         }
 
-        if (
-          workflowStatus &&
-          order.workflowStatus !== workflowStatus
-        ) {
+        if (workflowStatus && order.workflowStatus !== workflowStatus) {
           return false;
         }
 
-        if (
-          modality &&
-          String(order.modality)
-            .toUpperCase() !== modality
-        ) {
+        if (modality && String(order.modality).toUpperCase() !== modality) {
           return false;
         }
 
-        if (
-          priority &&
-          String(order.priority)
-            .toLowerCase() !== priority
-        ) {
+        if (priority && String(order.priority).toLowerCase() !== priority) {
           return false;
         }
 
-        if (
-          radiologistId &&
-          order.radiologistId !== radiologistId
-        ) {
+        if (radiologistId && order.radiologistId !== radiologistId) {
           return false;
         }
 
-        if (
-          assignment === 'assigned' &&
-          !order.radiologistId
-        ) {
+        if (assignment === 'assigned' && !order.radiologistId) {
           return false;
         }
 
-        if (
-          assignment === 'unassigned' &&
-          order.radiologistId
-        ) {
+        if (assignment === 'unassigned' && order.radiologistId) {
           return false;
         }
 
         if (
           accessionNeedle &&
-          !String(
-            order.accessionNumber ?? '',
-          )
+          !String(order.accessionNumber ?? '')
             .toLowerCase()
             .includes(accessionNeedle)
         ) {
@@ -495,11 +414,7 @@ export class RadiologyService {
             .join(' ')
             .toLowerCase();
 
-          if (
-            !haystack.includes(
-              searchNeedle,
-            )
-          ) {
+          if (!haystack.includes(searchNeedle)) {
             return false;
           }
         }
@@ -507,58 +422,31 @@ export class RadiologyService {
         return true;
       })
       .sort(
-        (a, b) =>
-          this.dateValue(
-            b.authoredOn,
-          ) -
-          this.dateValue(
-            a.authoredOn,
-          ),
+        (a, b) => this.dateValue(b.authoredOn) - this.dateValue(a.authoredOn),
       );
 
     const summary = {
       total: filtered.length,
-      active:
-        filtered.filter(
-          (order) =>
-            order.status === 'active',
-        ).length,
-      urgent:
-        filtered.filter(
-          (order) =>
-            order.priority === 'urgent' ||
-            order.priority === 'asap' ||
-            order.priority === 'stat',
-        ).length,
-      imagesAvailable:
-        filtered.filter(
-          (order) =>
-            ['acquired', 'images-available'].includes(order.workflowStatus ?? ''),
-        ).length,
-      reporting:
-        filtered.filter(
-          (order) =>
-            order.workflowStatus ===
-            'reporting',
-        ).length,
-      final:
-        filtered.filter(
-          (order) =>
-            order.workflowStatus ===
-            'final',
-        ).length,
-      assigned:
-        filtered.filter(
-          (order) => Boolean(order.radiologistId),
-        ).length,
-      unassigned:
-        filtered.filter(
-          (order) => !order.radiologistId,
-        ).length,
+      active: filtered.filter((order) => order.status === 'active').length,
+      urgent: filtered.filter(
+        (order) =>
+          order.priority === 'urgent' ||
+          order.priority === 'asap' ||
+          order.priority === 'stat',
+      ).length,
+      imagesAvailable: filtered.filter((order) =>
+        ['acquired', 'images-available'].includes(order.workflowStatus ?? ''),
+      ).length,
+      reporting: filtered.filter(
+        (order) => order.workflowStatus === 'reporting',
+      ).length,
+      final: filtered.filter((order) => order.workflowStatus === 'final')
+        .length,
+      assigned: filtered.filter((order) => Boolean(order.radiologistId)).length,
+      unassigned: filtered.filter((order) => !order.radiologistId).length,
     };
 
-    const orders =
-      filtered.slice(0, limit);
+    const orders = filtered.slice(0, limit);
 
     return {
       total: filtered.length,
@@ -566,31 +454,17 @@ export class RadiologyService {
       limit,
       summary,
       filters: {
-        hospitalId:
-          hospitalId || undefined,
-        patientId:
-          patientId || undefined,
-        encounterId:
-          encounterId || undefined,
-        status:
-          status || undefined,
-        workflowStatus:
-          workflowStatus || undefined,
-        modality:
-          modality || undefined,
-        priority:
-          priority || undefined,
-        radiologistId:
-          radiologistId || undefined,
-        assignment:
-          assignment || undefined,
-        accessionNumber:
-          query.accessionNumber
-            ?.trim() ||
-          undefined,
-        q:
-          query.q?.trim() ||
-          undefined,
+        hospitalId: hospitalId || undefined,
+        patientId: patientId || undefined,
+        encounterId: encounterId || undefined,
+        status: status || undefined,
+        workflowStatus: workflowStatus || undefined,
+        modality: modality || undefined,
+        priority: priority || undefined,
+        radiologistId: radiologistId || undefined,
+        assignment: assignment || undefined,
+        accessionNumber: query.accessionNumber?.trim() || undefined,
+        q: query.q?.trim() || undefined,
       },
       orders,
     };
@@ -603,18 +477,19 @@ export class RadiologyService {
 
     await this.readEncounter(encounterId);
 
-    const resources = await this.medplumService.getClient().searchResources(
-      'ServiceRequest',
-      {
+    const resources = await this.medplumService
+      .getClient()
+      .searchResources('ServiceRequest', {
         encounter: `Encounter/${encounterId}`,
         _count: '500',
-      },
-    );
+      });
 
     const orders = resources
       .filter((resource) => this.isRadiologyOrder(resource))
       .map((resource) => this.mapOrder(resource))
-      .sort((a, b) => this.dateValue(b.authoredOn) - this.dateValue(a.authoredOn));
+      .sort(
+        (a, b) => this.dateValue(b.authoredOn) - this.dateValue(a.authoredOn),
+      );
 
     return {
       total: orders.length,
@@ -629,18 +504,19 @@ export class RadiologyService {
 
     await this.readPatient(patientId);
 
-    const resources = await this.medplumService.getClient().searchResources(
-      'ServiceRequest',
-      {
+    const resources = await this.medplumService
+      .getClient()
+      .searchResources('ServiceRequest', {
         subject: `Patient/${patientId}`,
         _count: '500',
-      },
-    );
+      });
 
     const orders = resources
       .filter((resource) => this.isRadiologyOrder(resource))
       .map((resource) => this.mapOrder(resource))
-      .sort((a, b) => this.dateValue(b.authoredOn) - this.dateValue(a.authoredOn));
+      .sort(
+        (a, b) => this.dateValue(b.authoredOn) - this.dateValue(a.authoredOn),
+      );
 
     return {
       total: orders.length,
@@ -648,52 +524,38 @@ export class RadiologyService {
     };
   }
 
-  async assignRadiologist(
-    orderId: string,
-    dto: AssignRadiologistDto,
-  ) {
+  async assignRadiologist(orderId: string, dto: AssignRadiologistDto) {
     if (!dto.hospitalId?.trim()) {
-      throw new BadRequestException(
-        'hospitalId is required.',
-      );
+      throw new BadRequestException('hospitalId is required.');
     }
 
     if (!dto.radiologistId?.trim()) {
-      throw new BadRequestException(
-        'radiologistId is required.',
-      );
+      throw new BadRequestException('radiologistId is required.');
     }
 
     const order = await this.readOrder(orderId);
 
     if (!this.isRadiologyOrder(order)) {
-      throw new NotFoundException(
-        'Radiology order not found',
-      );
+      throw new NotFoundException('Radiology order not found');
     }
 
     const orderHospitalId = this.referenceId(
       order.extension?.find(
-        (extension) =>
-          extension.url === HOSPITAL_EXTENSION_URL,
+        (extension) => extension.url === HOSPITAL_EXTENSION_URL,
       )?.valueReference?.reference,
       'Organization',
     );
 
-    if (
-      !orderHospitalId ||
-      orderHospitalId !== dto.hospitalId.trim()
-    ) {
+    if (!orderHospitalId || orderHospitalId !== dto.hospitalId.trim()) {
       throw new BadRequestException(
         'Radiology order does not belong to the selected hospital.',
       );
     }
 
-    const radiologist =
-      await this.radiologistsService.get(
-        dto.radiologistId.trim(),
-        dto.hospitalId.trim(),
-      );
+    const radiologist = await this.radiologistsService.get(
+      dto.radiologistId.trim(),
+      dto.hospitalId.trim(),
+    );
 
     if (!radiologist.active) {
       throw new BadRequestException(
@@ -703,10 +565,7 @@ export class RadiologyService {
 
     const current = this.assignedRadiologist(order);
 
-    if (
-      current.radiologistId ===
-      radiologist.practitionerId
-    ) {
+    if (current.radiologistId === radiologist.practitionerId) {
       return this.mapOrder(order);
     }
 
@@ -714,14 +573,10 @@ export class RadiologyService {
 
     const performer = [
       ...(order.performer ?? []).filter(
-        (reference) =>
-          !reference.reference?.startsWith(
-            'Practitioner/',
-          ),
+        (reference) => !reference.reference?.startsWith('Practitioner/'),
       ),
       {
-        reference:
-          `Practitioner/${radiologist.practitionerId}`,
+        reference: `Practitioner/${radiologist.practitionerId}`,
         display: radiologist.displayName,
       },
     ];
@@ -742,79 +597,59 @@ export class RadiologyService {
             {
               url: ASSIGNED_BY_EXTENSION_URL,
               valueReference: {
-                reference:
-                  `Practitioner/${dto.assignedById.trim()}`,
-                display:
-                  dto.assignedByName?.trim() ||
-                  undefined,
+                reference: `Practitioner/${dto.assignedById.trim()}`,
+                display: dto.assignedByName?.trim() || undefined,
               },
             },
           ]
         : []),
-      ...(!dto.assignedById?.trim() &&
-      dto.assignedByName?.trim()
+      ...(!dto.assignedById?.trim() && dto.assignedByName?.trim()
         ? [
             {
               url: ASSIGNED_BY_NAME_EXTENSION_URL,
-              valueString:
-                dto.assignedByName.trim(),
+              valueString: dto.assignedByName.trim(),
             },
           ]
         : []),
     ];
 
-    const updated =
-      await this.medplumService
-        .getClient()
-        .updateResource<ServiceRequest>({
-          ...order,
-          performer,
-          extension,
-        });
+    const updated = await this.medplumService
+      .getClient()
+      .updateResource<ServiceRequest>({
+        ...order,
+        performer,
+        extension,
+      });
 
     return this.mapOrder(updated);
   }
 
-  async unassignRadiologist(
-    orderId: string,
-    hospitalId: string,
-  ) {
+  async unassignRadiologist(orderId: string, hospitalId: string) {
     if (!hospitalId?.trim()) {
-      throw new BadRequestException(
-        'hospitalId is required.',
-      );
+      throw new BadRequestException('hospitalId is required.');
     }
 
     const order = await this.readOrder(orderId);
 
     if (!this.isRadiologyOrder(order)) {
-      throw new NotFoundException(
-        'Radiology order not found',
-      );
+      throw new NotFoundException('Radiology order not found');
     }
 
     const orderHospitalId = this.referenceId(
       order.extension?.find(
-        (extension) =>
-          extension.url === HOSPITAL_EXTENSION_URL,
+        (extension) => extension.url === HOSPITAL_EXTENSION_URL,
       )?.valueReference?.reference,
       'Organization',
     );
 
-    if (
-      !orderHospitalId ||
-      orderHospitalId !== hospitalId.trim()
-    ) {
+    if (!orderHospitalId || orderHospitalId !== hospitalId.trim()) {
       throw new BadRequestException(
         'Radiology order does not belong to the selected hospital.',
       );
     }
 
     const performer = (order.performer ?? []).filter(
-      (reference) =>
-        !reference.reference?.startsWith(
-          'Practitioner/',
-        ),
+      (reference) => !reference.reference?.startsWith('Practitioner/'),
     );
 
     const extension = (order.extension ?? []).filter(
@@ -824,17 +659,13 @@ export class RadiologyService {
         item.url !== ASSIGNED_BY_NAME_EXTENSION_URL,
     );
 
-    const updated =
-      await this.medplumService
-        .getClient()
-        .updateResource<ServiceRequest>({
-          ...order,
-          performer:
-            performer.length > 0
-              ? performer
-              : undefined,
-          extension,
-        });
+    const updated = await this.medplumService
+      .getClient()
+      .updateResource<ServiceRequest>({
+        ...order,
+        performer: performer.length > 0 ? performer : undefined,
+        extension,
+      });
 
     return this.mapOrder(updated);
   }
@@ -845,9 +676,7 @@ export class RadiologyService {
     hospitalId: string,
   ) {
     if (!hospitalId?.trim()) {
-      throw new BadRequestException(
-        'hospitalId is required.',
-      );
+      throw new BadRequestException('hospitalId is required.');
     }
 
     const allowed: OrderStatus[] = [
@@ -867,8 +696,7 @@ export class RadiologyService {
 
     const orderHospitalId = this.referenceId(
       order.extension?.find(
-        (extension) =>
-          extension.url === HOSPITAL_EXTENSION_URL,
+        (extension) => extension.url === HOSPITAL_EXTENSION_URL,
       )?.valueReference?.reference,
       'Organization',
     );
@@ -892,14 +720,10 @@ export class RadiologyService {
     orderId: string,
     workflowStatus: RadiologyWorkflowStatus,
   ) {
-    const allowed = Object.keys(
-      WORKFLOW_RANK,
-    ) as RadiologyWorkflowStatus[];
+    const allowed = Object.keys(WORKFLOW_RANK) as RadiologyWorkflowStatus[];
 
     if (!allowed.includes(workflowStatus)) {
-      throw new BadRequestException(
-        'Invalid radiology workflow status',
-      );
+      throw new BadRequestException('Invalid radiology workflow status');
     }
 
     const order = await this.readOrder(orderId);
@@ -908,13 +732,9 @@ export class RadiologyService {
       throw new NotFoundException('Radiology order not found');
     }
 
-    const currentStatus =
-      this.workflowStatus(order);
+    const currentStatus = this.workflowStatus(order);
 
-    if (
-      WORKFLOW_RANK[workflowStatus] <
-      WORKFLOW_RANK[currentStatus]
-    ) {
+    if (WORKFLOW_RANK[workflowStatus] < WORKFLOW_RANK[currentStatus]) {
       return this.mapOrder(order);
     }
 
@@ -946,10 +766,7 @@ export class RadiologyService {
 
     const updated = await this.medplumService.getClient().updateResource({
       ...order,
-      status:
-        workflowStatus === 'final'
-          ? 'completed'
-          : order.status,
+      status: workflowStatus === 'final' ? 'completed' : order.status,
       extension: extensions,
     });
 
@@ -1016,18 +833,13 @@ export class RadiologyService {
         .toUpperCase()
         .padStart(6, '0');
 
-      const accessionNumber =
-        `RAD${yy}${mm}${dd}${suffix}`;
+      const accessionNumber = `RAD${yy}${mm}${dd}${suffix}`;
 
       try {
-        const existing = await medplum.searchResources(
-          'ServiceRequest',
-          {
-            identifier:
-              `${ACCESSION_IDENTIFIER_SYSTEM}|${accessionNumber}`,
-            _count: '1',
-          },
-        );
+        const existing = await medplum.searchResources('ServiceRequest', {
+          identifier: `${ACCESSION_IDENTIFIER_SYSTEM}|${accessionNumber}`,
+          _count: '1',
+        });
 
         if (existing.length === 0) {
           return accessionNumber;
@@ -1048,22 +860,16 @@ export class RadiologyService {
     const accession = accessionNumber?.trim();
 
     if (!accession) {
-      throw new BadRequestException(
-        'Accession number is required',
-      );
+      throw new BadRequestException('Accession number is required');
     }
 
     const medplum = this.medplumService.getClient();
 
     try {
-      const resources = await medplum.searchResources(
-        'ServiceRequest',
-        {
-          identifier:
-            `${ACCESSION_IDENTIFIER_SYSTEM}|${accession}`,
-          _count: '20',
-        },
-      );
+      const resources = await medplum.searchResources('ServiceRequest', {
+        identifier: `${ACCESSION_IDENTIFIER_SYSTEM}|${accession}`,
+        _count: '20',
+      });
 
       const match = resources.find(
         (resource) =>
@@ -1079,12 +885,9 @@ export class RadiologyService {
       // that do not expose identifier search exactly as expected.
     }
 
-    const fallback = await medplum.searchResources(
-      'ServiceRequest',
-      {
-        _count: '500',
-      },
-    );
+    const fallback = await medplum.searchResources('ServiceRequest', {
+      _count: '500',
+    });
 
     return fallback.find(
       (resource) =>
@@ -1093,82 +896,51 @@ export class RadiologyService {
     );
   }
 
-  private async readPatient(
-    patientId: string,
-  ): Promise<Patient> {
+  private async readPatient(patientId: string): Promise<Patient> {
     try {
       return await this.medplumService
         .getClient()
-        .readResource(
-          'Patient',
-          patientId,
-        );
+        .readResource('Patient', patientId);
     } catch {
-      throw new NotFoundException(
-        'Patient not found',
-      );
+      throw new NotFoundException('Patient not found');
     }
   }
 
-  private async readEncounter(
-    encounterId: string,
-  ): Promise<Encounter> {
+  private async readEncounter(encounterId: string): Promise<Encounter> {
     try {
       return await this.medplumService
         .getClient()
-        .readResource(
-          'Encounter',
-          encounterId,
-        );
+        .readResource('Encounter', encounterId);
     } catch {
-      throw new NotFoundException(
-        'Encounter not found',
-      );
+      throw new NotFoundException('Encounter not found');
     }
   }
 
-  private async readOrder(
-    orderId: string,
-  ): Promise<ServiceRequest> {
+  private async readOrder(orderId: string): Promise<ServiceRequest> {
     if (!orderId?.trim()) {
-      throw new BadRequestException(
-        'Radiology order ID is required',
-      );
+      throw new BadRequestException('Radiology order ID is required');
     }
 
     try {
       return await this.medplumService
         .getClient()
-        .readResource(
-          'ServiceRequest',
-          orderId,
-        );
+        .readResource('ServiceRequest', orderId);
     } catch {
-      throw new NotFoundException(
-        'Radiology order not found',
-      );
+      throw new NotFoundException('Radiology order not found');
     }
   }
 
-  private validateEncounterPatient(
-    encounter: Encounter,
-    patientId: string,
-  ) {
+  private validateEncounterPatient(encounter: Encounter, patientId: string) {
     const subject = encounter.subject?.reference;
 
-    if (
-      subject &&
-      subject !== `Patient/${patientId}`
-    ) {
+    if (subject && subject !== `Patient/${patientId}`) {
       throw new BadRequestException(
         'Encounter does not belong to the selected patient',
       );
     }
   }
 
-  private isRadiologyOrder(
-    order: ServiceRequest,
-  ) {
+  private isRadiologyOrder(order: ServiceRequest) {
     return Boolean(
       order.category?.some((category) =>
         category.coding?.some(
@@ -1180,167 +952,106 @@ export class RadiologyService {
     );
   }
 
-  private accessionNumber(
-    order: ServiceRequest,
-  ) {
+  private accessionNumber(order: ServiceRequest) {
     return order.identifier?.find(
-      (identifier) =>
-        identifier.system === ACCESSION_IDENTIFIER_SYSTEM,
+      (identifier) => identifier.system === ACCESSION_IDENTIFIER_SYSTEM,
     )?.value;
   }
 
-  private workflowStatus(
-    order: ServiceRequest,
-  ): RadiologyWorkflowStatus {
+  private workflowStatus(order: ServiceRequest): RadiologyWorkflowStatus {
     const value = order.extension?.find(
-      (extension) =>
-        extension.url === WORKFLOW_EXTENSION_URL,
+      (extension) => extension.url === WORKFLOW_EXTENSION_URL,
     )?.valueCode as RadiologyWorkflowStatus | undefined;
 
-    return value && value in WORKFLOW_RANK
-      ? value
-      : 'ordered';
+    return value && value in WORKFLOW_RANK ? value : 'ordered';
   }
 
-  private assignedRadiologist(
-    order: ServiceRequest,
-  ) {
-    const performer = order.performer?.find(
-      (reference) =>
-        reference.reference?.startsWith(
-          'Practitioner/',
-        ),
+  private assignedRadiologist(order: ServiceRequest) {
+    const performer = order.performer?.find((reference) =>
+      reference.reference?.startsWith('Practitioner/'),
     );
 
     const assignedAt = order.extension?.find(
-      (extension) =>
-        extension.url === ASSIGNED_AT_EXTENSION_URL,
+      (extension) => extension.url === ASSIGNED_AT_EXTENSION_URL,
     )?.valueDateTime;
 
     const assignedBy = order.extension?.find(
-      (extension) =>
-        extension.url === ASSIGNED_BY_EXTENSION_URL,
+      (extension) => extension.url === ASSIGNED_BY_EXTENSION_URL,
     )?.valueReference;
 
-    const assignedByNameExtension =
-      order.extension?.find(
-        (extension) =>
-          extension.url ===
-          ASSIGNED_BY_NAME_EXTENSION_URL,
-      )?.valueString;
+    const assignedByNameExtension = order.extension?.find(
+      (extension) => extension.url === ASSIGNED_BY_NAME_EXTENSION_URL,
+    )?.valueString;
 
     return {
-      radiologistId: this.referenceId(
-        performer?.reference,
-        'Practitioner',
-      ),
+      radiologistId: this.referenceId(performer?.reference, 'Practitioner'),
       radiologistName: performer?.display,
       assignedAt,
-      assignedById: this.referenceId(
-        assignedBy?.reference,
-        'Practitioner',
-      ),
-      assignedByName:
-        assignedBy?.display ??
-        assignedByNameExtension,
+      assignedById: this.referenceId(assignedBy?.reference, 'Practitioner'),
+      assignedByName: assignedBy?.display ?? assignedByNameExtension,
     };
   }
 
   private mapOrder(order: ServiceRequest) {
     const hospitalExtension = order.extension?.find(
-      (extension) =>
-        extension.url === HOSPITAL_EXTENSION_URL,
+      (extension) => extension.url === HOSPITAL_EXTENSION_URL,
     );
 
     const modalityExtension = order.extension?.find(
-      (extension) =>
-        extension.url === MODALITY_EXTENSION_URL,
+      (extension) => extension.url === MODALITY_EXTENSION_URL,
     );
 
     const clinicalQuestionExtension = order.extension?.find(
-      (extension) =>
-        extension.url === CLINICAL_QUESTION_EXTENSION_URL,
+      (extension) => extension.url === CLINICAL_QUESTION_EXTENSION_URL,
     );
 
-    const workflowUpdatedAtExtension =
-      order.extension?.find(
-        (extension) =>
-          extension.url === WORKFLOW_UPDATED_AT_EXTENSION_URL,
-      );
+    const workflowUpdatedAtExtension = order.extension?.find(
+      (extension) => extension.url === WORKFLOW_UPDATED_AT_EXTENSION_URL,
+    );
 
     return {
       id: order.id,
-      accessionNumber:
-        this.accessionNumber(order),
-      workflowStatus:
-        this.workflowStatus(order),
-      workflowUpdatedAt:
-        workflowUpdatedAtExtension?.valueDateTime,
+      accessionNumber: this.accessionNumber(order),
+      workflowStatus: this.workflowStatus(order),
+      workflowUpdatedAt: workflowUpdatedAtExtension?.valueDateTime,
 
       ...this.assignedRadiologist(order),
       status: order.status,
       intent: order.intent,
       priority: order.priority ?? 'routine',
 
-      patientId:
-        this.referenceId(
-          order.subject?.reference,
-          'Patient',
-        ),
-      patientName:
-        order.subject?.display,
-      encounterId:
-        this.referenceId(
-          order.encounter?.reference,
-          'Encounter',
-        ),
-      hospitalId:
-        this.referenceId(
-          hospitalExtension?.valueReference?.reference,
-          'Organization',
-        ),
+      patientId: this.referenceId(order.subject?.reference, 'Patient'),
+      patientName: order.subject?.display,
+      encounterId: this.referenceId(order.encounter?.reference, 'Encounter'),
+      hospitalId: this.referenceId(
+        hospitalExtension?.valueReference?.reference,
+        'Organization',
+      ),
 
-      examCode:
-        order.code?.coding?.[0]?.code,
+      examCode: order.code?.coding?.[0]?.code,
       examName:
         order.code?.text ??
         order.code?.coding?.[0]?.display ??
         'Radiology Exam',
 
-      modality:
-        modalityExtension?.valueCode ??
-        'OTHER',
+      modality: modalityExtension?.valueCode ?? 'OTHER',
 
-      bodySiteCode:
-        order.bodySite?.[0]?.coding?.[0]?.code,
+      bodySiteCode: order.bodySite?.[0]?.coding?.[0]?.code,
       bodySiteName:
-        order.bodySite?.[0]?.text ??
-        order.bodySite?.[0]?.coding?.[0]?.display,
+        order.bodySite?.[0]?.text ?? order.bodySite?.[0]?.coding?.[0]?.display,
 
-      clinicalIndication:
-        order.reasonCode?.[0]?.text,
-      clinicalQuestion:
-        clinicalQuestionExtension?.valueString,
+      clinicalIndication: order.reasonCode?.[0]?.text,
+      clinicalQuestion: clinicalQuestionExtension?.valueString,
 
-      requesterId:
-        this.referenceId(
-          order.requester?.reference,
-          'Practitioner',
-        ),
-      requesterName:
-        order.requester?.display,
+      requesterId: this.referenceId(order.requester?.reference, 'Practitioner'),
+      requesterName: order.requester?.display,
 
       authoredOn: order.authoredOn,
-      notes:
-        order.note
-          ?.map((note) => note.text)
-          .filter(Boolean),
+      notes: order.note?.map((note) => note.text).filter(Boolean),
     };
   }
 
-  private patientDisplay(
-    patient: Patient,
-  ): string | undefined {
+  private patientDisplay(patient: Patient): string | undefined {
     const name = patient.name?.[0];
 
     if (!name) {
@@ -1351,10 +1062,7 @@ export class RadiologyService {
       return name.text.trim();
     }
 
-    const generatedName = [
-      name.given?.join(' '),
-      name.family,
-    ]
+    const generatedName = [name.given?.join(' '), name.family]
       .filter(Boolean)
       .join(' ')
       .trim();
@@ -1362,68 +1070,53 @@ export class RadiologyService {
     return generatedName || undefined;
   }
 
-  private referenceId(
-    reference: string | undefined,
-    resourceType: string,
-  ) {
+  private referenceId(reference: string | undefined, resourceType: string) {
     const prefix = `${resourceType}/`;
 
     if (!reference?.startsWith(prefix)) {
       return undefined;
     }
 
-    return reference.slice(
-      prefix.length,
-    );
+    return reference.slice(prefix.length);
   }
 
-  private worklistLimit(
-    value?: string,
-  ) {
+  private worklistLimit(value?: string) {
     if (!value?.trim()) {
       return 200;
     }
 
-    const parsed =
-      Number.parseInt(
-        value,
-        10,
-      );
+    const parsed = Number.parseInt(value, 10);
 
-    if (
-      !Number.isFinite(parsed) ||
-      parsed < 1
-    ) {
-      throw new BadRequestException(
-        'limit must be a positive integer',
-      );
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      throw new BadRequestException('limit must be a positive integer');
     }
 
-    return Math.min(
-      parsed,
-      1000,
-    );
+    return Math.min(parsed, 1000);
   }
 
-  private dateValue(
-    value?: string,
-  ) {
+  private dateValue(value?: string) {
     if (!value) {
       return 0;
     }
 
-    const time =
-      new Date(value).getTime();
+    const time = new Date(value).getTime();
 
-    return Number.isNaN(time)
-      ? 0
-      : time;
+    return Number.isNaN(time) ? 0 : time;
   }
 
   private assertFinancialClearance(encounter: Encounter) {
-    const status = encounter.extension?.find((item) => item.url === 'https://hospital-ehr.local/fhir/StructureDefinition/financial-clearance-status')?.valueCode;
+    const status = encounter.extension?.find(
+      (item) =>
+        item.url ===
+        'https://hospital-ehr.local/fhir/StructureDefinition/financial-clearance-status',
+    )?.valueCode;
     if (status && !['cleared', 'emergency-override'].includes(status)) {
-      throw new ConflictException({ message: 'Financial clearance is required before non-emergency services', code: 'FINANCIAL_CLEARANCE_REQUIRED', status });
+      throw new ConflictException({
+        message:
+          'Financial clearance is required before non-emergency services',
+        code: 'FINANCIAL_CLEARANCE_REQUIRED',
+        status,
+      });
     }
   }
 }

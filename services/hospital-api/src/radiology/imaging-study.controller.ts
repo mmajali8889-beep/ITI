@@ -33,7 +33,10 @@ export class ImagingStudyController {
   }
 
   @Patch(':studyId/status')
-  updateStatus(@Param('studyId') studyId: string, @Body() dto: UpdateImagingStudyStatusDto) {
+  updateStatus(
+    @Param('studyId') studyId: string,
+    @Body() dto: UpdateImagingStudyStatusDto,
+  ) {
     return this.imagingStudyService.updateStatus(studyId, dto.status);
   }
 }

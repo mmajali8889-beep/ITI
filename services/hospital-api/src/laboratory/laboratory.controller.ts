@@ -16,14 +16,10 @@ import { CreateLabOrderDto } from './dto/create-lab-order.dto';
 
 @Controller('api/laboratory')
 export class LaboratoryController {
-  constructor(
-    private readonly laboratoryService: LaboratoryService,
-  ) {}
+  constructor(private readonly laboratoryService: LaboratoryService) {}
 
   @Post('orders')
-  createOrder(
-    @Body() dto: CreateLabOrderDto,
-  ) {
+  createOrder(@Body() dto: CreateLabOrderDto) {
     return this.laboratoryService.createOrder(dto);
   }
 
@@ -33,7 +29,8 @@ export class LaboratoryController {
     @Query('hospitalId') hospitalId: string,
   ) {
     return this.laboratoryService.findByEncounter(
-      encounterId, requireHospitalId(hospitalId),
+      encounterId,
+      requireHospitalId(hospitalId),
     );
   }
 
@@ -43,14 +40,13 @@ export class LaboratoryController {
     @Query('hospitalId') hospitalId: string,
   ) {
     return this.laboratoryService.findByPatient(
-      patientId, requireHospitalId(hospitalId),
+      patientId,
+      requireHospitalId(hospitalId),
     );
   }
 
   @Get('orders/:orderId')
-  findOrder(
-    @Param('orderId') orderId: string,
-  ) {
+  findOrder(@Param('orderId') orderId: string) {
     return this.laboratoryService.findOrder(orderId);
   }
 
@@ -76,41 +72,38 @@ export class LaboratoryController {
     );
   }
 
-@Post('specimens')
-createSpecimen(
-  @Body() dto: CreateSpecimenDto,
-) {
-  return this.laboratoryService.createSpecimen(dto);
-}
+  @Post('specimens')
+  createSpecimen(@Body() dto: CreateSpecimenDto) {
+    return this.laboratoryService.createSpecimen(dto);
+  }
 
-@Get('orders/:orderId/specimens')
-findSpecimensByOrder(
-  @Param('orderId') orderId: string,
-  @Query('hospitalId') hospitalId: string,
-) {
-  return this.laboratoryService.findSpecimensByOrder(orderId, requireHospitalId(hospitalId));
-}
+  @Get('orders/:orderId/specimens')
+  findSpecimensByOrder(
+    @Param('orderId') orderId: string,
+    @Query('hospitalId') hospitalId: string,
+  ) {
+    return this.laboratoryService.findSpecimensByOrder(
+      orderId,
+      requireHospitalId(hospitalId),
+    );
+  }
 
-@Get('specimens/:specimenId')
-findSpecimen(
-  @Param('specimenId') specimenId: string,
-) {
-  return this.laboratoryService.findSpecimen(specimenId);
-}
+  @Get('specimens/:specimenId')
+  findSpecimen(@Param('specimenId') specimenId: string) {
+    return this.laboratoryService.findSpecimen(specimenId);
+  }
 
-@Patch('specimens/:specimenId/status')
-updateSpecimenStatus(
-  @Param('specimenId') specimenId: string,
-  @Body() dto: UpdateSpecimenStatusDto,
-) {
-  return this.laboratoryService.updateSpecimenStatus(
-    specimenId,
-    dto,
-  );
-}
+  @Patch('specimens/:specimenId/status')
+  updateSpecimenStatus(
+    @Param('specimenId') specimenId: string,
+    @Body() dto: UpdateSpecimenStatusDto,
+  ) {
+    return this.laboratoryService.updateSpecimenStatus(specimenId, dto);
+  }
 }
 
 function requireHospitalId(hospitalId: string): string {
-  if (!hospitalId?.trim()) throw new BadRequestException('Hospital ID is required');
+  if (!hospitalId?.trim())
+    throw new BadRequestException('Hospital ID is required');
   return hospitalId;
 }

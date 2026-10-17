@@ -12,63 +12,43 @@ import type {
   Patient,
 } from '@medplum/fhirtypes';
 
-import {
-  MedplumService,
-} from '../medplum/medplum.service';
+import { MedplumService } from '../medplum/medplum.service';
 
-import {
-  CreateMedicationRequestDto,
-} from './dto/create-medication-request.dto';
+import { CreateMedicationRequestDto } from './dto/create-medication-request.dto';
 
 @Injectable()
 export class MedicationsService {
-  constructor(
-    private readonly medplumService:
-      MedplumService,
-  ) {}
+  constructor(private readonly medplumService: MedplumService) {}
 
   // =====================================================
   // CREATE MEDICATION REQUEST
   // =====================================================
 
-  async create(
-    dto: CreateMedicationRequestDto,
-  ) {
-    const medplum =
-      this.medplumService.getClient();
+  async create(dto: CreateMedicationRequestDto) {
+    const medplum = this.medplumService.getClient();
 
     // ===================================================
     // VALIDATION
     // ===================================================
 
     if (!dto.patientId) {
-      throw new BadRequestException(
-        'Patient ID is required',
-      );
+      throw new BadRequestException('Patient ID is required');
     }
 
     if (!dto.hospitalId) {
-      throw new BadRequestException(
-        'Hospital ID is required',
-      );
+      throw new BadRequestException('Hospital ID is required');
     }
 
     if (!dto.encounterId) {
-      throw new BadRequestException(
-        'Encounter ID is required',
-      );
+      throw new BadRequestException('Encounter ID is required');
     }
 
     if (!dto.medicationName?.trim()) {
-      throw new BadRequestException(
-        'Medication name is required',
-      );
+      throw new BadRequestException('Medication name is required');
     }
 
     if (!dto.medicationCode?.trim()) {
-      throw new BadRequestException(
-        'Medication code is required',
-      );
+      throw new BadRequestException('Medication code is required');
     }
 
     // ===================================================
@@ -78,20 +58,13 @@ export class MedicationsService {
     let patient: Patient;
 
     try {
-      patient =
-        await medplum.readResource(
-          'Patient',
-          dto.patientId,
-        );
+      patient = await medplum.readResource('Patient', dto.patientId);
     } catch {
-      throw new NotFoundException(
-        'Patient not found',
-      );
+      throw new NotFoundException('Patient not found');
     }
 
     if (
-      patient.managingOrganization
-        ?.reference !==
+      patient.managingOrganization?.reference !==
       `Organization/${dto.hospitalId}`
     ) {
       throw new BadRequestException(
@@ -106,30 +79,19 @@ export class MedicationsService {
     let encounter: Encounter;
 
     try {
-      encounter =
-        await medplum.readResource(
-          'Encounter',
-          dto.encounterId,
-        );
+      encounter = await medplum.readResource('Encounter', dto.encounterId);
     } catch {
-      throw new NotFoundException(
-        'Encounter not found',
-      );
+      throw new NotFoundException('Encounter not found');
     }
 
-    if (
-      encounter.subject?.reference !==
-      `Patient/${dto.patientId}`
-    ) {
+    if (encounter.subject?.reference !== `Patient/${dto.patientId}`) {
       throw new BadRequestException(
         'Encounter does not belong to this patient',
       );
     }
 
     if (
-      encounter.serviceProvider
-        ?.reference !==
-      `Organization/${dto.hospitalId}`
+      encounter.serviceProvider?.reference !== `Organization/${dto.hospitalId}`
     ) {
       throw new BadRequestException(
         'Encounter does not belong to the selected hospital',
@@ -140,28 +102,21 @@ export class MedicationsService {
     // DRUG ALLERGY SAFETY CHECK
     // ===================================================
 
-    const allergyWarnings =
-      await this.findMedicationAllergyWarnings(
-        dto.patientId,
-        dto.medicationName,
-        dto.medicationCode,
-      );
+    const allergyWarnings = await this.findMedicationAllergyWarnings(
+      dto.patientId,
+      dto.medicationName,
+      dto.medicationCode,
+    );
 
-    if (
-      allergyWarnings.length > 0
-    ) {
+    if (allergyWarnings.length > 0) {
       throw new ConflictException({
-        message:
-          'Medication allergy alert',
+        message: 'Medication allergy alert',
 
-        allergyAlert:
-          true,
+        allergyAlert: true,
 
-        medication:
-          dto.medicationName,
+        medication: dto.medicationName,
 
-        warnings:
-          allergyWarnings,
+        warnings: allergyWarnings,
       });
     }
 
@@ -169,36 +124,24 @@ export class MedicationsService {
     // DATE VALIDATION
     // ===================================================
 
-    const authoredOn =
-      new Date().toISOString();
+    const authoredOn = new Date().toISOString();
 
-    let startDate:
-      string | undefined;
+    let startDate: string | undefined;
 
-    let endDate:
-      string | undefined;
+    let endDate: string | undefined;
 
     if (dto.startDate) {
-      startDate =
-        this.parseDate(
-          dto.startDate,
-          'start date',
-        );
+      startDate = this.parseDate(dto.startDate, 'start date');
     }
 
     if (dto.endDate) {
-      endDate =
-        this.parseDate(
-          dto.endDate,
-          'end date',
-        );
+      endDate = this.parseDate(dto.endDate, 'end date');
     }
 
     if (
       startDate &&
       endDate &&
-      new Date(endDate).getTime() <
-        new Date(startDate).getTime()
+      new Date(endDate).getTime() < new Date(startDate).getTime()
     ) {
       throw new BadRequestException(
         'Medication end date cannot be before start date',
@@ -209,157 +152,94 @@ export class MedicationsService {
     // BUILD DOSAGE INSTRUCTION
     // ===================================================
 
-    const dosageInstruction:
-      NonNullable<
-        MedicationRequest[
-          'dosageInstruction'
-        ]
-      > = [];
+    const dosageInstruction: NonNullable<
+      MedicationRequest['dosageInstruction']
+    > = [];
 
-    const dosage:
-      NonNullable<
-        MedicationRequest[
-          'dosageInstruction'
-        ]
-      >[number] = {};
+    const dosage: NonNullable<MedicationRequest['dosageInstruction']>[number] =
+      {};
 
-    if (
-      dto.instructions?.trim()
-    ) {
-      dosage.text =
-        dto.instructions.trim();
+    if (dto.instructions?.trim()) {
+      dosage.text = dto.instructions.trim();
     }
 
-    if (
-      dto.asNeeded !== undefined
-    ) {
-      dosage.asNeededBoolean =
-        dto.asNeeded;
+    if (dto.asNeeded !== undefined) {
+      dosage.asNeededBoolean = dto.asNeeded;
     }
 
-    if (
-      dto.route?.trim()
-    ) {
+    if (dto.route?.trim()) {
       dosage.route = {
-        text:
-          dto.route.trim(),
+        text: dto.route.trim(),
       };
     }
 
-    if (
-      dto.dose !== undefined
-    ) {
+    if (dto.dose !== undefined) {
       dosage.doseAndRate = [
         {
           doseQuantity: {
-            value:
-              dto.dose,
+            value: dto.dose,
 
-            unit:
-              dto.doseUnit ||
-              undefined,
+            unit: dto.doseUnit || undefined,
 
-            system:
-              dto.doseUnit
-                ? 'http://unitsofmeasure.org'
-                : undefined,
+            system: dto.doseUnit ? 'http://unitsofmeasure.org' : undefined,
 
-            code:
-              dto.doseUnit ||
-              undefined,
+            code: dto.doseUnit || undefined,
           },
         },
       ];
     }
 
-    if (
-      dto.frequency?.trim() ||
-      dto.durationDays !==
-        undefined
-    ) {
+    if (dto.frequency?.trim() || dto.durationDays !== undefined) {
       dosage.timing = {};
 
-      if (
-        dto.frequency?.trim()
-      ) {
+      if (dto.frequency?.trim()) {
         dosage.timing.code = {
-          text:
-            dto.frequency.trim(),
+          text: dto.frequency.trim(),
         };
       }
 
-      if (
-        dto.durationDays !==
-        undefined
-      ) {
+      if (dto.durationDays !== undefined) {
         dosage.timing.repeat = {
           boundsDuration: {
-            value:
-              dto.durationDays,
+            value: dto.durationDays,
 
-            unit:
-              'days',
+            unit: 'days',
 
-            system:
-              'http://unitsofmeasure.org',
+            system: 'http://unitsofmeasure.org',
 
-            code:
-              'd',
+            code: 'd',
           },
         };
       }
     }
 
-    if (
-      Object.keys(dosage).length >
-      0
-    ) {
-      dosageInstruction.push(
-        dosage,
-      );
+    if (Object.keys(dosage).length > 0) {
+      dosageInstruction.push(dosage);
     }
 
     // ===================================================
     // DISPENSE REQUEST
     // ===================================================
 
-    const dispenseRequest:
-      MedicationRequest[
-        'dispenseRequest'
-      ] = {};
+    const dispenseRequest: MedicationRequest['dispenseRequest'] = {};
 
-    if (
-      dto.quantity !== undefined
-    ) {
+    if (dto.quantity !== undefined) {
       dispenseRequest.quantity = {
-        value:
-          dto.quantity,
+        value: dto.quantity,
 
-        unit:
-          dto.quantityUnit ||
-          undefined,
+        unit: dto.quantityUnit || undefined,
 
-        system:
-          dto.quantityUnit
-            ? 'http://unitsofmeasure.org'
-            : undefined,
+        system: dto.quantityUnit ? 'http://unitsofmeasure.org' : undefined,
 
-        code:
-          dto.quantityUnit ||
-          undefined,
+        code: dto.quantityUnit || undefined,
       };
     }
 
-    if (
-      startDate ||
-      endDate
-    ) {
+    if (startDate || endDate) {
       dispenseRequest.validityPeriod = {
-        start:
-          startDate,
+        start: startDate,
 
-        end:
-          endDate,
+        end: endDate,
       };
     }
 
@@ -367,171 +247,107 @@ export class MedicationsService {
     // BUILD FHIR MEDICATION REQUEST
     // ===================================================
 
-    const medicationRequest:
-      MedicationRequest = {
-        resourceType:
-          'MedicationRequest',
+    const medicationRequest: MedicationRequest = {
+      resourceType: 'MedicationRequest',
 
-        status:
-          'active',
+      status: 'active',
 
-        intent:
-          'order',
+      intent: 'order',
 
-        priority:
-          dto.priority ??
-          'routine',
+      priority: dto.priority ?? 'routine',
 
-        medicationCodeableConcept: {
-          coding: [
-            {
-              system:
-                'https://hospital-ehr.local/CodeSystem/medication',
-
-              code:
-                dto.medicationCode.trim(),
-
-              display:
-                dto.medicationName.trim(),
-            },
-          ],
-
-          text:
-            dto.medicationName.trim(),
-        },
-
-        subject: {
-          reference:
-            `Patient/${dto.patientId}`,
-        },
-
-        encounter: {
-          reference:
-            `Encounter/${dto.encounterId}`,
-        },
-
-        authoredOn,
-
-        requester:
-          dto.practitionerId
-            ? {
-                reference:
-                  `Practitioner/${dto.practitionerId}`,
-              }
-            : {
-                reference:
-                  `Organization/${dto.hospitalId}`,
-              },
-
-        dosageInstruction:
-          dosageInstruction.length >
-          0
-            ? dosageInstruction
-            : undefined,
-
-        dispenseRequest:
-          Object.keys(
-            dispenseRequest,
-          ).length > 0
-            ? dispenseRequest
-            : undefined,
-
-        extension: [
+      medicationCodeableConcept: {
+        coding: [
           {
-            url:
-              'https://hospital-ehr.local/fhir/StructureDefinition/medication-hospital',
+            system: 'https://hospital-ehr.local/CodeSystem/medication',
 
-            valueReference: {
-              reference:
-                `Organization/${dto.hospitalId}`,
-            },
+            code: dto.medicationCode.trim(),
+
+            display: dto.medicationName.trim(),
           },
         ],
-      };
+
+        text: dto.medicationName.trim(),
+      },
+
+      subject: {
+        reference: `Patient/${dto.patientId}`,
+      },
+
+      encounter: {
+        reference: `Encounter/${dto.encounterId}`,
+      },
+
+      authoredOn,
+
+      requester: dto.practitionerId
+        ? {
+            reference: `Practitioner/${dto.practitionerId}`,
+          }
+        : {
+            reference: `Organization/${dto.hospitalId}`,
+          },
+
+      dosageInstruction:
+        dosageInstruction.length > 0 ? dosageInstruction : undefined,
+
+      dispenseRequest:
+        Object.keys(dispenseRequest).length > 0 ? dispenseRequest : undefined,
+
+      extension: [
+        {
+          url: 'https://hospital-ehr.local/fhir/StructureDefinition/medication-hospital',
+
+          valueReference: {
+            reference: `Organization/${dto.hospitalId}`,
+          },
+        },
+      ],
+    };
 
     // ===================================================
     // SAVE
     // ===================================================
 
     const created =
-      await medplum.createResource<MedicationRequest>(
-        medicationRequest,
-      );
+      await medplum.createResource<MedicationRequest>(medicationRequest);
 
-    return this.mapMedicationRequest(
-      created,
-    );
+    return this.mapMedicationRequest(created);
   }
 
   // =====================================================
   // GET ENCOUNTER MEDICATIONS
   // =====================================================
 
-  async findByEncounter(
-    encounterId: string,
-  ) {
+  async findByEncounter(encounterId: string) {
     if (!encounterId) {
-      throw new BadRequestException(
-        'Encounter ID is required',
-      );
+      throw new BadRequestException('Encounter ID is required');
     }
 
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
-    const result =
-      await medplum.searchResources(
-        'MedicationRequest',
-        {
-          encounter:
-            `Encounter/${encounterId}`,
+    const result = await medplum.searchResources('MedicationRequest', {
+      encounter: `Encounter/${encounterId}`,
 
-          _count:
-            '200',
-        },
-      );
+      _count: '200',
+    });
 
-    const medications:
-      MedicationRequest[] = [
-        ...result,
-      ];
+    const medications: MedicationRequest[] = [...result];
 
-    medications.sort(
-      (
-        a,
-        b,
-      ) => {
-        const aDate =
-          a.authoredOn
-            ? new Date(
-                a.authoredOn,
-              ).getTime()
-            : 0;
+    medications.sort((a, b) => {
+      const aDate = a.authoredOn ? new Date(a.authoredOn).getTime() : 0;
 
-        const bDate =
-          b.authoredOn
-            ? new Date(
-                b.authoredOn,
-              ).getTime()
-            : 0;
+      const bDate = b.authoredOn ? new Date(b.authoredOn).getTime() : 0;
 
-        return bDate - aDate;
-      },
-    );
+      return bDate - aDate;
+    });
 
     return {
-      total:
-        medications.length,
+      total: medications.length,
 
-      medications:
-        medications.map(
-          (
-            medication,
-          ) =>
-            this.mapMedicationRequest(
-              medication,
-            ),
-        ),
+      medications: medications.map((medication) =>
+        this.mapMedicationRequest(medication),
+      ),
     };
   }
 
@@ -539,48 +355,27 @@ export class MedicationsService {
   // GET PATIENT MEDICATIONS
   // =====================================================
 
-  async findByPatient(
-    patientId: string,
-  ) {
+  async findByPatient(patientId: string) {
     if (!patientId) {
-      throw new BadRequestException(
-        'Patient ID is required',
-      );
+      throw new BadRequestException('Patient ID is required');
     }
 
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
-    const result =
-      await medplum.searchResources(
-        'MedicationRequest',
-        {
-          subject:
-            `Patient/${patientId}`,
+    const result = await medplum.searchResources('MedicationRequest', {
+      subject: `Patient/${patientId}`,
 
-          _count:
-            '300',
-        },
-      );
+      _count: '300',
+    });
 
-    const medications:
-      MedicationRequest[] = [
-        ...result,
-      ];
+    const medications: MedicationRequest[] = [...result];
 
     return {
-      total:
-        medications.length,
+      total: medications.length,
 
-      medications:
-        medications.map(
-          (
-            medication,
-          ) =>
-            this.mapMedicationRequest(
-              medication,
-            ),
-        ),
+      medications: medications.map((medication) =>
+        this.mapMedicationRequest(medication),
+      ),
     };
   }
 
@@ -588,31 +383,21 @@ export class MedicationsService {
   // GET MEDICATION BY ID
   // =====================================================
 
-  async findById(
-    medicationRequestId:
-      string,
-  ) {
-    const medplum =
-      this.medplumService.getClient();
+  async findById(medicationRequestId: string) {
+    const medplum = this.medplumService.getClient();
 
-    let request:
-      MedicationRequest;
+    let request: MedicationRequest;
 
     try {
-      request =
-        await medplum.readResource(
-          'MedicationRequest',
-          medicationRequestId,
-        );
-    } catch {
-      throw new NotFoundException(
-        'Medication request not found',
+      request = await medplum.readResource(
+        'MedicationRequest',
+        medicationRequestId,
       );
+    } catch {
+      throw new NotFoundException('Medication request not found');
     }
 
-    return this.mapMedicationRequest(
-      request,
-    );
+    return this.mapMedicationRequest(request);
   }
 
   // =====================================================
@@ -620,11 +405,9 @@ export class MedicationsService {
   // =====================================================
 
   async updateStatus(
-    medicationRequestId:
-      string,
+    medicationRequestId: string,
 
-    status:
-      string,
+    status: string,
   ) {
     const allowedStatuses = [
       'active',
@@ -636,46 +419,28 @@ export class MedicationsService {
       'unknown',
     ];
 
-    if (
-      !allowedStatuses.includes(
-        status,
-      )
-    ) {
-      throw new BadRequestException(
-        'Invalid medication status',
-      );
+    if (!allowedStatuses.includes(status)) {
+      throw new BadRequestException('Invalid medication status');
     }
 
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
-    let request:
-      MedicationRequest;
+    let request: MedicationRequest;
 
     try {
-      request =
-        await medplum.readResource(
-          'MedicationRequest',
-          medicationRequestId,
-        );
-    } catch {
-      throw new NotFoundException(
-        'Medication request not found',
+      request = await medplum.readResource(
+        'MedicationRequest',
+        medicationRequestId,
       );
+    } catch {
+      throw new NotFoundException('Medication request not found');
     }
 
-    request.status =
-      status as
-        MedicationRequest['status'];
+    request.status = status as MedicationRequest['status'];
 
-    const updated =
-      await medplum.updateResource<MedicationRequest>(
-        request,
-      );
+    const updated = await medplum.updateResource<MedicationRequest>(request);
 
-    return this.mapMedicationRequest(
-      updated,
-    );
+    return this.mapMedicationRequest(updated);
   }
 
   // =====================================================
@@ -683,321 +448,161 @@ export class MedicationsService {
   // =====================================================
 
   private async findMedicationAllergyWarnings(
-    patientId:
-      string,
+    patientId: string,
 
-    medicationName:
-      string,
+    medicationName: string,
 
-    medicationCode:
-      string,
+    medicationCode: string,
   ) {
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
-    const result =
-      await medplum.searchResources(
-        'AllergyIntolerance',
-        {
-          patient:
-            `Patient/${patientId}`,
+    const result = await medplum.searchResources('AllergyIntolerance', {
+      patient: `Patient/${patientId}`,
 
-          _count:
-            '200',
-        },
-      );
+      _count: '200',
+    });
 
-    const allergies:
-      AllergyIntolerance[] = [
-        ...result,
-      ];
+    const allergies: AllergyIntolerance[] = [...result];
 
-    const medicationNameNormalized =
-      this.normalize(
-        medicationName,
-      );
+    const medicationNameNormalized = this.normalize(medicationName);
 
-    const medicationCodeNormalized =
-      this.normalize(
-        medicationCode,
-      );
+    const medicationCodeNormalized = this.normalize(medicationCode);
 
     return allergies
-      .filter(
-        (
-          allergy,
-        ) => {
-          const clinicalStatus =
-            allergy.clinicalStatus
-              ?.coding?.[0]
-              ?.code;
+      .filter((allergy) => {
+        const clinicalStatus = allergy.clinicalStatus?.coding?.[0]?.code;
 
-          const verificationStatus =
-            allergy.verificationStatus
-              ?.coding?.[0]
-              ?.code;
+        const verificationStatus =
+          allergy.verificationStatus?.coding?.[0]?.code;
 
-          if (
-            clinicalStatus !==
-            'active'
-          ) {
-            return false;
-          }
+        if (clinicalStatus !== 'active') {
+          return false;
+        }
 
-          if (
-            verificationStatus ===
-              'refuted' ||
-            verificationStatus ===
-              'entered-in-error'
-          ) {
-            return false;
-          }
+        if (
+          verificationStatus === 'refuted' ||
+          verificationStatus === 'entered-in-error'
+        ) {
+          return false;
+        }
 
-          const category =
-            allergy.category?.[0];
+        const category = allergy.category?.[0];
 
-          if (
-            category &&
-            category !==
-              'medication'
-          ) {
-            return false;
-          }
+        if (category && category !== 'medication') {
+          return false;
+        }
 
-          const allergyCode =
-            this.normalize(
-              allergy.code
-                ?.coding?.[0]
-                ?.code,
-            );
+        const allergyCode = this.normalize(allergy.code?.coding?.[0]?.code);
 
-          const allergyDisplay =
-            this.normalize(
-              allergy.code?.text ??
-              allergy.code
-                ?.coding?.[0]
-                ?.display,
-            );
+        const allergyDisplay = this.normalize(
+          allergy.code?.text ?? allergy.code?.coding?.[0]?.display,
+        );
 
-          if (
-            !allergyCode &&
-            !allergyDisplay
-          ) {
-            return false;
-          }
+        if (!allergyCode && !allergyDisplay) {
+          return false;
+        }
 
-          const codeMatch =
-            Boolean(
-              allergyCode &&
-              medicationCodeNormalized &&
-              (
-                allergyCode ===
-                  medicationCodeNormalized ||
-                medicationCodeNormalized.includes(
-                  allergyCode,
-                ) ||
-                allergyCode.includes(
-                  medicationCodeNormalized,
-                )
-              ),
-            );
+        const codeMatch = Boolean(
+          allergyCode &&
+          medicationCodeNormalized &&
+          (allergyCode === medicationCodeNormalized ||
+            medicationCodeNormalized.includes(allergyCode) ||
+            allergyCode.includes(medicationCodeNormalized)),
+        );
 
-          const displayMatch =
-            Boolean(
-              allergyDisplay &&
-              medicationNameNormalized &&
-              (
-                allergyDisplay ===
-                  medicationNameNormalized ||
-                medicationNameNormalized.includes(
-                  allergyDisplay,
-                ) ||
-                allergyDisplay.includes(
-                  medicationNameNormalized,
-                )
-              ),
-            );
+        const displayMatch = Boolean(
+          allergyDisplay &&
+          medicationNameNormalized &&
+          (allergyDisplay === medicationNameNormalized ||
+            medicationNameNormalized.includes(allergyDisplay) ||
+            allergyDisplay.includes(medicationNameNormalized)),
+        );
 
-          return (
-            codeMatch ||
-            displayMatch
-          );
-        },
-      )
-      .map(
-        (
-          allergy,
-        ) => ({
-          allergyId:
-            allergy.id,
+        return codeMatch || displayMatch;
+      })
+      .map((allergy) => ({
+        allergyId: allergy.id,
 
-          allergen:
-            allergy.code?.text ??
-            allergy.code
-              ?.coding?.[0]
-              ?.display ??
-            'Unknown allergen',
+        allergen:
+          allergy.code?.text ??
+          allergy.code?.coding?.[0]?.display ??
+          'Unknown allergen',
 
-          criticality:
-            allergy.criticality,
+        criticality: allergy.criticality,
 
-          reaction:
-            allergy.reaction?.[0]
-              ?.manifestation?.[0]
-              ?.text,
+        reaction: allergy.reaction?.[0]?.manifestation?.[0]?.text,
 
-          severity:
-            allergy.reaction?.[0]
-              ?.severity,
+        severity: allergy.reaction?.[0]?.severity,
 
-          verificationStatus:
-            allergy.verificationStatus
-              ?.coding?.[0]
-              ?.code,
-        }),
-      );
+        verificationStatus: allergy.verificationStatus?.coding?.[0]?.code,
+      }));
   }
 
   // =====================================================
   // MAP MEDICATION REQUEST
   // =====================================================
 
-  private mapMedicationRequest(
-    request:
-      MedicationRequest,
-  ) {
-    const medication =
-      request.medicationCodeableConcept;
+  private mapMedicationRequest(request: MedicationRequest) {
+    const medication = request.medicationCodeableConcept;
 
-    const dosage =
-      request.dosageInstruction?.[0];
+    const dosage = request.dosageInstruction?.[0];
 
-    const doseQuantity =
-      dosage
-        ?.doseAndRate?.[0]
-        ?.doseQuantity;
+    const doseQuantity = dosage?.doseAndRate?.[0]?.doseQuantity;
 
-    const hospitalId =
-      request.extension
-        ?.find(
-          (
-            extension,
-          ) =>
-            extension.url ===
-            'https://hospital-ehr.local/fhir/StructureDefinition/medication-hospital',
-        )
-        ?.valueReference
-        ?.reference
-        ?.replace(
-          'Organization/',
-          '',
-        );
+    const hospitalId = request.extension
+      ?.find(
+        (extension) =>
+          extension.url ===
+          'https://hospital-ehr.local/fhir/StructureDefinition/medication-hospital',
+      )
+      ?.valueReference?.reference?.replace('Organization/', '');
 
     return {
-      id:
-        request.id,
+      id: request.id,
 
-      resourceType:
-        request.resourceType,
+      resourceType: request.resourceType,
 
-      status:
-        request.status,
+      status: request.status,
 
-      intent:
-        request.intent,
+      intent: request.intent,
 
-      priority:
-        request.priority,
+      priority: request.priority,
 
-      medicationCode:
-        medication
-          ?.coding?.[0]
-          ?.code,
+      medicationCode: medication?.coding?.[0]?.code,
 
-      medicationName:
-        medication?.text ??
-        medication
-          ?.coding?.[0]
-          ?.display,
+      medicationName: medication?.text ?? medication?.coding?.[0]?.display,
 
-      patientId:
-        request.subject
-          ?.reference
-          ?.replace(
-            'Patient/',
-            '',
-          ),
+      patientId: request.subject?.reference?.replace('Patient/', ''),
 
-      encounterId:
-        request.encounter
-          ?.reference
-          ?.replace(
-            'Encounter/',
-            '',
-          ),
+      encounterId: request.encounter?.reference?.replace('Encounter/', ''),
 
       hospitalId,
 
-      requester:
-        request.requester
-          ?.reference,
+      requester: request.requester?.reference,
 
-      authoredOn:
-        request.authoredOn,
+      authoredOn: request.authoredOn,
 
-      instructions:
-        dosage?.text,
+      instructions: dosage?.text,
 
-      route:
-        dosage?.route
-          ?.text,
+      route: dosage?.route?.text,
 
-      dose:
-        doseQuantity
-          ?.value,
+      dose: doseQuantity?.value,
 
-      doseUnit:
-        doseQuantity
-          ?.unit,
+      doseUnit: doseQuantity?.unit,
 
-      frequency:
-        dosage?.timing
-          ?.code?.text,
+      frequency: dosage?.timing?.code?.text,
 
-      asNeeded:
-        dosage
-          ?.asNeededBoolean,
+      asNeeded: dosage?.asNeededBoolean,
 
-      durationDays:
-        dosage
-          ?.timing
-          ?.repeat
-          ?.boundsDuration
-          ?.value,
+      durationDays: dosage?.timing?.repeat?.boundsDuration?.value,
 
-      quantity:
-        request
-          .dispenseRequest
-          ?.quantity
-          ?.value,
+      quantity: request.dispenseRequest?.quantity?.value,
 
-      quantityUnit:
-        request
-          .dispenseRequest
-          ?.quantity
-          ?.unit,
+      quantityUnit: request.dispenseRequest?.quantity?.unit,
 
-      startDate:
-        request
-          .dispenseRequest
-          ?.validityPeriod
-          ?.start,
+      startDate: request.dispenseRequest?.validityPeriod?.start,
 
-      endDate:
-        request
-          .dispenseRequest
-          ?.validityPeriod
-          ?.end,
+      endDate: request.dispenseRequest?.validityPeriod?.end,
     };
   }
 
@@ -1005,10 +610,7 @@ export class MedicationsService {
   // HELPERS
   // =====================================================
 
-  private normalize(
-    value?:
-      string,
-  ) {
+  private normalize(value?: string) {
     if (!value) {
       return '';
     }
@@ -1016,32 +618,18 @@ export class MedicationsService {
     return value
       .trim()
       .toLowerCase()
-      .replace(
-        /[^a-z0-9]+/g,
-        '',
-      );
+      .replace(/[^a-z0-9]+/g, '');
   }
 
   private parseDate(
-    value:
-      string,
+    value: string,
 
-    label:
-      string,
+    label: string,
   ) {
-    const date =
-      new Date(
-        value,
-      );
+    const date = new Date(value);
 
-    if (
-      Number.isNaN(
-        date.getTime(),
-      )
-    ) {
-      throw new BadRequestException(
-        `Invalid medication ${label}`,
-      );
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException(`Invalid medication ${label}`);
     }
 
     return date.toISOString();

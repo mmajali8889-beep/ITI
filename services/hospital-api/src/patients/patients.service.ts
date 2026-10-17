@@ -32,10 +32,13 @@ export interface DuplicateCheckOptions {
   phone?: string;
 }
 
-const NATIONAL_ID_SYSTEM = 'https://hospital-ehr.local/identifier/jordan-national-id';
+const NATIONAL_ID_SYSTEM =
+  'https://hospital-ehr.local/identifier/jordan-national-id';
 const PASSPORT_SYSTEM = 'https://hospital-ehr.local/identifier/passport';
-const MRN_SEQUENCE_SYSTEM = 'https://hospital-ehr.local/identifier/mrn-sequence';
-const MRN_SEQUENCE_VALUE_URL = 'https://hospital-ehr.local/fhir/StructureDefinition/mrn-sequence-value';
+const MRN_SEQUENCE_SYSTEM =
+  'https://hospital-ehr.local/identifier/mrn-sequence';
+const MRN_SEQUENCE_VALUE_URL =
+  'https://hospital-ehr.local/fhir/StructureDefinition/mrn-sequence-value';
 
 interface PatientSearchOptions {
   search?: string;
@@ -48,19 +51,14 @@ interface PatientSearchOptions {
 
 @Injectable()
 export class PatientsService {
-  constructor(
-    private readonly medplumService: MedplumService,
-  ) {}
+  constructor(private readonly medplumService: MedplumService) {}
 
   // =====================================================
   // CREATE PATIENT
   // =====================================================
 
-  async create(
-    dto: CreatePatientDto,
-  ) {
-    const medplum =
-      this.medplumService.getClient();
+  async create(dto: CreatePatientDto) {
+    const medplum = this.medplumService.getClient();
 
     this.normalizeRegistration(dto);
 
@@ -69,15 +67,11 @@ export class PatientsService {
     // ===================================================
 
     if (!dto.hospitalId) {
-      throw new BadRequestException(
-        'Hospital ID is required',
-      );
+      throw new BadRequestException('Hospital ID is required');
     }
 
     if (!dto.hospitalCode) {
-      throw new BadRequestException(
-        'Hospital code is required',
-      );
+      throw new BadRequestException('Hospital code is required');
     }
 
     // Hospital MRNs are server-owned. Never trust or reuse a value submitted
@@ -98,7 +92,8 @@ export class PatientsService {
     });
     if (identityDuplicateCheck.blocking) {
       throw new ConflictException({
-        message: 'A patient with the same authoritative identifier already exists',
+        message:
+          'A patient with the same authoritative identifier already exists',
         code: 'PATIENT_DUPLICATE',
         matches: identityDuplicateCheck.matches,
       });
@@ -113,26 +108,18 @@ export class PatientsService {
     // MRN System
     // ===================================================
 
-    const mrnSystem =
-      `https://hospital-ehr.local/mrn/${dto.hospitalCode}`;
+    const mrnSystem = `https://hospital-ehr.local/mrn/${dto.hospitalCode}`;
 
     // ===================================================
     // Duplicate Hospital MRN Check
     // ===================================================
 
-    const existingMrn =
-      await medplum.searchResources(
-        'Patient',
-        {
-          identifier:
-            `${mrnSystem}|${dto.hospitalMrn}`,
-        },
-      );
+    const existingMrn = await medplum.searchResources('Patient', {
+      identifier: `${mrnSystem}|${dto.hospitalMrn}`,
+    });
 
     if (existingMrn.length > 0) {
-      throw new BadRequestException(
-        'Hospital MRN already exists',
-      );
+      throw new BadRequestException('Hospital MRN already exists');
     }
 
     // ===================================================
@@ -143,21 +130,12 @@ export class PatientsService {
       const nationalIdSystem =
         'https://hospital-ehr.local/identifier/jordan-national-id';
 
-      const existingNationalId =
-        await medplum.searchResources(
-          'Patient',
-          {
-            identifier:
-              `${nationalIdSystem}|${dto.nationalId}`,
-          },
-        );
+      const existingNationalId = await medplum.searchResources('Patient', {
+        identifier: `${nationalIdSystem}|${dto.nationalId}`,
+      });
 
-      if (
-        existingNationalId.length > 0
-      ) {
-        throw new BadRequestException(
-          'National ID already exists',
-        );
+      if (existingNationalId.length > 0) {
+        throw new BadRequestException('National ID already exists');
       }
     }
 
@@ -166,24 +144,14 @@ export class PatientsService {
     // ===================================================
 
     if (dto.passportNumber) {
-      const passportSystem =
-        'https://hospital-ehr.local/identifier/passport';
+      const passportSystem = 'https://hospital-ehr.local/identifier/passport';
 
-      const existingPassport =
-        await medplum.searchResources(
-          'Patient',
-          {
-            identifier:
-              `${passportSystem}|${dto.passportNumber}`,
-          },
-        );
+      const existingPassport = await medplum.searchResources('Patient', {
+        identifier: `${passportSystem}|${dto.passportNumber}`,
+      });
 
-      if (
-        existingPassport.length > 0
-      ) {
-        throw new BadRequestException(
-          'Passport number already exists',
-        );
+      if (existingPassport.length > 0) {
+        throw new BadRequestException('Passport number already exists');
       }
     }
 
@@ -201,11 +169,9 @@ export class PatientsService {
           text: 'Enterprise MRN',
         },
 
-        system:
-          'https://hospital-ehr.local/mrn/enterprise',
+        system: 'https://hospital-ehr.local/mrn/enterprise',
 
-        value:
-          dto.enterpriseMrn,
+        value: dto.enterpriseMrn,
       });
     }
 
@@ -216,15 +182,12 @@ export class PatientsService {
         text: 'Hospital MRN',
       },
 
-      system:
-        mrnSystem,
+      system: mrnSystem,
 
-      value:
-        dto.hospitalMrn,
+      value: dto.hospitalMrn,
 
       assigner: {
-        reference:
-          `Organization/${dto.hospitalId}`,
+        reference: `Organization/${dto.hospitalId}`,
       },
     });
 
@@ -236,11 +199,9 @@ export class PatientsService {
           text: 'Jordan National ID',
         },
 
-        system:
-          'https://hospital-ehr.local/identifier/jordan-national-id',
+        system: 'https://hospital-ehr.local/identifier/jordan-national-id',
 
-        value:
-          dto.nationalId,
+        value: dto.nationalId,
       });
     }
 
@@ -252,11 +213,9 @@ export class PatientsService {
           text: 'Passport Number',
         },
 
-        system:
-          'https://hospital-ehr.local/identifier/passport',
+        system: 'https://hospital-ehr.local/identifier/passport',
 
-        value:
-          dto.passportNumber,
+        value: dto.passportNumber,
       });
     }
 
@@ -266,42 +225,30 @@ export class PatientsService {
 
     const names: HumanName[] = [];
 
-    const arabicGivenNames = [
-      dto.firstNameAr,
-      dto.middleNameAr,
-    ].filter(
-      (value): value is string =>
-        Boolean(value),
+    const arabicGivenNames = [dto.firstNameAr, dto.middleNameAr].filter(
+      (value): value is string => Boolean(value),
     );
 
     const arabicNameParts = [
       dto.firstNameAr,
       dto.middleNameAr,
       dto.familyNameAr,
-    ].filter(
-      (value): value is string =>
-        Boolean(value),
-    );
+    ].filter((value): value is string => Boolean(value));
 
     names.push({
       use: 'official',
 
-      family:
-        dto.familyNameAr,
+      family: dto.familyNameAr,
 
-      given:
-        arabicGivenNames,
+      given: arabicGivenNames,
 
-      text:
-        arabicNameParts.join(' '),
+      text: arabicNameParts.join(' '),
 
       extension: [
         {
-          url:
-            'https://hospital-ehr.local/fhir/StructureDefinition/name-language',
+          url: 'https://hospital-ehr.local/fhir/StructureDefinition/name-language',
 
-          valueCode:
-            'ar',
+          valueCode: 'ar',
         },
       ],
     });
@@ -310,46 +257,31 @@ export class PatientsService {
     // English Name
     // ===================================================
 
-    if (
-      dto.firstNameEn ||
-      dto.familyNameEn
-    ) {
-      const englishGivenNames = [
-        dto.firstNameEn,
-        dto.middleNameEn,
-      ].filter(
-        (value): value is string =>
-          Boolean(value),
+    if (dto.firstNameEn || dto.familyNameEn) {
+      const englishGivenNames = [dto.firstNameEn, dto.middleNameEn].filter(
+        (value): value is string => Boolean(value),
       );
 
       const englishNameParts = [
         dto.firstNameEn,
         dto.middleNameEn,
         dto.familyNameEn,
-      ].filter(
-        (value): value is string =>
-          Boolean(value),
-      );
+      ].filter((value): value is string => Boolean(value));
 
       names.push({
         use: 'usual',
 
-        family:
-          dto.familyNameEn,
+        family: dto.familyNameEn,
 
-        given:
-          englishGivenNames,
+        given: englishGivenNames,
 
-        text:
-          englishNameParts.join(' '),
+        text: englishNameParts.join(' '),
 
         extension: [
           {
-            url:
-              'https://hospital-ehr.local/fhir/StructureDefinition/name-language',
+            url: 'https://hospital-ehr.local/fhir/StructureDefinition/name-language',
 
-            valueCode:
-              'en',
+            valueCode: 'en',
           },
         ],
       });
@@ -365,8 +297,7 @@ export class PatientsService {
       telecom.push({
         system: 'phone',
 
-        value:
-          dto.phone,
+        value: dto.phone,
 
         use: 'mobile',
       });
@@ -384,29 +315,17 @@ export class PatientsService {
     // Address
     // ===================================================
 
-    const address:
-      | Address[]
-      | undefined =
-      dto.addressLine ||
-      dto.city ||
-      dto.country
+    const address: Address[] | undefined =
+      dto.addressLine || dto.city || dto.country
         ? [
             {
               use: 'home',
 
-              line:
-                dto.addressLine
-                  ? [
-                      dto.addressLine,
-                    ]
-                  : undefined,
+              line: dto.addressLine ? [dto.addressLine] : undefined,
 
-              city:
-                dto.city,
+              city: dto.city,
 
-              country:
-                dto.country ??
-                'JO',
+              country: dto.country ?? 'JO',
             },
           ]
         : undefined;
@@ -415,36 +334,29 @@ export class PatientsService {
     // Next of Kin
     // ===================================================
 
-    const contacts:
-      PatientContact[] = [];
+    const contacts: PatientContact[] = [];
 
     if (dto.nextOfKinName) {
       contacts.push({
         relationship: [
           {
-            text:
-              dto.nextOfKinRelationship ??
-              'Next of Kin',
+            text: dto.nextOfKinRelationship ?? 'Next of Kin',
           },
         ],
 
         name: {
-          text:
-            dto.nextOfKinName,
+          text: dto.nextOfKinName,
         },
 
-        telecom:
-          dto.nextOfKinPhone
-            ? [
-                {
-                  system:
-                    'phone',
+        telecom: dto.nextOfKinPhone
+          ? [
+              {
+                system: 'phone',
 
-                  value:
-                    dto.nextOfKinPhone,
-                },
-              ]
-            : undefined,
+                value: dto.nextOfKinPhone,
+              },
+            ]
+          : undefined,
       });
     }
 
@@ -452,16 +364,13 @@ export class PatientsService {
     // Extensions
     // ===================================================
 
-    const extensions:
-      Extension[] = [];
+    const extensions: Extension[] = [];
 
     if (dto.nationality) {
       extensions.push({
-        url:
-          'https://hospital-ehr.local/fhir/StructureDefinition/nationality',
+        url: 'https://hospital-ehr.local/fhir/StructureDefinition/nationality',
 
-        valueString:
-          dto.nationality,
+        valueString: dto.nationality,
       });
     }
 
@@ -469,77 +378,78 @@ export class PatientsService {
     // Create FHIR Patient
     // ===================================================
 
-    const patient =
-      await medplum.createResource<Patient>(
-        {
-          resourceType:
-            'Patient',
+    const patient = await medplum.createResource<Patient>({
+      resourceType: 'Patient',
 
-          active:
-            true,
+      active: true,
 
-          identifier:
-            identifiers,
+      identifier: identifiers,
 
-          name:
-            names,
+      name: names,
 
-          gender:
-            dto.gender,
+      gender: dto.gender,
 
-          birthDate:
-            dto.birthDate,
+      birthDate: dto.birthDate,
 
-          communication: dto.preferredLanguage
-            ? [{
-                language: {
-                  coding: [{
+      communication: dto.preferredLanguage
+        ? [
+            {
+              language: {
+                coding: [
+                  {
                     system: 'urn:ietf:bcp:47',
                     code: dto.preferredLanguage,
-                  }],
-                  text: dto.preferredLanguage === 'ar' ? 'Arabic' : 'English',
+                  },
+                ],
+                text: dto.preferredLanguage === 'ar' ? 'Arabic' : 'English',
+              },
+              preferred: true,
+            },
+          ]
+        : undefined,
+
+      maritalStatus:
+        dto.maritalStatus && dto.maritalStatus !== 'unknown'
+          ? {
+              coding: [
+                {
+                  system:
+                    'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus',
+                  code: (
+                    {
+                      single: 'S',
+                      married: 'M',
+                      divorced: 'D',
+                      widowed: 'W',
+                    } as const
+                  )[dto.maritalStatus],
                 },
-                preferred: true,
-              }]
-            : undefined,
+              ],
+              text: dto.maritalStatus,
+            }
+          : undefined,
 
-          maritalStatus: dto.maritalStatus && dto.maritalStatus !== 'unknown'
-            ? {
-                coding: [{
-                  system: 'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus',
-                  code: ({ single: 'S', married: 'M', divorced: 'D', widowed: 'W' } as const)[dto.maritalStatus],
-                }],
-                text: dto.maritalStatus,
-              }
-            : undefined,
+      telecom: telecom.length > 0 ? telecom : undefined,
 
-          telecom:
-            telecom.length > 0
-              ? telecom
-              : undefined,
+      address,
 
-          address,
+      contact: contacts.length > 0 ? contacts : undefined,
 
-          contact:
-            contacts.length > 0
-              ? contacts
-              : undefined,
+      photo: dto.photoBase64
+        ? [
+            {
+              contentType: dto.photoContentType ?? 'image/jpeg',
+              data: dto.photoBase64,
+            },
+          ]
+        : undefined,
 
-          photo: dto.photoBase64
-            ? [{ contentType: dto.photoContentType ?? 'image/jpeg', data: dto.photoBase64 }]
-            : undefined,
+      extension: extensions.length > 0 ? extensions : undefined,
 
-          extension:
-            extensions.length > 0
-              ? extensions
-              : undefined,
-
-          managingOrganization: {
-            reference:
-              `Organization/${dto.hospitalId}`,
-          },
-        },
-      );
+      managingOrganization: {
+        reference: `Organization/${dto.hospitalId}`,
+      },
+    });
 
     const linked = await this.createRegistrationLinks(patient, dto);
     return { ...this.mapPatient(patient), ...linked };
@@ -563,23 +473,30 @@ export class PatientsService {
         kind: 'passport',
         identifier: `${PASSPORT_SYSTEM}|${options.passportNumber.trim().toUpperCase()}`,
       },
-    ].filter((value): value is { kind: string; identifier: string } => Boolean(value));
+    ].filter((value): value is { kind: string; identifier: string } =>
+      Boolean(value),
+    );
 
     const medplum = this.medplumService.getClient();
-    const results = await Promise.all(checks.map(async (check) => ({
-      kind: check.kind,
-      patients: await medplum.searchResources('Patient', {
-        identifier: check.identifier,
-        _count: '5',
-      }),
-    })));
+    const results = await Promise.all(
+      checks.map(async (check) => ({
+        kind: check.kind,
+        patients: await medplum.searchResources('Patient', {
+          identifier: check.identifier,
+          _count: '5',
+        }),
+      })),
+    );
 
-    const unique = new Map<string, {
-      id: string;
-      name?: string;
-      hospitalId?: string;
-      matchedBy: string[];
-    }>();
+    const unique = new Map<
+      string,
+      {
+        id: string;
+        name?: string;
+        hospitalId?: string;
+        matchedBy: string[];
+      }
+    >();
 
     for (const result of results) {
       for (const patient of result.patients) {
@@ -587,7 +504,10 @@ export class PatientsService {
         const current = unique.get(patient.id) ?? {
           id: patient.id,
           name: patient.name?.[0]?.text,
-          hospitalId: patient.managingOrganization?.reference?.replace('Organization/', ''),
+          hospitalId: patient.managingOrganization?.reference?.replace(
+            'Organization/',
+            '',
+          ),
           matchedBy: [],
         };
         current.matchedBy.push(result.kind);
@@ -619,23 +539,37 @@ export class PatientsService {
     dto.familyNameEn = clean(dto.familyNameEn);
     dto.phone = clean(dto.phone)?.replace(/[\s()-]/g, '');
     dto.email = clean(dto.email)?.toLowerCase();
-    dto.photoBase64 = clean(dto.photoBase64)?.replace(/^data:image\/(?:jpeg|png|webp);base64,/, '');
+    dto.photoBase64 = clean(dto.photoBase64)?.replace(
+      /^data:image\/(?:jpeg|png|webp);base64,/,
+      '',
+    );
   }
 
   private validateRegistration(dto: CreatePatientDto): void {
     if (!dto.firstNameAr || !dto.familyNameAr) {
-      throw new BadRequestException('Arabic first and family names are required');
+      throw new BadRequestException(
+        'Arabic first and family names are required',
+      );
     }
     const arabicName = /^[\u0600-\u06FF\s'-]{2,80}$/;
-    if (!arabicName.test(dto.firstNameAr) || !arabicName.test(dto.familyNameAr)) {
+    if (
+      !arabicName.test(dto.firstNameAr) ||
+      !arabicName.test(dto.familyNameAr)
+    ) {
       throw new BadRequestException('Arabic names contain invalid characters');
     }
     if (!['male', 'female', 'other', 'unknown'].includes(dto.gender)) {
       throw new BadRequestException('Invalid gender');
     }
     const birthDate = new Date(`${dto.birthDate}T00:00:00Z`);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dto.birthDate) || Number.isNaN(birthDate.getTime()) || birthDate > new Date()) {
-      throw new BadRequestException('A valid non-future birth date is required');
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(dto.birthDate) ||
+      Number.isNaN(birthDate.getTime()) ||
+      birthDate > new Date()
+    ) {
+      throw new BadRequestException(
+        'A valid non-future birth date is required',
+      );
     }
     if (dto.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dto.email)) {
       throw new BadRequestException('Invalid email address');
@@ -652,15 +586,27 @@ export class PatientsService {
     if (!dto.hospitalMrn || !/^[A-Z0-9-]{3,30}$/.test(dto.hospitalMrn)) {
       throw new BadRequestException('Invalid hospital MRN format');
     }
-    if (dto.photoBase64 && (!dto.photoContentType || !/^[A-Za-z0-9+/]+={0,2}$/.test(dto.photoBase64) || Buffer.byteLength(dto.photoBase64, 'base64') > 5 * 1024 * 1024)) {
-      throw new BadRequestException('Patient photo must be JPEG, PNG, or WebP and no larger than 5 MB');
+    if (
+      dto.photoBase64 &&
+      (!dto.photoContentType ||
+        !/^[A-Za-z0-9+/]+={0,2}$/.test(dto.photoBase64) ||
+        Buffer.byteLength(dto.photoBase64, 'base64') > 5 * 1024 * 1024)
+    ) {
+      throw new BadRequestException(
+        'Patient photo must be JPEG, PNG, or WebP and no larger than 5 MB',
+      );
     }
   }
 
-  private async assertHospital(hospitalId: string, hospitalCode: string): Promise<void> {
+  private async assertHospital(
+    hospitalId: string,
+    hospitalCode: string,
+  ): Promise<void> {
     let hospital: Organization;
     try {
-      hospital = await this.medplumService.getClient().readResource('Organization', hospitalId);
+      hospital = await this.medplumService
+        .getClient()
+        .readResource('Organization', hospitalId);
     } catch {
       throw new BadRequestException('Selected hospital does not exist');
     }
@@ -683,31 +629,40 @@ export class PatientsService {
     const client = this.medplumService.getClient();
     const identifierValue = hospitalId;
     const query = `identifier=${encodeURIComponent(MRN_SEQUENCE_SYSTEM)}|${encodeURIComponent(identifierValue)}`;
-    const seed = await this.highestExistingMrnSequence(hospitalId, hospitalCode);
+    const seed = await this.highestExistingMrnSequence(
+      hospitalId,
+      hospitalCode,
+    );
 
-    let counter = await client.createResourceIfNoneExist<Basic>({
-      resourceType: 'Basic',
-      code: {
-        coding: [{
-          system: MRN_SEQUENCE_SYSTEM,
-          code: 'hospital-mrn-sequence',
-          display: 'Hospital MRN Sequence',
-        }],
+    let counter = await client.createResourceIfNoneExist<Basic>(
+      {
+        resourceType: 'Basic',
+        code: {
+          coding: [
+            {
+              system: MRN_SEQUENCE_SYSTEM,
+              code: 'hospital-mrn-sequence',
+              display: 'Hospital MRN Sequence',
+            },
+          ],
+        },
+        identifier: [{ system: MRN_SEQUENCE_SYSTEM, value: identifierValue }],
+        subject: { reference: `Organization/${hospitalId}` },
+        // Basic.created is a FHIR `date`, not a `dateTime`.
+        created: new Date().toISOString().slice(0, 10),
+        extension: [{ url: MRN_SEQUENCE_VALUE_URL, valueInteger: seed }],
       },
-      identifier: [{ system: MRN_SEQUENCE_SYSTEM, value: identifierValue }],
-      subject: { reference: `Organization/${hospitalId}` },
-      // Basic.created is a FHIR `date`, not a `dateTime`.
-      created: new Date().toISOString().slice(0, 10),
-      extension: [{ url: MRN_SEQUENCE_VALUE_URL, valueInteger: seed }],
-    }, query);
+      query,
+    );
 
     // Compare-and-swap on the counter's version: a parallel registration that
     // wins the race makes ours fail with a version conflict, and we retry.
     const attempts = 20;
     for (let attempt = 0; attempt < attempts; attempt += 1) {
-      const current = counter.extension?.find(
-        (extension) => extension.url === MRN_SEQUENCE_VALUE_URL,
-      )?.valueInteger ?? 0;
+      const current =
+        counter.extension?.find(
+          (extension) => extension.url === MRN_SEQUENCE_VALUE_URL,
+        )?.valueInteger ?? 0;
       const next = Math.max(current, seed) + 1;
 
       try {
@@ -722,8 +677,15 @@ export class PatientsService {
         });
         return `${hospitalCode}-${String(next).padStart(6, '0')}`;
       } catch (error) {
-        if (!counter.id || !isVersionConflict(error) || attempt === attempts - 1) throw error;
-        await new Promise((resolve) => setTimeout(resolve, 20 + Math.random() * 80));
+        if (
+          !counter.id ||
+          !isVersionConflict(error) ||
+          attempt === attempts - 1
+        )
+          throw error;
+        await new Promise((resolve) =>
+          setTimeout(resolve, 20 + Math.random() * 80),
+        );
         counter = await client.readResource('Basic', counter.id);
       }
     }
@@ -735,45 +697,150 @@ export class PatientsService {
     hospitalId: string,
     hospitalCode: string,
   ): Promise<number> {
-    const patients = await this.medplumService.getClient().searchResources('Patient', {
-      organization: `Organization/${hospitalId}`,
-      _count: '1000',
-    });
+    const patients = await this.medplumService
+      .getClient()
+      .searchResources('Patient', {
+        organization: `Organization/${hospitalId}`,
+        _count: '1000',
+      });
     const system = this.mrnSystem(hospitalCode);
-    const expression = new RegExp(`^${hospitalCode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-(\\d+)$`);
+    const expression = new RegExp(
+      `^${hospitalCode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-(\\d+)$`,
+    );
     return patients.reduce((highest, patient) => {
-      const value = patient.identifier?.find((identifier) => identifier.system === system)?.value;
+      const value = patient.identifier?.find(
+        (identifier) => identifier.system === system,
+      )?.value;
       const sequence = value?.match(expression)?.[1];
       return sequence ? Math.max(highest, Number(sequence)) : highest;
     }, 0);
   }
 
-
   private validateRegistrationLinks(dto: CreatePatientDto): void {
     if (dto.insurance) {
-      for (const field of ['payerId', 'payerName', 'subscriberId', 'validFrom'] as const) if (!dto.insurance[field]?.trim()) throw new BadRequestException(`Insurance ${field} is required`);
-      const start = new Date(dto.insurance.validFrom); const end = dto.insurance.validTo ? new Date(dto.insurance.validTo) : undefined;
-      if (Number.isNaN(start.getTime()) || (end && (Number.isNaN(end.getTime()) || end < start))) throw new BadRequestException('Invalid insurance validity period');
+      for (const field of [
+        'payerId',
+        'payerName',
+        'subscriberId',
+        'validFrom',
+      ] as const)
+        if (!dto.insurance[field]?.trim())
+          throw new BadRequestException(`Insurance ${field} is required`);
+      const start = new Date(dto.insurance.validFrom);
+      const end = dto.insurance.validTo
+        ? new Date(dto.insurance.validTo)
+        : undefined;
+      if (
+        Number.isNaN(start.getTime()) ||
+        (end && (Number.isNaN(end.getTime()) || end < start))
+      )
+        throw new BadRequestException('Invalid insurance validity period');
     }
-    for (const allergy of dto.knownAllergies ?? []) if (!allergy.substance?.trim()) throw new BadRequestException('Known allergy substance is required');
+    for (const allergy of dto.knownAllergies ?? [])
+      if (!allergy.substance?.trim())
+        throw new BadRequestException('Known allergy substance is required');
   }
 
-  private async createRegistrationLinks(patient: Patient, dto: CreatePatientDto) {
+  private async createRegistrationLinks(
+    patient: Patient,
+    dto: CreatePatientDto,
+  ) {
     const client = this.medplumService.getClient();
     let relatedPersonId: string | undefined;
     let coverageId: string | undefined;
     const allergyIds: string[] = [];
     if (dto.nextOfKinName && patient.id) {
-      const related = await client.createResource<RelatedPerson>({ resourceType: 'RelatedPerson', active: true, patient: { reference: `Patient/${patient.id}` }, relationship: [{ text: dto.nextOfKinRelationship ?? 'Next of Kin' }], name: [{ text: dto.nextOfKinName }], telecom: dto.nextOfKinPhone ? [{ system: 'phone', value: dto.nextOfKinPhone }] : undefined });
+      const related = await client.createResource<RelatedPerson>({
+        resourceType: 'RelatedPerson',
+        active: true,
+        patient: { reference: `Patient/${patient.id}` },
+        relationship: [{ text: dto.nextOfKinRelationship ?? 'Next of Kin' }],
+        name: [{ text: dto.nextOfKinName }],
+        telecom: dto.nextOfKinPhone
+          ? [{ system: 'phone', value: dto.nextOfKinPhone }]
+          : undefined,
+      });
       relatedPersonId = related.id;
     }
     if (dto.insurance && patient.id) {
-      const start = new Date(dto.insurance.validFrom); const end = dto.insurance.validTo ? new Date(dto.insurance.validTo) : undefined;
-      const coverage = await client.createResource<Coverage>({ resourceType: 'Coverage', status: 'active', beneficiary: { reference: `Patient/${patient.id}` }, subscriberId: dto.insurance.subscriberId, payor: [{ reference: `Organization/${dto.insurance.payerId}`, display: dto.insurance.payerName }], type: { text: dto.insurance.planName ?? 'Health insurance' }, period: { start: start.toISOString(), ...(end ? { end: end.toISOString() } : {}) }, class: dto.insurance.policyNumber ? [{ type: { text: 'Policy' }, value: dto.insurance.policyNumber }] : undefined, extension: [{ url: 'https://hospital-ehr.local/fhir/StructureDefinition/financial-hospital', valueReference: { reference: `Organization/${dto.hospitalId}` } }] });
+      const start = new Date(dto.insurance.validFrom);
+      const end = dto.insurance.validTo
+        ? new Date(dto.insurance.validTo)
+        : undefined;
+      const coverage = await client.createResource<Coverage>({
+        resourceType: 'Coverage',
+        status: 'active',
+        beneficiary: { reference: `Patient/${patient.id}` },
+        subscriberId: dto.insurance.subscriberId,
+        payor: [
+          {
+            reference: `Organization/${dto.insurance.payerId}`,
+            display: dto.insurance.payerName,
+          },
+        ],
+        type: { text: dto.insurance.planName ?? 'Health insurance' },
+        period: {
+          start: start.toISOString(),
+          ...(end ? { end: end.toISOString() } : {}),
+        },
+        class: dto.insurance.policyNumber
+          ? [{ type: { text: 'Policy' }, value: dto.insurance.policyNumber }]
+          : undefined,
+        extension: [
+          {
+            url: 'https://hospital-ehr.local/fhir/StructureDefinition/financial-hospital',
+            valueReference: { reference: `Organization/${dto.hospitalId}` },
+          },
+        ],
+      });
       coverageId = coverage.id;
     }
     for (const allergy of dto.knownAllergies ?? []) {
-      const created = await client.createResource<AllergyIntolerance>({ resourceType: 'AllergyIntolerance', patient: { reference: `Patient/${patient.id}` }, clinicalStatus: { coding: [{ system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical', code: 'active' }] }, verificationStatus: { coding: [{ system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-verification', code: 'unconfirmed' }] }, code: { coding: allergy.code ? [{ system: 'https://hospital-ehr.local/CodeSystem/allergens', code: allergy.code, display: allergy.substance.trim() }] : undefined, text: allergy.substance.trim() }, criticality: allergy.criticality, reaction: allergy.reaction ? [{ manifestation: [{ text: allergy.reaction }] }] : undefined, recordedDate: new Date().toISOString(), extension: [{ url: 'https://hospital-ehr.local/fhir/StructureDefinition/allergy-hospital', valueReference: { reference: `Organization/${dto.hospitalId}` } }] });
+      const created = await client.createResource<AllergyIntolerance>({
+        resourceType: 'AllergyIntolerance',
+        patient: { reference: `Patient/${patient.id}` },
+        clinicalStatus: {
+          coding: [
+            {
+              system:
+                'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+              code: 'active',
+            },
+          ],
+        },
+        verificationStatus: {
+          coding: [
+            {
+              system:
+                'http://terminology.hl7.org/CodeSystem/allergyintolerance-verification',
+              code: 'unconfirmed',
+            },
+          ],
+        },
+        code: {
+          coding: allergy.code
+            ? [
+                {
+                  system: 'https://hospital-ehr.local/CodeSystem/allergens',
+                  code: allergy.code,
+                  display: allergy.substance.trim(),
+                },
+              ]
+            : undefined,
+          text: allergy.substance.trim(),
+        },
+        criticality: allergy.criticality,
+        reaction: allergy.reaction
+          ? [{ manifestation: [{ text: allergy.reaction }] }]
+          : undefined,
+        recordedDate: new Date().toISOString(),
+        extension: [
+          {
+            url: 'https://hospital-ehr.local/fhir/StructureDefinition/allergy-hospital',
+            valueReference: { reference: `Organization/${dto.hospitalId}` },
+          },
+        ],
+      });
       if (created.id) allergyIds.push(created.id);
     }
     return { relatedPersonId, coverageId, allergyIds };
@@ -783,14 +850,11 @@ export class PatientsService {
   // SEARCH / LIST PATIENTS
   // =====================================================
 
-  async findAll(
-    options: PatientSearchOptions,
-  ) {
+  async findAll(options: PatientSearchOptions) {
     if (!options.hospitalId?.trim()) {
       throw new BadRequestException('hospitalId is required');
     }
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
     let patients: Patient[] = [];
 
@@ -799,19 +863,11 @@ export class PatientsService {
     // ===================================================
 
     if (options.nationalId) {
-      patients =
-        await medplum.searchResources(
-          'Patient',
-          {
-            identifier:
-              `https://hospital-ehr.local/identifier/jordan-national-id|${options.nationalId}`,
-          },
-        );
+      patients = await medplum.searchResources('Patient', {
+        identifier: `https://hospital-ehr.local/identifier/jordan-national-id|${options.nationalId}`,
+      });
 
-      return this.filterAndMapPatients(
-        patients,
-        options,
-      );
+      return this.filterAndMapPatients(patients, options);
     }
 
     if (options.passportNumber) {
@@ -826,19 +882,11 @@ export class PatientsService {
     // ===================================================
 
     if (options.mrn) {
-      patients =
-        await medplum.searchResources(
-          'Patient',
-          {
-            identifier:
-              options.mrn,
-          },
-        );
+      patients = await medplum.searchResources('Patient', {
+        identifier: options.mrn,
+      });
 
-      return this.filterAndMapPatients(
-        patients,
-        options,
-      );
+      return this.filterAndMapPatients(patients, options);
     }
 
     // ===================================================
@@ -846,19 +894,11 @@ export class PatientsService {
     // ===================================================
 
     if (options.phone) {
-      patients =
-        await medplum.searchResources(
-          'Patient',
-          {
-            telecom:
-              options.phone,
-          },
-        );
+      patients = await medplum.searchResources('Patient', {
+        telecom: options.phone,
+      });
 
-      return this.filterAndMapPatients(
-        patients,
-        options,
-      );
+      return this.filterAndMapPatients(patients, options);
     }
 
     // ===================================================
@@ -866,144 +906,90 @@ export class PatientsService {
     // ===================================================
 
     if (options.search) {
-      const searchText =
-        options.search.trim();
+      const searchText = options.search.trim();
 
       if (!searchText) {
-        patients =
-          await medplum.searchResources(
-            'Patient',
-            {
-              _count: '50',
-            },
-          );
+        patients = await medplum.searchResources('Patient', {
+          _count: '50',
+        });
 
-        return this.filterAndMapPatients(
-          patients,
-          options,
-        );
+        return this.filterAndMapPatients(patients, options);
       }
 
       // -----------------------------------------------
       // Try identifier first
       // -----------------------------------------------
 
-      const identifierResults =
-        await medplum.searchResources(
-          'Patient',
-          {
-            identifier:
-              searchText,
-          },
-        );
+      const identifierResults = await medplum.searchResources('Patient', {
+        identifier: searchText,
+      });
 
-      if (
-        identifierResults.length > 0
-      ) {
-        return this.filterAndMapPatients(
-          identifierResults,
-          options,
-        );
+      if (identifierResults.length > 0) {
+        return this.filterAndMapPatients(identifierResults, options);
       }
 
       // -----------------------------------------------
       // Try phone
       // -----------------------------------------------
 
-      const phoneResults =
-        await medplum.searchResources(
-          'Patient',
-          {
-            telecom:
-              searchText,
-          },
-        );
+      const phoneResults = await medplum.searchResources('Patient', {
+        telecom: searchText,
+      });
 
-      if (
-        phoneResults.length > 0
-      ) {
-        return this.filterAndMapPatients(
-          phoneResults,
-          options,
-        );
+      if (phoneResults.length > 0) {
+        return this.filterAndMapPatients(phoneResults, options);
       }
 
       // -----------------------------------------------
       // Search Name
       // -----------------------------------------------
 
-      patients =
-        await medplum.searchResources(
-          'Patient',
-          {
-            name:
-              searchText,
+      patients = await medplum.searchResources('Patient', {
+        name: searchText,
 
-            _count:
-              '50',
-          },
-        );
+        _count: '50',
+      });
 
-      return this.filterAndMapPatients(
-        patients,
-        options,
-      );
+      return this.filterAndMapPatients(patients, options);
     }
 
     // ===================================================
     // List Patients
     // ===================================================
 
-    patients =
-      await medplum.searchResources(
-        'Patient',
-        {
-          _count: '50',
-        },
-      );
+    patients = await medplum.searchResources('Patient', {
+      _count: '50',
+    });
 
-    return this.filterAndMapPatients(
-      patients,
-      options,
-    );
+    return this.filterAndMapPatients(patients, options);
   }
 
   // =====================================================
   // GET PATIENT BY ID
   // =====================================================
 
-  async findById(
-    patientId: string,
-    hospitalId: string,
-  ) {
+  async findById(patientId: string, hospitalId: string) {
     if (!hospitalId?.trim()) {
       throw new BadRequestException('hospitalId is required');
     }
 
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
     let patient: Patient;
 
     try {
-      patient =
-        await medplum.readResource(
-          'Patient',
-          patientId,
-        );
+      patient = await medplum.readResource('Patient', patientId);
     } catch {
-      throw new NotFoundException(
-        'Patient not found',
-      );
-    }
-
-    if (patient.managingOrganization?.reference !== `Organization/${hospitalId}`) {
       throw new NotFoundException('Patient not found');
     }
 
-    return this.mapPatient(
-      patient,
-    );
+    if (
+      patient.managingOrganization?.reference !== `Organization/${hospitalId}`
+    ) {
+      throw new NotFoundException('Patient not found');
+    }
+
+    return this.mapPatient(patient);
   }
 
   // =====================================================
@@ -1014,34 +1000,21 @@ export class PatientsService {
     patients: Patient[],
     options: PatientSearchOptions,
   ) {
-    let filteredPatients =
-      patients;
+    let filteredPatients = patients;
 
     if (options.hospitalId) {
-      const hospitalReference =
-        `Organization/${options.hospitalId}`;
+      const hospitalReference = `Organization/${options.hospitalId}`;
 
-      filteredPatients =
-        patients.filter(
-          (patient) =>
-            patient
-              .managingOrganization
-              ?.reference ===
-            hospitalReference,
-        );
+      filteredPatients = patients.filter(
+        (patient) =>
+          patient.managingOrganization?.reference === hospitalReference,
+      );
     }
 
     return {
-      total:
-        filteredPatients.length,
+      total: filteredPatients.length,
 
-      patients:
-        filteredPatients.map(
-          (patient) =>
-            this.mapPatient(
-              patient,
-            ),
-        ),
+      patients: filteredPatients.map((patient) => this.mapPatient(patient)),
     };
   }
 
@@ -1049,104 +1022,82 @@ export class PatientsService {
   // MAP FHIR PATIENT TO API RESPONSE
   // =====================================================
 
-  private mapPatient(
-    patient: Patient,
-  ) {
-    const identifiers =
-      patient.identifier ?? [];
+  private mapPatient(patient: Patient) {
+    const identifiers = patient.identifier ?? [];
 
     // ===================================================
     // Enterprise MRN
     // ===================================================
 
-    const enterpriseMrn =
-      identifiers.find(
-        (identifier) =>
-          identifier.system ===
-          'https://hospital-ehr.local/mrn/enterprise',
-      )?.value;
+    const enterpriseMrn = identifiers.find(
+      (identifier) =>
+        identifier.system === 'https://hospital-ehr.local/mrn/enterprise',
+    )?.value;
 
     // ===================================================
     // Hospital MRN
     // ===================================================
 
-    const hospitalIdentifier =
-      identifiers.find(
-        (identifier) =>
-          identifier.system?.startsWith(
-            'https://hospital-ehr.local/mrn/',
-          ) &&
-          identifier.system !==
-            'https://hospital-ehr.local/mrn/enterprise',
-      );
+    const hospitalIdentifier = identifiers.find(
+      (identifier) =>
+        identifier.system?.startsWith('https://hospital-ehr.local/mrn/') &&
+        identifier.system !== 'https://hospital-ehr.local/mrn/enterprise',
+    );
 
-    const hospitalMrn =
-      hospitalIdentifier?.value;
+    const hospitalMrn = hospitalIdentifier?.value;
 
     // ===================================================
     // National ID
     // ===================================================
 
-    const nationalId =
-      identifiers.find(
-        (identifier) =>
-          identifier.system ===
-          'https://hospital-ehr.local/identifier/jordan-national-id',
-      )?.value;
+    const nationalId = identifiers.find(
+      (identifier) =>
+        identifier.system ===
+        'https://hospital-ehr.local/identifier/jordan-national-id',
+    )?.value;
 
     // ===================================================
     // Passport
     // ===================================================
 
-    const passportNumber =
-      identifiers.find(
-        (identifier) =>
-          identifier.system ===
-          'https://hospital-ehr.local/identifier/passport',
-      )?.value;
+    const passportNumber = identifiers.find(
+      (identifier) =>
+        identifier.system === 'https://hospital-ehr.local/identifier/passport',
+    )?.value;
 
     // ===================================================
     // Arabic Name
     // ===================================================
 
-    const arabicName =
-      patient.name?.find(
-        (name) =>
-          name.extension?.some(
-            (extension) =>
-              extension.url ===
-                'https://hospital-ehr.local/fhir/StructureDefinition/name-language' &&
-              extension.valueCode ===
-                'ar',
-          ),
-      );
+    const arabicName = patient.name?.find((name) =>
+      name.extension?.some(
+        (extension) =>
+          extension.url ===
+            'https://hospital-ehr.local/fhir/StructureDefinition/name-language' &&
+          extension.valueCode === 'ar',
+      ),
+    );
 
     // ===================================================
     // English Name
     // ===================================================
 
-    const englishName =
-      patient.name?.find(
-        (name) =>
-          name.extension?.some(
-            (extension) =>
-              extension.url ===
-                'https://hospital-ehr.local/fhir/StructureDefinition/name-language' &&
-              extension.valueCode ===
-                'en',
-          ),
-      );
+    const englishName = patient.name?.find((name) =>
+      name.extension?.some(
+        (extension) =>
+          extension.url ===
+            'https://hospital-ehr.local/fhir/StructureDefinition/name-language' &&
+          extension.valueCode === 'en',
+      ),
+    );
 
     // ===================================================
     // Phone
     // ===================================================
 
-    const phone =
-      patient.telecom?.find(
-        (telecom) =>
-          telecom.system ===
-          'phone',
-      )?.value;
+    const phone = patient.telecom?.find(
+      (telecom) => telecom.system === 'phone',
+    )?.value;
 
     const email = patient.telecom?.find(
       (telecom) => telecom.system === 'email',
@@ -1156,39 +1107,31 @@ export class PatientsService {
     // Nationality
     // ===================================================
 
-    const nationality =
-      patient.extension?.find(
-        (extension) =>
-          extension.url ===
-          'https://hospital-ehr.local/fhir/StructureDefinition/nationality',
-      )?.valueString;
+    const nationality = patient.extension?.find(
+      (extension) =>
+        extension.url ===
+        'https://hospital-ehr.local/fhir/StructureDefinition/nationality',
+    )?.valueString;
 
     // ===================================================
     // Hospital ID
     // ===================================================
 
-    const hospitalId =
-      patient
-        .managingOrganization
-        ?.reference
-        ?.replace(
-          'Organization/',
-          '',
-        );
+    const hospitalId = patient.managingOrganization?.reference?.replace(
+      'Organization/',
+      '',
+    );
 
     // ===================================================
     // Response
     // ===================================================
 
     return {
-      id:
-        patient.id,
+      id: patient.id,
 
-      resourceType:
-        patient.resourceType,
+      resourceType: patient.resourceType,
 
-      active:
-        patient.active,
+      active: patient.active,
 
       hospitalId,
 
@@ -1200,17 +1143,13 @@ export class PatientsService {
 
       passportNumber,
 
-      nameAr:
-        arabicName?.text,
+      nameAr: arabicName?.text,
 
-      nameEn:
-        englishName?.text,
+      nameEn: englishName?.text,
 
-      gender:
-        patient.gender,
+      gender: patient.gender,
 
-      birthDate:
-        patient.birthDate,
+      birthDate: patient.birthDate,
 
       phone,
 
@@ -1218,14 +1157,11 @@ export class PatientsService {
 
       nationality,
 
-      address:
-        patient.address?.[0],
+      address: patient.address?.[0],
 
-      nextOfKin:
-        patient.contact?.[0],
+      nextOfKin: patient.contact?.[0],
 
-      managingOrganization:
-        patient.managingOrganization,
+      managingOrganization: patient.managingOrganization,
     };
   }
 }

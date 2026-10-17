@@ -1,26 +1,14 @@
-import {
-  Module,
-} from '@nestjs/common';
+import { Module } from '@nestjs/common';
 
-import {
-  VitalsController,
-} from './vitals.controller';
+import { VitalsController } from './vitals.controller';
 
-import {
-  VitalsService,
-} from './vitals.service';
+import { VitalsService } from './vitals.service';
 
 @Module({
-  controllers: [
-    VitalsController,
-  ],
+  controllers: [VitalsController],
 
-  providers: [
-    VitalsService,
-  ],
+  providers: [VitalsService],
 
-  exports: [
-    VitalsService,
-  ],
+  exports: [VitalsService],
 })
 export class VitalsModule {}

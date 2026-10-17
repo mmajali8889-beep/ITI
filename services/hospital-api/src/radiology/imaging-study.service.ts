@@ -11,9 +11,7 @@ import type {
   ServiceRequest,
 } from '@medplum/fhirtypes';
 
-import {
-  MedplumService,
-} from '../medplum/medplum.service';
+import { MedplumService } from '../medplum/medplum.service';
 
 import {
   CreateImagingStudyDto,
@@ -37,66 +35,40 @@ const ACCESSION_IDENTIFIER_SYSTEM =
 
 @Injectable()
 export class ImagingStudyService {
-  constructor(
-    private readonly medplumService:
-      MedplumService,
-  ) {}
+  constructor(private readonly medplumService: MedplumService) {}
 
-  async create(
-    dto: CreateImagingStudyDto,
-  ) {
+  async create(dto: CreateImagingStudyDto) {
     this.validateCreate(dto);
 
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
-    const patient =
-      await this.readPatient(
-        dto.patientId,
-      );
+    const patient = await this.readPatient(dto.patientId);
 
-    let encounter:
-      Encounter | undefined;
+    let encounter: Encounter | undefined;
 
     if (dto.encounterId) {
-      encounter =
-        await this.readEncounter(
-          dto.encounterId,
-        );
+      encounter = await this.readEncounter(dto.encounterId);
 
-      if (
-        encounter.subject?.reference !==
-        `Patient/${dto.patientId}`
-      ) {
+      if (encounter.subject?.reference !== `Patient/${dto.patientId}`) {
         throw new BadRequestException(
           'Encounter does not belong to the selected patient.',
         );
       }
     }
 
-    let order:
-      ServiceRequest | undefined;
+    let order: ServiceRequest | undefined;
 
     if (dto.orderId) {
-      order =
-        await this.readOrder(
-          dto.orderId,
-        );
+      order = await this.readOrder(dto.orderId);
 
-      if (
-        order.subject?.reference !==
-        `Patient/${dto.patientId}`
-      ) {
+      if (order.subject?.reference !== `Patient/${dto.patientId}`) {
         throw new BadRequestException(
           'Radiology order does not belong to the selected patient.',
         );
       }
     }
 
-    const existing =
-      await this.findByStudyInstanceUid(
-        dto.studyInstanceUid,
-      );
+    const existing = await this.findByStudyInstanceUid(dto.studyInstanceUid);
 
     if (existing) {
       throw new BadRequestException(
@@ -105,35 +77,24 @@ export class ImagingStudyService {
     }
 
     const study: ImagingStudy = {
-      resourceType:
-        'ImagingStudy',
-      status:
-        dto.status ??
-        'available',
+      resourceType: 'ImagingStudy',
+      status: dto.status ?? 'available',
 
       subject: {
-        reference:
-          `Patient/${dto.patientId}`,
-        display:
-          this.patientDisplay(
-            patient,
-          ),
+        reference: `Patient/${dto.patientId}`,
+        display: this.patientDisplay(patient),
       },
 
       identifier: [
         {
-          system:
-            'urn:dicom:uid',
-          value:
-            `urn:oid:${dto.studyInstanceUid}`,
+          system: 'urn:dicom:uid',
+          value: `urn:oid:${dto.studyInstanceUid}`,
         },
         ...(dto.accessionNumber
           ? [
               {
-                system:
-                  ACCESSION_IDENTIFIER_SYSTEM,
-                value:
-                  dto.accessionNumber,
+                system: ACCESSION_IDENTIFIER_SYSTEM,
+                value: dto.accessionNumber,
               },
             ]
           : []),
@@ -142,124 +103,99 @@ export class ImagingStudyService {
       ...(encounter
         ? {
             encounter: {
-              reference:
-                `Encounter/${encounter.id}`,
+              reference: `Encounter/${encounter.id}`,
             },
           }
         : {}),
 
       ...(dto.started
         ? {
-            started:
-              dto.started,
+            started: dto.started,
           }
         : {}),
 
       ...(dto.description
         ? {
-            description:
-              dto.description,
+            description: dto.description,
           }
         : {}),
 
       modality: [
         {
-          system:
-            'http://dicom.nema.org/resources/ontology/DCM',
-          code:
-            dto.modality,
-          display:
-            dto.modality,
+          system: 'http://dicom.nema.org/resources/ontology/DCM',
+          code: dto.modality,
+          display: dto.modality,
         },
       ],
 
       ...(dto.numberOfSeries !== undefined
         ? {
-            numberOfSeries:
-              dto.numberOfSeries,
+            numberOfSeries: dto.numberOfSeries,
           }
         : {}),
 
       ...(dto.numberOfInstances !== undefined
         ? {
-            numberOfInstances:
-              dto.numberOfInstances,
+            numberOfInstances: dto.numberOfInstances,
           }
         : {}),
 
       ...(dto.series?.length
         ? {
-            series:
-              dto.series.map(
-                (series) => ({
-                  uid:
-                    series.uid,
+            series: dto.series.map((series) => ({
+              uid: series.uid,
 
-                  ...(series.number !== undefined
-                    ? {
-                        number:
-                          series.number,
-                      }
-                    : {}),
+              ...(series.number !== undefined
+                ? {
+                    number: series.number,
+                  }
+                : {}),
 
-                  modality: {
-                    system:
-                      'http://dicom.nema.org/resources/ontology/DCM',
-                    code:
-                      series.modality,
-                    display:
-                      series.modality,
-                  },
+              modality: {
+                system: 'http://dicom.nema.org/resources/ontology/DCM',
+                code: series.modality,
+                display: series.modality,
+              },
 
-                  ...(series.description
-                    ? {
-                        description:
-                          series.description,
-                      }
-                    : {}),
+              ...(series.description
+                ? {
+                    description: series.description,
+                  }
+                : {}),
 
-                  ...(series.numberOfInstances !== undefined
-                    ? {
-                        numberOfInstances:
-                          series.numberOfInstances,
-                      }
-                    : {}),
+              ...(series.numberOfInstances !== undefined
+                ? {
+                    numberOfInstances: series.numberOfInstances,
+                  }
+                : {}),
 
-                  ...(series.bodySiteCode
-                    ? {
-                        bodySite: {
-                          system:
-                            'http://snomed.info/sct',
-                          code:
-                            series.bodySiteCode,
-                          display:
-                            series.bodySiteName,
-                        },
-                      }
-                    : {}),
-                }),
-              ),
+              ...(series.bodySiteCode
+                ? {
+                    bodySite: {
+                      system: 'http://snomed.info/sct',
+                      code: series.bodySiteCode,
+                      display: series.bodySiteName,
+                    },
+                  }
+                : {}),
+            })),
           }
         : {}),
 
       extension: [
         {
-          url:
-            HOSPITAL_EXTENSION,
+          url: HOSPITAL_EXTENSION,
           valueReference: {
-            reference:
-              `Organization/${dto.hospitalId}`,
+            reference: `Organization/${dto.hospitalId}`,
           },
         },
 
         ...(order
           ? [
               {
-                url:
-                  ORDER_EXTENSION,
+                url: ORDER_EXTENSION,
                 valueReference: {
-                  reference:
-                    `ServiceRequest/${order.id}`,
+                  reference: `ServiceRequest/${order.id}`,
                 },
               },
             ]
@@ -268,10 +204,8 @@ export class ImagingStudyService {
         ...(dto.pacsStudyUrl
           ? [
               {
-                url:
-                  PACS_URL_EXTENSION,
-                valueUrl:
-                  dto.pacsStudyUrl,
+                url: PACS_URL_EXTENSION,
+                valueUrl: dto.pacsStudyUrl,
               },
             ]
           : []),
@@ -279,507 +213,265 @@ export class ImagingStudyService {
         ...(dto.notes
           ? [
               {
-                url:
-                  NOTES_EXTENSION,
-                valueString:
-                  dto.notes,
+                url: NOTES_EXTENSION,
+                valueString: dto.notes,
               },
             ]
           : []),
       ],
     };
 
-    const created =
-      await medplum.createResource(
-        study,
-      );
+    const created = await medplum.createResource(study);
 
-    return this.mapStudy(
-      created,
-    );
+    return this.mapStudy(created);
   }
 
-  async findByStudyInstanceUid(
-    studyInstanceUid: string,
-  ) {
-    const uid =
-      studyInstanceUid?.trim();
+  async findByStudyInstanceUid(studyInstanceUid: string) {
+    const uid = studyInstanceUid?.trim();
 
     if (!uid) {
-      throw new BadRequestException(
-        'studyInstanceUid is required.',
-      );
+      throw new BadRequestException('studyInstanceUid is required.');
     }
 
-    const medplum =
-      this.medplumService.getClient();
+    const medplum = this.medplumService.getClient();
 
-    const studies =
-      await medplum.searchResources(
-        'ImagingStudy',
-        {
-          identifier:
-            `urn:dicom:uid|urn:oid:${uid}`,
-          _count: '10',
-        },
-      ).catch(
-        () =>
-          [] as ImagingStudy[],
-      );
+    const studies = await medplum
+      .searchResources('ImagingStudy', {
+        identifier: `urn:dicom:uid|urn:oid:${uid}`,
+        _count: '10',
+      })
+      .catch(() => [] as ImagingStudy[]);
 
-    const match =
-      studies.find(
-        (study) =>
-          this.studyInstanceUid(
-            study,
-          ) === uid,
-      );
+    const match = studies.find((study) => this.studyInstanceUid(study) === uid);
 
-    return match
-      ? this.mapStudy(match)
-      : undefined;
+    return match ? this.mapStudy(match) : undefined;
   }
 
-  async getByAccessionNumber(
-    accessionNumber: string,
-  ) {
-    const accession =
-      accessionNumber?.trim();
+  async getByAccessionNumber(accessionNumber: string) {
+    const accession = accessionNumber?.trim();
 
     if (!accession) {
-      throw new BadRequestException(
-        'accessionNumber is required.',
-      );
+      throw new BadRequestException('accessionNumber is required.');
     }
 
-    const studies =
-      await this.medplumService
-        .getClient()
-        .searchResources(
-          'ImagingStudy',
-          {
-            identifier:
-              `${ACCESSION_IDENTIFIER_SYSTEM}|${accession}`,
-            _count: '100',
-          },
-        )
-        .catch(
-          () =>
-            [] as ImagingStudy[],
-        );
+    const studies = await this.medplumService
+      .getClient()
+      .searchResources('ImagingStudy', {
+        identifier: `${ACCESSION_IDENTIFIER_SYSTEM}|${accession}`,
+        _count: '100',
+      })
+      .catch(() => [] as ImagingStudy[]);
 
-    const matched =
-      studies.filter(
-        (study) =>
-          this.accessionNumber(
-            study,
-          ) === accession,
-      );
+    const matched = studies.filter(
+      (study) => this.accessionNumber(study) === accession,
+    );
 
     return {
-      accessionNumber:
-        accession,
-      count:
-        matched.length,
-      studies:
-        matched
-          .sort(
-            this.newestFirst,
-          )
-          .map(
-            (study) =>
-              this.mapStudy(
-                study,
-              ),
-          ),
+      accessionNumber: accession,
+      count: matched.length,
+      studies: matched
+        .sort(this.newestFirst)
+        .map((study) => this.mapStudy(study)),
     };
   }
 
-  async getById(
-    studyId: string,
-  ) {
-    const study =
-      await this.readStudy(
-        studyId,
-      );
+  async getById(studyId: string) {
+    const study = await this.readStudy(studyId);
 
-    return this.mapStudy(
-      study,
-    );
+    return this.mapStudy(study);
   }
 
-  async getByPatient(
-    patientId: string,
-  ) {
-    await this.readPatient(
-      patientId,
-    );
+  async getByPatient(patientId: string) {
+    await this.readPatient(patientId);
 
-    const studies =
-      await this.medplumService
-        .getClient()
-        .searchResources(
-          'ImagingStudy',
-          {
-            subject:
-              `Patient/${patientId}`,
-            _count:
-              '500',
-          },
-        );
+    const studies = await this.medplumService
+      .getClient()
+      .searchResources('ImagingStudy', {
+        subject: `Patient/${patientId}`,
+        _count: '500',
+      });
 
     return {
       patientId,
-      studies:
-        studies
-          .sort(
-            this.newestFirst,
-          )
-          .map(
-            (study) =>
-              this.mapStudy(
-                study,
-              ),
-          ),
-      count:
-        studies.length,
+      studies: studies
+        .sort(this.newestFirst)
+        .map((study) => this.mapStudy(study)),
+      count: studies.length,
     };
   }
 
-  async getByEncounter(
-    encounterId: string,
-  ) {
-    const encounter =
-      await this.readEncounter(
-        encounterId,
-      );
+  async getByEncounter(encounterId: string) {
+    const encounter = await this.readEncounter(encounterId);
 
-    const patientId =
-      this.referenceId(
-        encounter.subject
-          ?.reference,
-        'Patient',
-      );
+    const patientId = this.referenceId(encounter.subject?.reference, 'Patient');
 
     if (!patientId) {
-      throw new BadRequestException(
-        'Encounter has no patient subject.',
-      );
+      throw new BadRequestException('Encounter has no patient subject.');
     }
 
-    const studies =
-      await this.medplumService
-        .getClient()
-        .searchResources(
-          'ImagingStudy',
-          {
-            subject:
-              `Patient/${patientId}`,
-            _count:
-              '500',
-          },
-        );
+    const studies = await this.medplumService
+      .getClient()
+      .searchResources('ImagingStudy', {
+        subject: `Patient/${patientId}`,
+        _count: '500',
+      });
 
-    const filtered =
-      studies.filter(
-        (study) =>
-          study.encounter
-            ?.reference ===
-          `Encounter/${encounterId}`,
-      );
+    const filtered = studies.filter(
+      (study) => study.encounter?.reference === `Encounter/${encounterId}`,
+    );
 
     return {
       encounterId,
-      studies:
-        filtered
-          .sort(
-            this.newestFirst,
-          )
-          .map(
-            (study) =>
-              this.mapStudy(
-                study,
-              ),
-          ),
-      count:
-        filtered.length,
+      studies: filtered
+        .sort(this.newestFirst)
+        .map((study) => this.mapStudy(study)),
+      count: filtered.length,
     };
   }
 
-  async getByOrder(
-    orderId: string,
-  ) {
-    const order =
-      await this.readOrder(
-        orderId,
-      );
+  async getByOrder(orderId: string) {
+    const order = await this.readOrder(orderId);
 
-    const patientId =
-      this.referenceId(
-        order.subject
-          ?.reference,
-        'Patient',
-      );
+    const patientId = this.referenceId(order.subject?.reference, 'Patient');
 
     if (!patientId) {
-      throw new BadRequestException(
-        'Radiology order has no patient subject.',
-      );
+      throw new BadRequestException('Radiology order has no patient subject.');
     }
 
-    const studies =
-      await this.medplumService
-        .getClient()
-        .searchResources(
-          'ImagingStudy',
-          {
-            subject:
-              `Patient/${patientId}`,
-            _count:
-              '500',
-          },
-        );
+    const studies = await this.medplumService
+      .getClient()
+      .searchResources('ImagingStudy', {
+        subject: `Patient/${patientId}`,
+        _count: '500',
+      });
 
-    const filtered =
-      studies.filter(
-        (study) =>
-          this.extensionReference(
-            study,
-            ORDER_EXTENSION,
-          ) ===
-          `ServiceRequest/${orderId}`,
-      );
+    const filtered = studies.filter(
+      (study) =>
+        this.extensionReference(study, ORDER_EXTENSION) ===
+        `ServiceRequest/${orderId}`,
+    );
 
     return {
       orderId,
-      studies:
-        filtered
-          .sort(
-            this.newestFirst,
-          )
-          .map(
-            (study) =>
-              this.mapStudy(
-                study,
-              ),
-          ),
-      count:
-        filtered.length,
+      studies: filtered
+        .sort(this.newestFirst)
+        .map((study) => this.mapStudy(study)),
+      count: filtered.length,
     };
   }
 
-  async updateStatus(
-    studyId: string,
-    status: ImagingStudyStatus,
-  ) {
-    const allowed:
-      ImagingStudyStatus[] = [
-        'registered',
-        'available',
-        'cancelled',
-        'entered-in-error',
-        'unknown',
-      ];
+  async updateStatus(studyId: string, status: ImagingStudyStatus) {
+    const allowed: ImagingStudyStatus[] = [
+      'registered',
+      'available',
+      'cancelled',
+      'entered-in-error',
+      'unknown',
+    ];
 
     if (!allowed.includes(status)) {
-      throw new BadRequestException(
-        'Invalid ImagingStudy status.',
-      );
+      throw new BadRequestException('Invalid ImagingStudy status.');
     }
 
-    const study =
-      await this.readStudy(
-        studyId,
-      );
+    const study = await this.readStudy(studyId);
 
-    const updated =
-      await this.medplumService
-        .getClient()
-        .updateResource({
-          ...study,
-          status,
-        });
+    const updated = await this.medplumService.getClient().updateResource({
+      ...study,
+      status,
+    });
 
-    return this.mapStudy(
-      updated,
-    );
+    return this.mapStudy(updated);
   }
 
-  private validateCreate(
-    dto: CreateImagingStudyDto,
-  ) {
+  private validateCreate(dto: CreateImagingStudyDto) {
     if (!dto.patientId?.trim()) {
-      throw new BadRequestException(
-        'patientId is required.',
-      );
+      throw new BadRequestException('patientId is required.');
     }
 
     if (!dto.hospitalId?.trim()) {
-      throw new BadRequestException(
-        'hospitalId is required.',
-      );
+      throw new BadRequestException('hospitalId is required.');
     }
 
     if (!dto.studyInstanceUid?.trim()) {
-      throw new BadRequestException(
-        'studyInstanceUid is required.',
-      );
+      throw new BadRequestException('studyInstanceUid is required.');
     }
 
     if (!dto.modality?.trim()) {
-      throw new BadRequestException(
-        'modality is required.',
-      );
+      throw new BadRequestException('modality is required.');
     }
   }
 
-  private async readPatient(
-    id: string,
-  ): Promise<Patient> {
+  private async readPatient(id: string): Promise<Patient> {
+    try {
+      return await this.medplumService.getClient().readResource('Patient', id);
+    } catch {
+      throw new NotFoundException(`Patient ${id} was not found.`);
+    }
+  }
+
+  private async readEncounter(id: string): Promise<Encounter> {
     try {
       return await this.medplumService
         .getClient()
-        .readResource(
-          'Patient',
-          id,
-        );
+        .readResource('Encounter', id);
     } catch {
-      throw new NotFoundException(
-        `Patient ${id} was not found.`,
-      );
+      throw new NotFoundException(`Encounter ${id} was not found.`);
     }
   }
 
-  private async readEncounter(
-    id: string,
-  ): Promise<Encounter> {
+  private async readOrder(id: string): Promise<ServiceRequest> {
     try {
       return await this.medplumService
         .getClient()
-        .readResource(
-          'Encounter',
-          id,
-        );
+        .readResource('ServiceRequest', id);
     } catch {
-      throw new NotFoundException(
-        `Encounter ${id} was not found.`,
-      );
+      throw new NotFoundException(`ServiceRequest ${id} was not found.`);
     }
   }
 
-  private async readOrder(
-    id: string,
-  ): Promise<ServiceRequest> {
+  private async readStudy(id: string): Promise<ImagingStudy> {
     try {
       return await this.medplumService
         .getClient()
-        .readResource(
-          'ServiceRequest',
-          id,
-        );
+        .readResource('ImagingStudy', id);
     } catch {
-      throw new NotFoundException(
-        `ServiceRequest ${id} was not found.`,
-      );
+      throw new NotFoundException(`ImagingStudy ${id} was not found.`);
     }
   }
 
-  private async readStudy(
-    id: string,
-  ): Promise<ImagingStudy> {
-    try {
-      return await this.medplumService
-        .getClient()
-        .readResource(
-          'ImagingStudy',
-          id,
-        );
-    } catch {
-      throw new NotFoundException(
-        `ImagingStudy ${id} was not found.`,
-      );
-    }
-  }
-
-  private studyInstanceUid(
-    study: ImagingStudy,
-  ) {
+  private studyInstanceUid(study: ImagingStudy) {
     return study.identifier
-      ?.find(
-        (identifier) =>
-          identifier.system ===
-          'urn:dicom:uid',
-      )
-      ?.value
-      ?.replace(
-        /^urn:oid:/,
-        '',
-      );
+      ?.find((identifier) => identifier.system === 'urn:dicom:uid')
+      ?.value?.replace(/^urn:oid:/, '');
   }
 
-  private accessionNumber(
-    study: ImagingStudy,
-  ) {
-    return study.identifier
-      ?.find(
-        (identifier) =>
-          identifier.system ===
-          ACCESSION_IDENTIFIER_SYSTEM,
-      )
-      ?.value;
+  private accessionNumber(study: ImagingStudy) {
+    return study.identifier?.find(
+      (identifier) => identifier.system === ACCESSION_IDENTIFIER_SYSTEM,
+    )?.value;
   }
 
-  private referenceId(
-    reference:
-      string | undefined,
-    resourceType: string,
-  ) {
-    const prefix =
-      `${resourceType}/`;
+  private referenceId(reference: string | undefined, resourceType: string) {
+    const prefix = `${resourceType}/`;
 
-    return reference
-      ?.startsWith(prefix)
-      ? reference.slice(
-          prefix.length,
-        )
+    return reference?.startsWith(prefix)
+      ? reference.slice(prefix.length)
       : undefined;
   }
 
-  private extensionReference(
-    study: ImagingStudy,
-    url: string,
-  ) {
-    return study.extension
-      ?.find(
-        (extension) =>
-          extension.url === url,
-      )
-      ?.valueReference
-      ?.reference;
+  private extensionReference(study: ImagingStudy, url: string) {
+    return study.extension?.find((extension) => extension.url === url)
+      ?.valueReference?.reference;
   }
 
-  private extensionString(
-    study: ImagingStudy,
-    url: string,
-  ) {
-    const extension =
-      study.extension
-        ?.find(
-          (item) =>
-            item.url === url,
-        );
+  private extensionString(study: ImagingStudy, url: string) {
+    const extension = study.extension?.find((item) => item.url === url);
 
-    return (
-      extension?.valueString ??
-      extension?.valueUrl
-    );
+    return extension?.valueString ?? extension?.valueUrl;
   }
 
-  private patientDisplay(
-    patient: Patient,
-  ): string | undefined {
-    const name =
-      patient.name?.[0];
+  private patientDisplay(patient: Patient): string | undefined {
+    const name = patient.name?.[0];
 
     if (!name) {
       return undefined;
@@ -789,10 +481,7 @@ export class ImagingStudyService {
       return name.text.trim();
     }
 
-    const generated = [
-      name.given?.join(' '),
-      name.family,
-    ]
+    const generated = [name.given?.join(' '), name.family]
       .filter(Boolean)
       .join(' ')
       .trim();
@@ -800,117 +489,50 @@ export class ImagingStudyService {
     return generated || undefined;
   }
 
-  private newestFirst = (
-    a: ImagingStudy,
-    b: ImagingStudy,
-  ) =>
-    String(
-      b.started ??
-      b.meta?.lastUpdated ??
-      '',
-    ).localeCompare(
-      String(
-        a.started ??
-        a.meta?.lastUpdated ??
-        '',
-      ),
+  private newestFirst = (a: ImagingStudy, b: ImagingStudy) =>
+    String(b.started ?? b.meta?.lastUpdated ?? '').localeCompare(
+      String(a.started ?? a.meta?.lastUpdated ?? ''),
     );
 
-  private mapStudy(
-    study: ImagingStudy,
-  ) {
+  private mapStudy(study: ImagingStudy) {
     return {
-      id:
-        study.id,
-      status:
-        study.status,
-      patientId:
-        this.referenceId(
-          study.subject.reference,
-          'Patient',
-        ),
-      encounterId:
-        this.referenceId(
-          study.encounter?.reference,
-          'Encounter',
-        ),
-      orderId:
-        this.referenceId(
-          this.extensionReference(
-            study,
-            ORDER_EXTENSION,
-          ),
-          'ServiceRequest',
-        ),
-      hospitalId:
-        this.referenceId(
-          this.extensionReference(
-            study,
-            HOSPITAL_EXTENSION,
-          ),
-          'Organization',
-        ),
-      studyInstanceUid:
-        this.studyInstanceUid(
-          study,
-        ),
-      accessionNumber:
-        this.accessionNumber(
-          study,
-        ),
-      started:
-        study.started,
-      description:
-        study.description,
+      id: study.id,
+      status: study.status,
+      patientId: this.referenceId(study.subject.reference, 'Patient'),
+      encounterId: this.referenceId(study.encounter?.reference, 'Encounter'),
+      orderId: this.referenceId(
+        this.extensionReference(study, ORDER_EXTENSION),
+        'ServiceRequest',
+      ),
+      hospitalId: this.referenceId(
+        this.extensionReference(study, HOSPITAL_EXTENSION),
+        'Organization',
+      ),
+      studyInstanceUid: this.studyInstanceUid(study),
+      accessionNumber: this.accessionNumber(study),
+      started: study.started,
+      description: study.description,
       modalities:
-        study.modality
-          ?.map(
-            (modality) =>
-              modality.code,
-          )
-          .filter(Boolean) ??
-        [],
-      numberOfSeries:
-        study.numberOfSeries ??
-        study.series?.length ??
-        0,
+        study.modality?.map((modality) => modality.code).filter(Boolean) ?? [],
+      numberOfSeries: study.numberOfSeries ?? study.series?.length ?? 0,
       numberOfInstances:
         study.numberOfInstances ??
         study.series?.reduce(
-          (total, series) =>
-            total +
-            (series.numberOfInstances ??
-              0),
+          (total, series) => total + (series.numberOfInstances ?? 0),
           0,
         ) ??
         0,
-      pacsStudyUrl:
-        this.extensionString(
-          study,
-          PACS_URL_EXTENSION,
-        ),
-      notes:
-        this.extensionString(
-          study,
-          NOTES_EXTENSION,
-        ),
+      pacsStudyUrl: this.extensionString(study, PACS_URL_EXTENSION),
+      notes: this.extensionString(study, NOTES_EXTENSION),
       series:
-        study.series?.map(
-          (series) => ({
-            uid:
-              series.uid,
-            number:
-              series.number,
-            modality:
-              series.modality?.code,
-            description:
-              series.description,
-            numberOfInstances:
-              series.numberOfInstances,
-          }),
-        ) ?? [],
-      lastUpdated:
-        study.meta?.lastUpdated,
+        study.series?.map((series) => ({
+          uid: series.uid,
+          number: series.number,
+          modality: series.modality?.code,
+          description: series.description,
+          numberOfInstances: series.numberOfInstances,
+        })) ?? [],
+      lastUpdated: study.meta?.lastUpdated,
     };
   }
 }

@@ -1,4 +1,4 @@
- export type LabResultStatus =
+export type LabResultStatus =
   | 'registered'
   | 'preliminary'
   | 'final'
