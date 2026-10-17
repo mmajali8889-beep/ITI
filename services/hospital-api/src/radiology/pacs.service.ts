@@ -9,6 +9,7 @@ import type {
   OrthancSeries,
   OrthancStudy,
 } from './pacs.types';
+import { orthancAuthHeaders } from './orthanc-connection';
 
 @Injectable()
 export class PacsService {
@@ -361,6 +362,7 @@ export class PacsService {
               'application/json',
             'Content-Type':
               'application/json',
+            ...orthancAuthHeaders(),
             ...(init?.headers ?? {}),
           },
         },

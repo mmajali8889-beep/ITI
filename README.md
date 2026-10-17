@@ -37,11 +37,18 @@ node create-test-hospitals.mjs      # dedicated UAT hospitals HOSP-01..03 (tagge
 
 ### 3. PACS (Orthanc with the built-in OHIF viewer)
 
+Orthanc runs with **authentication on** and a single service account for the API. Generate its password once; this writes both git-ignored files, which must match:
+
+```bash
+node -e "const pw=require('crypto').randomBytes(24).toString('base64url');require('fs').mkdirSync('infrastructure/orthanc',{recursive:true});require('fs').writeFileSync('infrastructure/orthanc/.env.orthanc','ORTHANC__REGISTERED_USERS={\"hospital-api\":\"'+pw+'\"}\n');require('fs').appendFileSync('services/hospital-api/.env','\nORTHANC_USERNAME=hospital-api\nORTHANC_PASSWORD='+pw+'\n')"
+```
+
 ```bash
 docker run -d --name hospital-ehr-orthanc --restart unless-stopped \
   -p 127.0.0.1:8042:8042 -p 127.0.0.1:4242:4242 \
+  --env-file infrastructure/orthanc/.env.orthanc \
   -e ORTHANC__NAME=HOSPITAL-EHR-PACS \
-  -e ORTHANC__AUTHENTICATION_ENABLED=false \
+  -e ORTHANC__AUTHENTICATION_ENABLED=true \
   -e ORTHANC__REMOTE_ACCESS_ALLOWED=true \
   -e ORTHANC__DICOM_AET=ORTHANC \
   -e DICOM_WEB_PLUGIN_ENABLED=true \
@@ -51,10 +58,9 @@ docker run -d --name hospital-ehr-orthanc --restart unless-stopped \
   orthancteam/orthanc:24.10.3
 ```
 
-Ports are bound to `127.0.0.1` because authentication is off. For a shared or production PACS, enable authentication and set `ORTHANC_USERNAME` / `ORTHANC_PASSWORD` in the API's `.env`.
-The viewer opens at `http://localhost:8042/ohif/viewer?StudyInstanceUIDs=…`. A standalone OHIF on port 3001 (`upstream/medplum/docker-compose.ohif.yml`) also works if you point `VITE_OHIF_URL` / `OHIF_VIEWER_URL` at it and allow CORS on Orthanc.
+**Browsers never receive Orthanc credentials.** Orthanc has no per-user roles: anyone holding the account could also delete studies. Instead, the API serves the viewer and DICOMweb on its own origin (`http://localhost:4000/ohif/…`, `/dicom-web/…`) through a read-only proxy. The proxy requires a signed-in EHR session with the `radiology` or `clinical` permission, and the API adds the service credentials on the server side (`services/hospital-api/src/radiology/pacs-viewer.proxy.ts`). Set `OHIF_VIEWER_URL` and `VITE_OHIF_URL` to `http://localhost:4000/ohif`.
 
-Studies are linked to radiology orders by **accession number**. The API syncs Orthanc every 15 s, or on demand via `POST /api/radiology/pacs/sync/accession/:accessionNumber`.
+Studies are linked to radiology orders by **accession number**. The API syncs Orthanc every 15 s, or on demand via `POST /api/radiology/pacs/sync/accession/:accessionNumber`. Modalities send images over DICOM on port 4242, which uses AE titles rather than the HTTP account.
 
 ### 4. API and web app
 

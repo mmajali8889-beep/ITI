@@ -25,6 +25,7 @@ import {
 import {
   PublishRadiologyWorklistDto,
 } from './dto/publish-radiology-worklist.dto';
+import { orthancAuthHeaders } from './orthanc-connection';
 
 const MWL_ID_EXTENSION =
   'http://hospital-ehr.local/fhir/StructureDefinition/radiology-mwl-id';
@@ -1044,6 +1045,7 @@ export class RadiologyMwlService {
                 'application/json',
               'Content-Type':
                 'application/json',
+              ...orthancAuthHeaders(),
               ...(init?.headers ??
                 {}),
             },
