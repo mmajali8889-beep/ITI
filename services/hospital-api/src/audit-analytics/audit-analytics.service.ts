@@ -13,8 +13,10 @@ const HOSPITAL = `${BASE}/audit-hospital`, ROUTE = `${BASE}/audit-route`, HTTP_S
 export class AuditAnalyticsService {
   constructor(private readonly medplumService: MedplumService) {}
 
-  async record(input: { hospitalId?: string; userId?: string; userName?: string; method: string; route: string; ip?: string; statusCode: number; durationMs: number; patientId?: string; encounterId?: string }) {
+  async record(input: { hospitalId?: string; userId?: string; userName?: string; method: string; route: string; ip?: string; statusCode: number; durationMs: number; patientId?: string; encounterId?: string; record?: { id: string; types: string[] } }) {
     if (!input.hospitalId) return;
+    // 27.4: attribute requests that named only an encounter or another record.
+    if (!input.patientId) Object.assign(input, await this.resolveSubjects(input).catch(() => ({})));
     const action = input.method === 'POST' ? 'C' : input.method === 'DELETE' ? 'D' : input.method === 'GET' ? 'R' : 'U';
     const event: AuditEvent = { resourceType: 'AuditEvent', type: { system: 'http://terminology.hl7.org/CodeSystem/audit-event-type', code: 'rest', display: 'RESTful Operation' }, subtype: [{ system: 'http://hl7.org/fhir/restful-interaction', code: input.method.toLowerCase() }], action, recorded: new Date().toISOString(), outcome: input.statusCode < 400 ? '0' : input.statusCode < 500 ? '4' : '8', outcomeDesc: `HTTP ${input.statusCode}`, agent: [{ who: input.userId ? { reference: `Practitioner/${input.userId}`, display: input.userName } : undefined, name: input.userName ?? 'Unauthenticated actor', requestor: true, network: input.ip ? { address: input.ip, type: '2' } : undefined }], source: { site: input.hospitalId, observer: { reference: `Organization/${input.hospitalId}` }, type: [{ system: 'http://terminology.hl7.org/CodeSystem/security-source-type', code: '4', display: 'Application Server' }] }, entity: [
       { name: input.route, description: `${input.method} ${input.route}` },
@@ -52,6 +54,37 @@ export class AuditAnalyticsService {
     const scopedClaims = claims.filter((item) => this.genericHospital(item) === hospitalId || item.provider.reference === `Organization/${hospitalId}`);
     const scopedTasks = tasks.filter((item) => this.genericHospital(item) === hospitalId);
     return { hospitalId, generatedAt: new Date().toISOString(), patients: patients.filter((item) => item.managingOrganization?.reference === `Organization/${hospitalId}`).length, encounters: { total: scopedEncounters.length, active: scopedEncounters.filter((item) => !['finished', 'cancelled', 'entered-in-error'].includes(item.status)).length, finished: scopedEncounters.filter((item) => item.status === 'finished').length, byType: this.encounterTypes(scopedEncounters) }, appointments: appointments.filter((item) => item.extension?.some((ext) => ext.valueReference?.reference === `Organization/${hospitalId}`)).length, finance: { invoiceCount: scopedInvoices.length, gross: this.sum(scopedInvoices, 'totalGross'), outstanding: scopedInvoices.reduce((sum, item) => sum + (item.extension?.find((ext) => ext.url === `${BASE}/invoice-balance`)?.valueMoney?.value ?? 0), 0), claimCount: scopedClaims.length }, records: { openDeficiencies: scopedTasks.filter((item) => item.code?.coding?.[0]?.code === 'chart-deficiency' && item.status !== 'completed').length, pendingResultReviews: scopedTasks.filter((item) => item.code?.coding?.[0]?.code === 'result-review' && item.status !== 'completed').length }, auditEvents: audits.filter((item) => this.hospitalId(item) === hospitalId).length };
+  }
+
+  /**
+   * Patient and encounter of the record a request addressed (read with the
+   * service account), or of the encounter it named.
+   */
+  private async resolveSubjects(input: { patientId?: string; encounterId?: string; record?: { id: string; types: string[] } }): Promise<{ patientId?: string; encounterId?: string }> {
+    const client = this.medplumService.getClient();
+    const references = (resource: Record<string, unknown>): string[] => {
+      const context = resource.context as { encounter?: unknown[] } | undefined;
+      const values: unknown[] = [resource.subject, resource.patient, resource.for, resource.beneficiary, resource.encounter, ...(context?.encounter ?? [])];
+      return values.map((value) => (value as { reference?: string } | undefined)?.reference).filter((value): value is string => typeof value === 'string');
+    };
+    let patientId: string | undefined;
+    let encounterId = input.encounterId;
+    if (input.record) {
+      for (const type of input.record.types) {
+        const resource = (await client.readResource(type as 'Task', input.record.id).catch(() => undefined)) as unknown as Record<string, unknown> | undefined;
+        if (!resource) continue;
+        const found = references(resource);
+        patientId = found.find((ref) => ref.startsWith('Patient/'))?.slice('Patient/'.length);
+        encounterId ??= found.find((ref) => ref.startsWith('Encounter/'))?.slice('Encounter/'.length);
+        break;
+      }
+    }
+    if (!patientId && encounterId) {
+      const encounter = await client.readResource('Encounter', encounterId).catch(() => undefined);
+      const subject = encounter?.subject?.reference;
+      patientId = subject?.startsWith('Patient/') ? subject.slice('Patient/'.length) : undefined;
+    }
+    return { patientId, encounterId };
   }
 
   private entityId(item: AuditEvent, type: 'Patient' | 'Encounter') { return item.entity?.find((entity) => entity.what?.reference?.startsWith(`${type}/`))?.what?.reference?.slice(type.length + 1); }

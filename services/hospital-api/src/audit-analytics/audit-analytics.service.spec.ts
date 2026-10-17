@@ -1,7 +1,7 @@
 import { AuditAnalyticsService } from './audit-analytics.service';
 
 describe('AuditAnalyticsService', () => {
-  const medplum = { createResource: jest.fn(), searchResources: jest.fn() };
+  const medplum = { createResource: jest.fn(), searchResources: jest.fn(), readResource: jest.fn() };
   let service: AuditAnalyticsService;
   const hospitalExtension = { url: 'https://hospital-ehr.local/fhir/StructureDefinition/audit-hospital', valueReference: { reference: 'Organization/hospital-a' } };
   beforeEach(() => { jest.resetAllMocks(); medplum.createResource.mockImplementation(async (resource) => ({ ...resource, id: 'audit-1' })); medplum.searchResources.mockResolvedValue([]); service = new AuditAnalyticsService({ getClient: () => medplum } as never); });
@@ -48,5 +48,39 @@ describe('AuditAnalyticsService', () => {
     medplum.searchResources.mockResolvedValueOnce([{ resourceType: 'AuditEvent', id: 'a', recorded: '2026-01-01T00:00:00Z', agent: [{ requestor: true }], entity: [{ name: '/api/vitals' }, { what: { reference: 'Patient/patient-1' } }, { what: { reference: 'Encounter/encounter-1' } }], extension: [hospitalExtension] }]);
     await expect(service.events('hospital-a', 50, { patientId: 'patient-1', encounterId: 'encounter-1' })).resolves.toMatchObject({ events: [{ id: 'a', patientId: 'patient-1', encounterId: 'encounter-1' }] });
     expect(medplum.searchResources).toHaveBeenCalledWith('AuditEvent', expect.objectContaining({ source: 'Organization/hospital-a', patient: 'Patient/patient-1', entity: 'Encounter/encounter-1' }));
+  });
+
+  const patientEntity = () => medplum.createResource.mock.calls[0][0].entity.find((e: { what?: { reference?: string } }) => e.what?.reference?.startsWith('Patient/'))?.what.reference;
+
+  it('attributes a request addressed by another record id to the patient of that record (27.4)', async () => {
+    medplum.readResource.mockImplementation(async (type: string) => type === 'Claim' ? { resourceType: 'Claim', id: 'c-1', patient: { reference: 'Patient/p-claim' } } : undefined);
+    await service.record({ hospitalId: 'hospital-a', method: 'POST', route: '/api/billing/claims/c-1/adjudications', statusCode: 201, durationMs: 4, record: { id: 'c-1', types: ['Claim'] } });
+    expect(patientEntity()).toBe('Patient/p-claim');
+  });
+
+  it('takes the encounter from the record and tries the next type when one is not found', async () => {
+    medplum.readResource.mockImplementation(async (type: string) => { if (type !== 'Task') throw new Error('not found'); return { resourceType: 'Task', for: { reference: 'Patient/p-task' }, encounter: { reference: 'Encounter/e-task' } }; });
+    await service.record({ hospitalId: 'hospital-a', method: 'POST', route: '/api/consultations/x/accept', statusCode: 201, durationMs: 4, record: { id: 'x', types: ['ServiceRequest', 'Task'] } });
+    const entity = medplum.createResource.mock.calls[0][0].entity;
+    expect(patientEntity()).toBe('Patient/p-task');
+    expect(entity).toEqual(expect.arrayContaining([expect.objectContaining({ what: { reference: 'Encounter/e-task' } })]));
+  });
+
+  it('derives the patient from an encounter when only the encounter is known', async () => {
+    medplum.readResource.mockImplementation(async (type: string) => type === 'Encounter' ? { resourceType: 'Encounter', subject: { reference: 'Patient/p-enc' } } : undefined);
+    await service.record({ hospitalId: 'hospital-a', method: 'PATCH', route: '/api/encounters/emergency/e-1/bed', statusCode: 200, durationMs: 4, encounterId: 'e-1' });
+    expect(patientEntity()).toBe('Patient/p-enc');
+  });
+
+  it('leaves non-patient requests without a patient and does not look anything up', async () => {
+    await service.record({ hospitalId: 'hospital-a', method: 'POST', route: '/api/inpatient/beds', statusCode: 201, durationMs: 4 });
+    expect(patientEntity()).toBeUndefined();
+    expect(medplum.readResource).not.toHaveBeenCalled();
+  });
+
+  it('still writes the audit event when the lookup fails', async () => {
+    medplum.readResource.mockRejectedValue(new Error('Medplum down'));
+    await service.record({ hospitalId: 'hospital-a', method: 'POST', route: '/api/billing/claims/c-2/adjudications', statusCode: 201, durationMs: 4, record: { id: 'c-2', types: ['Claim'] } });
+    expect(medplum.createResource).toHaveBeenCalledTimes(1);
   });
 });

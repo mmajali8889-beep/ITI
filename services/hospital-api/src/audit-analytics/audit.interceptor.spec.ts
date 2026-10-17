@@ -50,4 +50,35 @@ describe('AuditInterceptor', () => {
     const recorded = await run({ method: 'POST', originalUrl: '/api/inventory/items' }, { id: 'item-1' });
     expect(recorded.patientId).toBeUndefined();
   });
+
+  const audited = (request: Record<string, unknown>, result: unknown = {}) => new Promise<Record<string, unknown> | undefined>((resolve) => {
+    const audit = { record: jest.fn().mockResolvedValue(undefined) };
+    const interceptor = new AuditInterceptor(audit as never);
+    const context = { switchToHttp: () => ({ getRequest: () => ({ params: {}, query: {}, body: {}, ip: '127.0.0.1', auth: { hospitalId: 'hospital-a' }, ...request }), getResponse: () => ({ statusCode: 200 }) }) };
+    interceptor.intercept(context as never, { handle: () => of(result) }).subscribe({ complete: () => resolve(audit.record.mock.calls[0]?.[0]) });
+  });
+
+  it('audits chart reads that name a patient or encounter (27.5)', async () => {
+    expect(await audited({ method: 'GET', originalUrl: '/api/patients/p-9', params: { patientId: 'p-9' } })).toMatchObject({ method: 'GET', patientId: 'p-9' });
+    expect(await audited({ method: 'GET', originalUrl: '/api/vitals?encounterId=e-9', query: { encounterId: 'e-9' } })).toMatchObject({ encounterId: 'e-9' });
+  });
+
+  it('audits reads of a clinical record by its id and passes the record on (27.4/27.5)', async () => {
+    const recorded = await audited({ method: 'GET', originalUrl: '/api/laboratory/results/obs-1' });
+    expect(recorded).toMatchObject({ method: 'GET', record: { id: 'obs-1', types: ['Observation'] } });
+  });
+
+  it('does not audit a registry search that names no patient', async () => {
+    expect(await audited({ method: 'GET', originalUrl: '/api/patients?search=smith', query: { search: 'smith' } })).toBeUndefined();
+  });
+
+  it('picks up a patient nested one level in the response, and an order hint', async () => {
+    expect(await audited({ method: 'POST', originalUrl: '/api/billing/invoices/inv-1/payments' }, { invoice: { patientId: 'p-7', encounterId: 'e-7' } })).toMatchObject({ patientId: 'p-7', encounterId: 'e-7' });
+    expect(await audited({ method: 'POST', originalUrl: '/api/radiology/pacs/sync/accession/RAD1' }, { orderId: 'sr-1', studiesFound: 1 })).toMatchObject({ record: { id: 'sr-1', types: ['ServiceRequest'] } });
+  });
+
+  it('never mistakes literal path segments for record ids', async () => {
+    expect((await audited({ method: 'GET', originalUrl: '/api/laboratory/reports/patient/p-1', params: { patientId: 'p-1' } }))?.record).toBeUndefined();
+    expect((await audited({ method: 'POST', originalUrl: '/api/laboratory/results/batch' }))?.record).toBeUndefined();
+  });
 });
