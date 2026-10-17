@@ -43,9 +43,10 @@ export function openPacsStudy(study: PacsStudy): void {
     return;
   }
 
+  const viewerBase = String(import.meta.env.VITE_OHIF_URL || 'http://localhost:3001').replace(/\/+$/, '');
   const url =
     study.viewerUrl ||
-    `http://localhost:3001/viewer?StudyInstanceUIDs=${encodeURIComponent(
+    `${viewerBase}/viewer?StudyInstanceUIDs=${encodeURIComponent(
       study.studyInstanceUid,
     )}`;
 
