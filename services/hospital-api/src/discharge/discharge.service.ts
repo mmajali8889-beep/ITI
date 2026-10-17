@@ -337,7 +337,11 @@ export class DischargeService {
   }
   private json(v?: string) {
     try {
-      return JSON.parse(v ?? '{}') as Record<string, any>;
+      // Department clearances, e.g. { billing: { cleared: true, actorName, at } }.
+      return JSON.parse(v ?? '{}') as Record<
+        string,
+        { cleared?: boolean; [key: string]: unknown } | undefined
+      >;
     } catch {
       return {};
     }

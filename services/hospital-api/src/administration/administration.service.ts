@@ -4,24 +4,17 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import type { MedplumClient } from '@medplum/core';
 import type {
   ChargeItemDefinition,
-  CodeSystem,
-  Contract,
   Group,
-  HealthcareService,
   Location,
-  MedicationKnowledge,
-  Organization,
   Practitioner,
   PractitionerRole,
-  Questionnaire,
   Resource,
-  Schedule,
-  ActivityDefinition,
-  ProjectMembership,
 } from '@medplum/fhirtypes';
 import { MedplumService } from '../medplum/medplum.service';
+import { isBlank } from '../common/is-blank';
 import {
   AssignRoleDto,
   CreateCatalogItemDto,
@@ -98,10 +91,7 @@ export class AdministrationService {
     const type = this.resourceType(kind),
       items = (await this.medplumService
         .getClient()
-        .searchResources(
-          type as never,
-          { _count: '1000' } as never,
-        )) as Resource[];
+        .searchResources(type as never, { _count: '1000' })) as Resource[];
     return {
       kind,
       hospitalId,
@@ -152,7 +142,7 @@ export class AdministrationService {
           type: [code],
           partOf: { reference: `Organization/${d.parentId || d.hospitalId}` },
           extension: ext,
-        } as Organization;
+        };
         break;
       case 'schedules':
         r = {
@@ -168,7 +158,7 @@ export class AdministrationService {
           ],
           serviceType: [code],
           extension: ext,
-        } as Schedule;
+        };
         break;
       case 'services':
         r = {
@@ -181,7 +171,7 @@ export class AdministrationService {
           type: [code],
           specialty: d.specialty ? [{ text: d.specialty }] : undefined,
           extension: ext,
-        } as HealthcareService;
+        };
         break;
       case 'price-lists':
         if (!Number.isFinite(d.price) || Number(d.price) < 0)
@@ -220,7 +210,7 @@ export class AdministrationService {
           title: d.name.trim(),
           scope: code,
           extension: ext,
-        } as Contract;
+        };
         break;
       case 'bed-configuration':
         r = {
@@ -255,7 +245,7 @@ export class AdministrationService {
           status: 'active',
           code,
           extension: ext,
-        } as MedicationKnowledge;
+        };
         break;
       case 'lab-catalog':
       case 'radiology-catalog':
@@ -270,7 +260,7 @@ export class AdministrationService {
           publisher: `Organization/${d.hospitalId}`,
           description: d.description,
           extension: ext,
-        } as ActivityDefinition;
+        };
         break;
       case 'clinical-templates':
         r = {
@@ -282,7 +272,7 @@ export class AdministrationService {
           description: d.description,
           item: [],
           extension: ext,
-        } as Questionnaire;
+        };
         break;
       default:
         r = {
@@ -295,7 +285,7 @@ export class AdministrationService {
           description: d.description,
           concept: [],
           extension: ext,
-        } as CodeSystem;
+        };
     }
     return this.map(
       await this.medplumService.getClient().createResource(r),
@@ -313,7 +303,7 @@ export class AdministrationService {
         id: g.id,
         code: g.identifier?.[0]?.value,
         name: g.name,
-        permissions: this.json(g, PERMISSIONS) ?? [],
+        permissions: this.json<string[]>(g, PERMISSIONS) ?? [],
         managed: true,
       }));
     const used = new Set(custom.map((r) => r.code));
@@ -471,7 +461,7 @@ export class AdministrationService {
     const parts = d.name.trim().split(/\s+/),
       firstName = parts.shift() ?? d.name.trim(),
       lastName = parts.join(' ') || firstName;
-    let provisioningClient;
+    let provisioningClient: MedplumClient;
     try {
       provisioningClient = await this.medplumService.getProvisioningClient();
     } catch (error) {
@@ -495,9 +485,10 @@ export class AdministrationService {
         membership.issue?.[0]?.diagnostics ??
           'Unable to provision login account',
       );
-    const profileId = (
-      membership as ProjectMembership
-    ).profile?.reference?.replace('Practitioner/', '');
+    const profileId = membership.profile?.reference?.replace(
+      'Practitioner/',
+      '',
+    );
     if (!profileId)
       throw new BadRequestException(
         'Medplum did not return the practitioner profile',
@@ -716,11 +707,11 @@ export class AdministrationService {
       currency: amount?.currency,
     };
   }
-  private json(r: Group, url: string) {
+  private json<T>(r: Group, url: string): T | undefined {
     try {
-      return JSON.parse(
+      return (JSON.parse(
         r.extension?.find((e) => e.url === url)?.valueString ?? 'null',
-      );
+      ) ?? undefined) as T | undefined;
     } catch {
       return undefined;
     }
@@ -739,7 +730,7 @@ export class AdministrationService {
   }
   private required(d: object, fields: string[]) {
     for (const f of fields)
-      if (!String((d as Record<string, unknown>)[f] ?? '').trim())
+      if (isBlank((d as Record<string, unknown>)[f]))
         throw new BadRequestException(`${f} is required`);
   }
   private requireHospital(h: string) {

@@ -139,14 +139,12 @@ export class AuditInterceptor implements NestInterceptor {
         })
         .catch(() => undefined);
     };
-    return next
-      .handle()
-      .pipe(
-        tap({
-          next: (result: unknown) => write(response.statusCode, result),
-          error: (error: { status?: number; statusCode?: number }) =>
-            write(error.status ?? error.statusCode ?? 500),
-        }),
-      );
+    return next.handle().pipe(
+      tap({
+        next: (result: unknown) => write(response.statusCode, result),
+        error: (error: { status?: number; statusCode?: number }) =>
+          write(error.status ?? error.statusCode ?? 500),
+      }),
+    );
   }
 }

@@ -24,14 +24,14 @@ jobs:
       - run: npm ci
       - name: Typecheck
         run: npx tsc --noEmit -p tsconfig.json
+      - name: Lint
+        run: npm run lint
       - name: Unit tests
         run: npm test -- --ci
       # app.e2e-spec boots the whole app and needs a live Medplum, so only the
       # static workflow acceptance contract runs here.
       - name: Workflow acceptance contract
         run: npx jest --config ./test/jest-e2e.json --ci hp1-workflow
-      # ESLint is not enforced yet: the backend has existing lint errors, and its
-      # npm "lint" script runs with --fix. See docs/ROADMAP.md.
 
   ehr-web:
     runs-on: ubuntu-latest

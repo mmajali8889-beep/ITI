@@ -816,7 +816,7 @@ export class EncountersService {
     };
     const createdPatient = await medplum.createResource<Patient>(patient);
     const encounter = await this.create({
-      patientId: createdPatient.id!,
+      patientId: createdPatient.id,
       hospitalId: dto.hospitalId,
       encounterType: 'emergency',
       department: 'Emergency Department',

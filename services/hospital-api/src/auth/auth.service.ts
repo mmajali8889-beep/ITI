@@ -13,7 +13,7 @@ import { isMedplumRateLimitError } from '../medplum/medplum-rate-limit.filter';
 import { MedplumService } from '../medplum/medplum.service';
 import { MedplumClient, getDisplayString } from '@medplum/core';
 import type { ProfileResource } from '@medplum/core';
-import type { Basic } from '@medplum/fhirtypes';
+import type { Basic, PractitionerRole } from '@medplum/fhirtypes';
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import type { AuthSession } from './auth.types';
 import { PERMISSIONS_EXTENSION, permissionsForRoles } from './permissions';
@@ -332,7 +332,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     });
 
     try {
-      let profile;
+      let profile: ProfileResource;
       if (this.matchesDevelopmentAdmin(username, input.password)) {
         const clientId = process.env.MEDPLUM_CLIENT_ID;
         const clientSecret = process.env.MEDPLUM_CLIENT_SECRET;
@@ -388,7 +388,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
         });
       }
 
-      const practitionerRoles =
+      const practitionerRoles: PractitionerRole[] =
         profile.resourceType === 'Practitioner' &&
         profile.id !== 'development-admin'
           ? await client

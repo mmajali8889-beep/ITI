@@ -98,7 +98,7 @@ export class RadiologyMwlService {
       };
     }
 
-    let orthancWorklist: unknown | undefined;
+    let orthancWorklist: unknown;
 
     try {
       orthancWorklist = await this.orthancRequest<unknown>(
@@ -530,7 +530,7 @@ export class RadiologyMwlService {
   }
 
   private dicomModality(modality: unknown) {
-    const value = String(modality || 'OT')
+    const value = (typeof modality === 'string' && modality ? modality : 'OT')
       .trim()
       .toUpperCase();
 

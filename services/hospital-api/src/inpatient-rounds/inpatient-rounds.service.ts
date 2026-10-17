@@ -433,11 +433,15 @@ export class InpatientRoundsService {
     try {
       const data = v.content?.[0]?.attachment.data;
       if (data) {
-        const parsed = JSON.parse(Buffer.from(data, 'base64').toString('utf8'));
+        const parsed = JSON.parse(
+          Buffer.from(data, 'base64').toString('utf8'),
+        ) as { progressNote?: string; note?: string; assessment?: string };
         detail =
           parsed.progressNote ?? parsed.note ?? parsed.assessment ?? detail;
       }
-    } catch {}
+    } catch {
+      // Not a structured note: keep the description as the detail.
+    }
     return {
       id: v.id,
       type: v.extension?.some((x) => x.url === ROUND && x.valueBoolean)

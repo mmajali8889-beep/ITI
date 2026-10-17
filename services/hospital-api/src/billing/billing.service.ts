@@ -10,17 +10,14 @@ import type {
   Claim,
   ClaimResponse,
   Coverage,
-  Encounter,
   Invoice,
-  MedicationDispense,
   Money,
   PaymentNotice,
   PaymentReconciliation,
-  Procedure,
-  ServiceRequest,
 } from '@medplum/fhirtypes';
 import { randomUUID } from 'node:crypto';
 import { MedplumService } from '../medplum/medplum.service';
+import { isBlank } from '../common/is-blank';
 import {
   AdjudicateClaimDto,
   BillableCategory,
@@ -472,12 +469,10 @@ export class BillingService {
     ];
     claim = await this.medplumService.updateIfUnchanged<Claim>(claim);
     const responses = (
-      await this.medplumService
-        .getClient()
-        .searchResources('ClaimResponse', {
-          request: `Claim/${claimId}`,
-          _count: '20',
-        })
+      await this.medplumService.getClient().searchResources('ClaimResponse', {
+        request: `Claim/${claimId}`,
+        _count: '20',
+      })
     ).filter((item) => this.hospitalId(item) === dto.hospitalId);
     let responseId: string | undefined;
     if (responses.length) {
@@ -827,8 +822,12 @@ export class BillingService {
       });
       let content: { consumables?: string[] } = {};
       try {
-        content = JSON.parse(p.note?.[0]?.text ?? '{}');
-      } catch {}
+        content = JSON.parse(p.note?.[0]?.text ?? '{}') as {
+          consumables?: string[];
+        };
+      } catch {
+        // Free-text procedure note: no structured consumables to charge.
+      }
       for (let i = 0; i < (content.consumables?.length ?? 0); i++)
         candidates.push({
           category: 'consumable',
@@ -958,20 +957,16 @@ export class BillingService {
     if (encounter.serviceProvider?.reference !== `Organization/${hospitalId}`)
       throw new NotFoundException('Encounter not found');
     const charges = (
-      await this.medplumService
-        .getClient()
-        .searchResources('ChargeItem', {
-          context: `Encounter/${encounterId}`,
-          _count: '500',
-        })
+      await this.medplumService.getClient().searchResources('ChargeItem', {
+        context: `Encounter/${encounterId}`,
+        _count: '500',
+      })
     ).filter((item) => this.hospitalId(item) === hospitalId);
     const invoices = (
-      await this.medplumService
-        .getClient()
-        .searchResources('Invoice', {
-          subject: encounter.subject?.reference,
-          _count: '200',
-        })
+      await this.medplumService.getClient().searchResources('Invoice', {
+        subject: encounter.subject?.reference,
+        _count: '200',
+      })
     ).filter(
       (item) =>
         this.hospitalId(item) === hospitalId &&
@@ -985,7 +980,7 @@ export class BillingService {
   }
   private required(dto: object, fields: string[]) {
     for (const field of fields)
-      if (!String((dto as Record<string, unknown>)[field] ?? '').trim())
+      if (isBlank((dto as Record<string, unknown>)[field]))
         throw new BadRequestException(`${field} is required`);
   }
   private async readEncounter(id: string) {

@@ -13,6 +13,7 @@ import type {
 } from '@medplum/fhirtypes';
 import { randomUUID } from 'node:crypto';
 import { MedplumService } from '../medplum/medplum.service';
+import { isBlank } from '../common/is-blank';
 import {
   AssignFinancialClassDto,
   CheckEligibilityDto,
@@ -239,15 +240,13 @@ export class FinancialService {
       insurance: [
         { focal: true, coverage: { reference: `Coverage/${dto.coverageId}` } },
       ],
-      item: dto.serviceCodes
-        ?.filter(Boolean)
-        .map((code) => ({
-          category: {
-            coding: [
-              { system: 'https://hospital-ehr.local/CodeSystem/service', code },
-            ],
-          },
-        })),
+      item: dto.serviceCodes?.filter(Boolean).map((code) => ({
+        category: {
+          coding: [
+            { system: 'https://hospital-ehr.local/CodeSystem/service', code },
+          ],
+        },
+      })),
       identifier: [
         {
           system: `https://hospital-ehr.local/eligibility/${dto.hospitalId}`,
@@ -606,7 +605,7 @@ export class FinancialService {
 
   private required(dto: object, fields: string[]) {
     for (const field of fields)
-      if (!String((dto as Record<string, unknown>)[field] ?? '').trim())
+      if (isBlank((dto as Record<string, unknown>)[field]))
         throw new BadRequestException(`${field} is required`);
   }
   private date(value: string, message: string) {

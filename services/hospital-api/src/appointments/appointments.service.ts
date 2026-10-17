@@ -220,10 +220,7 @@ export class AppointmentsService {
       throw new ConflictException(
         `Cannot change appointment from ${current} to ${dto.status}`,
       );
-    appointment.status =
-      dto.status === 'confirmed'
-        ? 'booked'
-        : (dto.status as Appointment['status']);
+    appointment.status = dto.status === 'confirmed' ? 'booked' : dto.status;
     appointment.extension = [
       ...(appointment.extension ?? []).filter(
         (ext) => ext.url !== WORKFLOW_EXTENSION,

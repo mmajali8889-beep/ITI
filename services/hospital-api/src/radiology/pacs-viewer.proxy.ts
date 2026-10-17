@@ -1,7 +1,7 @@
 import { request as httpRequest } from 'node:http';
 import type { IncomingHttpHeaders, IncomingMessage } from 'node:http';
 import { request as httpsRequest } from 'node:https';
-import type { NextFunction, Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import type { AuthService } from '../auth/auth.service';
 import { readSessionCookie } from '../auth/auth.guard';
 import { orthancAuthHeaders, orthancBaseUrl } from './orthanc-connection';
@@ -38,7 +38,7 @@ export function pacsViewerProxy(
   authService: AuthService,
   studyAccess: PacsStudyAccessService,
 ) {
-  return (request: Request, response: Response, _next: NextFunction): void => {
+  return (request: Request, response: Response): void => {
     handle(request, response).catch(() => {
       if (!response.headersSent)
         response.status(502).json({ message: 'The PACS is unavailable' });
@@ -66,12 +66,10 @@ export function pacsViewerProxy(
         VIEWER_PERMISSIONS.includes(permission),
       )
     ) {
-      response
-        .status(403)
-        .json({
-          message:
-            "Viewing images requires the 'radiology' or 'clinical' permission",
-        });
+      response.status(403).json({
+        message:
+          "Viewing images requires the 'radiology' or 'clinical' permission",
+      });
       return;
     }
 

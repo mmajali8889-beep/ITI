@@ -457,7 +457,7 @@ export class RadiologyReportsService {
       );
     }
 
-    const updatedEditable = await this.updateFinalReportExtensions(report, dto);
+    const updatedEditable = this.updateFinalReportExtensions(report, dto);
 
     const medplum = this.medplumService.getClient();
     const updated = await medplum.updateResource<DiagnosticReport>({
@@ -470,7 +470,7 @@ export class RadiologyReportsService {
     return this.mapReport(updated);
   }
 
-  private async updateFinalReportExtensions(
+  private updateFinalReportExtensions(
     report: DiagnosticReport,
     dto: UpdateRadiologyReportDto,
   ) {

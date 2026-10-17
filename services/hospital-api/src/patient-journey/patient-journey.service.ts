@@ -3,7 +3,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Encounter, Resource } from '@medplum/fhirtypes';
+import type {
+  CodeableConcept,
+  DiagnosticReport,
+  DocumentReference,
+  Encounter,
+  Resource,
+  ServiceRequest,
+} from '@medplum/fhirtypes';
 import { MedplumService } from '../medplum/medplum.service';
 type State = 'completed' | 'current' | 'pending' | 'not-applicable';
 type Node = {
@@ -84,15 +91,13 @@ export class PatientJourneyService {
       c.searchResources('CarePlan', { encounter: eref, _count: '200' }),
     ]);
     const scoped = (r: Resource) => this.scoped(r, hospitalId),
-      appointment = (appointments as any[]).filter(
+      appointment = appointments.filter(
         (a) =>
-          a.participant?.some((p: any) => p.actor?.reference === pref) &&
+          a.participant?.some((p) => p.actor?.reference === pref) &&
           (encounter.appointment?.some(
             (x) => x.reference === `Appointment/${a.id}`,
           ) ||
-            a.extension?.some(
-              (x: any) => x.valueReference?.reference === eref,
-            )),
+            a.extension?.some((x) => x.valueReference?.reference === eref)),
       ),
       triage =
         encounter.extension?.some((x) =>
@@ -101,36 +106,32 @@ export class PatientJourneyService {
         ['triaged', 'in-progress', 'onleave', 'finished'].includes(
           encounter.status,
         ),
-      labOrders = (orders as any[]).filter((o) =>
-        this.category(o).includes('lab'),
-      ),
-      radOrders = (orders as any[]).filter((o) =>
-        /imag|radio/.test(this.category(o)),
-      ),
-      labReports = (reports as any[]).filter(
+      labOrders = orders.filter((o) => this.category(o).includes('lab')),
+      radOrders = orders.filter((o) => /imag|radio/.test(this.category(o))),
+      labReports = reports.filter(
         (r) =>
           FINAL_REPORT.includes(r.status) &&
           this.reportCategory(r).includes('lab'),
       ),
-      radReports = (reports as any[]).filter(
+      radReports = reports.filter(
         (r) =>
           FINAL_REPORT.includes(r.status) &&
           /imag|radio/.test(this.reportCategory(r)),
       ),
-      reviewed = (tasks as any[]).filter(
+      reviewed = tasks.filter(
         (t) =>
-          t.code?.coding?.some((x: any) => x.code === 'result-review') &&
+          t.code?.coding?.some((x) => x.code === 'result-review') &&
           t.status === 'completed',
       ),
       completedReports = [...labReports, ...radReports],
-      signedNotes = (notes as any[]).filter((note) => this.signedNote(note)),
-      encounterDispenses = (dispenses as any[]).filter(
+      signedNotes = notes.filter((note) => this.signedNote(note)),
+      encounterDispenses = dispenses.filter(
         (dispense) => dispense.context?.reference === eref,
       ),
-      admission = (orders as any[]).filter(
+      admission = orders.filter(
         (o) =>
           this.category(o) === 'admission-request' ||
-          o.code?.coding?.some((x: any) => x.code === 'admission-request'),
+          o.code?.coding?.some((x) => x.code === 'admission-request'),
       ),
       referral =
         encounter.hospitalization?.dischargeDisposition?.coding?.some((x) =>
@@ -139,34 +140,33 @@ export class PatientJourneyService {
         encounter.extension?.some((x) =>
           x.url.endsWith('/referral-destination'),
         ),
-      dischargeTasks = (tasks as any[]).filter((t) =>
-        t.code?.coding?.some((x: any) => x.code === 'discharge-workflow'),
+      dischargeTasks = tasks.filter((t) =>
+        t.code?.coding?.some((x) => x.code === 'discharge-workflow'),
       ),
-      dischargeDocs = (compositions as any[]).filter(
+      dischargeDocs = compositions.filter(
         (x) =>
-          x.type?.coding?.some((v: any) => v.code === '18842-5') &&
+          x.type?.coding?.some((v) => v.code === '18842-5') &&
           ['final', 'amended'].includes(x.status),
       ),
-      medicalRecords = (compositions as any[]).filter(
+      medicalRecords = compositions.filter(
         (x) =>
-          x.type?.coding?.some((v: any) => v.code === '34133-9') &&
+          x.type?.coding?.some((v) => v.code === '34133-9') &&
           ['final', 'amended'].includes(x.status),
       ),
-      followups = (appointments as any[]).filter(
+      followups = appointments.filter(
         (a) =>
-          a.reasonCode?.some((x: any) => /follow/i.test(x.text ?? '')) ||
+          a.reasonCode?.some((x) => /follow/i.test(x.text ?? '')) ||
           /follow/i.test(a.description ?? ''),
       ),
-      encounterInvoices = (invoices as any[]).filter(
+      encounterInvoices = invoices.filter(
         (i) =>
-          scoped(i) &&
-          i.extension?.some((x: any) => x.valueString === encounterId),
+          scoped(i) && i.extension?.some((x) => x.valueString === encounterId),
       ),
-      encounterClaims = (claims as any[]).filter(
+      encounterClaims = claims.filter(
         (claim) =>
           scoped(claim) &&
-          claim.item?.some((item: any) =>
-            item.encounter?.some((value: any) => value.reference === eref),
+          claim.item?.some((item) =>
+            item.encounter?.some((value) => value.reference === eref),
           ),
       ),
       inpatient = encounter.class?.code === 'IMP',
@@ -228,7 +228,7 @@ export class PatientJourneyService {
           : medications.every((request) =>
               encounterDispenses.some((dispense) =>
                 dispense.authorizingPrescription?.some(
-                  (reference: any) =>
+                  (reference) =>
                     reference.reference === `MedicationRequest/${request.id}`,
                 ),
               ),
@@ -289,8 +289,8 @@ export class PatientJourneyService {
         'surgery',
         'Surgery',
         this.branch(tasks, 'surgery') ||
-          procedures.some((p: any) =>
-            p.extension?.some((x: any) => x.url.includes('surgery')),
+          procedures.some((p) =>
+            p.extension?.some((x) => x.url.includes('surgery')),
           )
           ? true
           : 'na',
@@ -322,7 +322,7 @@ export class PatientJourneyService {
         'billing',
         'Billing / Insurance Claim',
         encounterInvoices.length > 0 &&
-          (encounterInvoices.every((i: any) => i.status === 'balanced') ||
+          (encounterInvoices.every((i) => i.status === 'balanced') ||
             encounterClaims.length > 0),
         encounterInvoices.length + encounterClaims.length,
       ),
@@ -330,12 +330,12 @@ export class PatientJourneyService {
         'medical-record',
         'Medical Record',
         medicalRecords.some(
-          (record: any) =>
-            record.extension?.find((x: any) => x.url.endsWith('/record-status'))
+          (record) =>
+            record.extension?.find((x) => x.url.endsWith('/record-status'))
               ?.valueCode === 'archived',
         ),
         medicalRecords.length,
-        medicalRecords[0]?.extension?.find((x: any) =>
+        medicalRecords[0]?.extension?.find((x) =>
           x.url.endsWith('/record-status'),
         )?.valueCode,
       ),
@@ -419,25 +419,25 @@ export class PatientJourneyService {
       false
     );
   }
-  private category(o: any) {
-    return `${o.category?.flatMap((x: any) => x.coding?.map((v: any) => v.code) ?? []).join(' ') ?? ''}`.toLowerCase();
+  private category(o: ServiceRequest) {
+    return `${o.category?.flatMap((x) => x.coding?.map((v) => v.code) ?? []).join(' ') ?? ''}`.toLowerCase();
   }
-  private reportCategory(r: any) {
-    return `${r.category?.flatMap((x: any) => x.coding?.map((v: any) => `${v.code} ${v.display}`) ?? []).join(' ') ?? ''} ${r.code?.text ?? ''}`.toLowerCase();
+  private reportCategory(r: DiagnosticReport) {
+    return `${r.category?.flatMap((x) => x.coding?.map((v) => `${v.code} ${v.display}`) ?? []).join(' ') ?? ''} ${r.code?.text ?? ''}`.toLowerCase();
   }
-  private reportForOrder(report: any, order: any) {
+  private reportForOrder(report: DiagnosticReport, order: ServiceRequest) {
     return report.basedOn?.some(
-      (reference: any) => reference.reference === `ServiceRequest/${order.id}`,
+      (reference) => reference.reference === `ServiceRequest/${order.id}`,
     );
   }
-  private signedNote(note: any) {
+  private signedNote(note: DocumentReference) {
     const data = note.content?.[0]?.attachment?.data;
     if (!data) return false;
     try {
-      return (
-        JSON.parse(Buffer.from(data, 'base64').toString('utf8')).status ===
-        'signed'
-      );
+      const content = JSON.parse(
+        Buffer.from(data, 'base64').toString('utf8'),
+      ) as { status?: unknown };
+      return content.status === 'signed';
     } catch {
       return false;
     }
@@ -448,14 +448,14 @@ export class PatientJourneyService {
       false
     );
   }
-  private branch(t: any[], name: string) {
+  private branch(t: Array<{ code?: CodeableConcept }>, name: string) {
     return t.some((x) =>
-      x.code?.coding?.some((c: any) => String(c.code).includes(name)),
+      x.code?.coding?.some((c) => String(c.code).includes(name)),
     );
   }
-  private branchCount(t: any[], name: string) {
+  private branchCount(t: Array<{ code?: CodeableConcept }>, name: string) {
     return t.filter((x) =>
-      x.code?.coding?.some((c: any) => String(c.code).includes(name)),
+      x.code?.coding?.some((c) => String(c.code).includes(name)),
     ).length;
   }
 }

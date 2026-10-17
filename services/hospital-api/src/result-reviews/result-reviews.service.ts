@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import type {
   DiagnosticReport,
-  Encounter,
   Observation,
   Procedure,
   Task,
@@ -139,9 +138,7 @@ export class ResultReviewsService {
     id: string,
   ): Promise<ReviewTarget> {
     try {
-      return (await this.medplumService
-        .getClient()
-        .readResource(type, id)) as ReviewTarget;
+      return await this.medplumService.getClient().readResource(type, id);
     } catch {
       throw new NotFoundException('Result not found');
     }

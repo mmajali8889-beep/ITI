@@ -12,6 +12,7 @@ import type {
 } from '@medplum/fhirtypes';
 import { randomUUID } from 'node:crypto';
 import { MedplumService } from '../medplum/medplum.service';
+import { isBlank } from '../common/is-blank';
 import {
   ApprovePurchaseRequestDto,
   CreateInventoryItemDto,
@@ -576,7 +577,7 @@ export class InventoryService {
   }
   private stock(i: Basic): StockLocation[] {
     try {
-      return JSON.parse(this.ext(i, STOCK) ?? '[]');
+      return JSON.parse(this.ext(i, STOCK) ?? '[]') as StockLocation[];
     } catch {
       return [];
     }
@@ -714,7 +715,7 @@ export class InventoryService {
   }
   private required(d: object, fields: string[]) {
     for (const f of fields)
-      if (!String((d as Record<string, unknown>)[f] ?? '').trim())
+      if (isBlank((d as Record<string, unknown>)[f]))
         throw new BadRequestException(`${f} is required`);
   }
 }

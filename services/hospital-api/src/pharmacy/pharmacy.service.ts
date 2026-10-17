@@ -10,6 +10,7 @@ import type {
   MedicationRequest,
   MedicationAdministration,
   Encounter,
+  Extension,
   Patient,
 } from '@medplum/fhirtypes';
 import { randomUUID } from 'node:crypto';
@@ -345,7 +346,7 @@ export class PharmacyService {
       this.setInteger(batch, STOCK, this.stock(batch) - take);
       await medplum.updateResource(batch);
       allocations.push({
-        medicationId: batch.id!,
+        medicationId: batch.id,
         lotNumber: batch.batch?.lotNumber,
         quantity: take,
       });
@@ -755,12 +756,16 @@ export class PharmacyService {
       ?.find((ext) => ext.url === HOSPITAL)
       ?.valueReference?.reference?.replace('Organization/', '');
   }
-  private integer(item: { extension?: any[] }, url: string) {
+  private integer(item: { extension?: Extension[] }, url: string) {
     return Number(
       item.extension?.find((ext) => ext.url === url)?.valueInteger ?? 0,
     );
   }
-  private setInteger(item: { extension?: any[] }, url: string, value: number) {
+  private setInteger(
+    item: { extension?: Extension[] },
+    url: string,
+    value: number,
+  ) {
     const ext = item.extension?.find((entry) => entry.url === url);
     if (ext) ext.valueInteger = value;
     else
@@ -844,7 +849,7 @@ export class PharmacyService {
           return JSON.parse(
             item.extension?.find((ext) => ext.url === COUNSELING)
               ?.valueString ?? 'null',
-          );
+          ) as unknown;
         } catch {
           return null;
         }

@@ -1,62 +1,31 @@
+import { ClinicalNotesModule } from './clinical-notes/clinical-notes.module';
 
-import {
-  ClinicalNotesModule,
-} from './clinical-notes/clinical-notes.module';
+import { Module } from '@nestjs/common';
 
-import {
-  Module,
-} from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 
-import {
-  ConfigModule,
-} from '@nestjs/config';
+import { AppController } from './app.controller';
 
-import {
-  AppController,
-} from './app.controller';
+import { AppService } from './app.service';
 
-import {
-  AppService,
-} from './app.service';
+import { MedplumModule } from './medplum/medplum.module';
 
-import {
-  MedplumModule,
-} from './medplum/medplum.module';
+import { HospitalsModule } from './hospitals/hospitals.module';
 
-import {
-  HospitalsModule,
-} from './hospitals/hospitals.module';
+import { PatientsModule } from './patients/patients.module';
 
-import {
-  PatientsModule,
-} from './patients/patients.module';
+import { EncountersModule } from './encounters/encounters.module';
 
-import {
-  EncountersModule,
-} from './encounters/encounters.module';
+import { VitalsModule } from './vitals/vitals.module';
 
-import {
-  VitalsModule,
-} from './vitals/vitals.module';
+import { ConditionsModule } from './conditions/conditions.module';
 
-import {
-  ConditionsModule,
-} from './conditions/conditions.module';
+import { AllergiesModule } from './allergies/allergies.module';
 
-import {
-  AllergiesModule,
-} from './allergies/allergies.module';
+import { MedicationsModule } from './medications/medications.module';
 
-import {
-  MedicationsModule,
-} from './medications/medications.module';
-
-import { 
-  LaboratoryModule } 
-  from './laboratory/laboratory.module';
-import { 
-  RadiologyModule } 
-  from './radiology/radiology.module';
+import { LaboratoryModule } from './laboratory/laboratory.module';
+import { RadiologyModule } from './radiology/radiology.module';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { MedplumRateLimitFilter } from './medplum/medplum-rate-limit.filter';
 import { AuthModule } from './auth/auth.module';
@@ -89,16 +58,14 @@ import { HospitalScopeGuard } from './auth/hospital-scope.guard';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal:
-        true,
+      isGlobal: true,
 
-      envFilePath:
-        '.env',
+      envFilePath: '.env',
     }),
-	
-	RadiologyModule,
-    
-	LaboratoryModule,
+
+    RadiologyModule,
+
+    LaboratoryModule,
 
     MedplumModule,
 
@@ -115,7 +82,7 @@ import { HospitalScopeGuard } from './auth/hospital-scope.guard';
     AllergiesModule,
 
     MedicationsModule,
-	
+
     ClinicalNotesModule,
     AuthModule,
     InpatientModule,
@@ -140,9 +107,7 @@ import { HospitalScopeGuard } from './auth/hospital-scope.guard';
     PatientJourneyModule,
   ],
 
-  controllers: [
-    AppController,
-  ],
+  controllers: [AppController],
 
   providers: [
     AppService,

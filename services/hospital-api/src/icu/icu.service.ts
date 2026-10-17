@@ -450,10 +450,12 @@ export class IcuService {
       : { display: dto.clinicianName.trim() };
   }
   private mapAdmission(t: Task) {
-    let disposition;
+    let disposition: unknown;
     try {
-      disposition = JSON.parse(t.output?.[0]?.valueString ?? 'null');
-    } catch {}
+      disposition = JSON.parse(t.output?.[0]?.valueString ?? 'null') as unknown;
+    } catch {
+      // Malformed disposition: report the admission without it.
+    }
     return {
       id: t.id,
       status: t.status,

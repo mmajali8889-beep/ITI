@@ -148,8 +148,10 @@ export class BedManagementService {
     try {
       history = JSON.parse(
         bed.extension?.find((e) => e.url === HISTORY)?.valueString ?? '[]',
-      );
-    } catch {}
+      ) as Array<Record<string, unknown>>;
+    } catch {
+      // Malformed stored history: start a fresh one rather than fail the update.
+    }
     history.push({
       from: this.state(bed),
       to: state,
