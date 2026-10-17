@@ -81,7 +81,7 @@ npm --prefix services/hospital-api run start
 npm --prefix apps/ehr-web run dev
 ```
 
-Open http://localhost:5173. Sign-in is limited to the hospital in `ACTIVE_HOSPITAL_CODE` (default `HOSP-A`). For local development you can opt in to an admin login: set `AUTH_DEV_ADMIN_ENABLED=true` with your own `DEV_ADMIN_USERNAME` and `DEV_ADMIN_PASSWORD`. There are no built-in credentials, and the API refuses to start if this is enabled with `NODE_ENV=production`.
+Open http://localhost:5173. The login screen lists the hospitals open for sign-in, set in `ENABLED_HOSPITAL_CODES` (for example `HOSP-A,HOSP-01`; default `HOSP-A`). The server refuses any other hospital. For local development you can opt in to an admin login: set `AUTH_DEV_ADMIN_ENABLED=true` with your own `DEV_ADMIN_USERNAME` and `DEV_ADMIN_PASSWORD`. There are no built-in credentials, and the API refuses to start if this is enabled with `NODE_ENV=production`.
 
 Logging out revokes the session durably. A hash of the token is stored in Medplum, so the logout survives restarts and reaches other API instances within `AUTH_REVOCATION_REFRESH_SECONDS`.
 
@@ -94,7 +94,7 @@ npm --prefix services/hospital-api test                     # unit tests
 npm --prefix services/hospital-api run test:e2e             # static acceptance contract
 ```
 
-Live acceptance runs against a running API and Medplum, using synthetic data in the dedicated UAT hospital (start the API with `ACTIVE_HOSPITAL_CODE=HOSP-01`):
+Live acceptance runs against a running API and Medplum, using synthetic data in the dedicated UAT hospital (include `HOSP-01` in `ENABLED_HOSPITAL_CODES`):
 
 ```bash
 cd services/hospital-api

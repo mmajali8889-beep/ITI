@@ -40,6 +40,8 @@ describe('AuthService per-account lockout', () => {
       'test-session-secret-that-is-longer-than-32-characters';
     process.env.AUTH_MAX_FAILED_LOGINS = '5';
     process.env.AUTH_LOCKOUT_MINUTES = '15';
+    delete process.env.ENABLED_HOSPITAL_CODES;
+    delete process.env.ACTIVE_HOSPITAL_CODE;
     startLogin.mockReset();
     startLogin.mockImplementation(
       async ({ password }: { password: string }) => {
@@ -106,5 +108,17 @@ describe('AuthService per-account lockout', () => {
       await attempt(service, `wrong-${i}`).catch(() => undefined);
     jest.setSystemTime(new Date('2026-10-17T08:16:00Z'));
     await expect(attempt(service, GOOD)).resolves.toBeDefined();
+  });
+
+  it('refuses hospitals that are not enabled, without counting it as a failed password', async () => {
+    process.env.ENABLED_HOSPITAL_CODES = 'HOSP-01'; // the mocked hospital is HOSP-A
+    const service = new AuthService();
+    for (let i = 0; i < 6; i += 1) {
+      const error = (await attempt(service, GOOD).catch((e: unknown) => e)) as HttpException;
+      expect(error).toBeInstanceOf(UnauthorizedException);
+      expect(error.getResponse()).toMatchObject({ code: 'HOSPITAL_NOT_ENABLED' });
+    }
+    process.env.ENABLED_HOSPITAL_CODES = 'HOSP-01,HOSP-A';
+    await expect(attempt(service, GOOD)).resolves.toMatchObject({ hospitalId: 'hospital-a' });
   });
 });

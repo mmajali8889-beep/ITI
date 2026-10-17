@@ -17,6 +17,7 @@ import type { Basic } from '@medplum/fhirtypes';
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import type { AuthSession } from './auth.types';
 import { PERMISSIONS_EXTENSION, permissionsForRoles } from './permissions';
+import { isHospitalEnabled } from '../hospitals/enabled-hospitals';
 
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const REMEMBERED_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -309,9 +310,11 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       const hospitalCode = hospital.identifier?.find(
         (identifier) => identifier.system === 'https://hospital-ehr.local/organization-code',
       )?.value;
-      const activeHospitalCode = process.env.ACTIVE_HOSPITAL_CODE ?? 'HOSP-A';
-      if (hospitalCode?.toUpperCase() !== activeHospitalCode.toUpperCase()) {
-        throw new UnauthorizedException(`Only ${activeHospitalCode} is enabled in this rollout phase`);
+      if (!isHospitalEnabled(hospitalCode)) {
+        throw new UnauthorizedException({
+          message: 'Sign-in is not enabled for this hospital yet',
+          code: 'HOSPITAL_NOT_ENABLED',
+        });
       }
 
       const practitionerRoles = profile.resourceType === 'Practitioner' && profile.id !== 'development-admin'

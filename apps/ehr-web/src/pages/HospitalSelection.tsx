@@ -25,6 +25,15 @@ const BENEFITS = [
 
 const HERO_SLIDES = [hospitalSlideOne, hospitalSlideTwo, hospitalSlideThree];
 
+// Convenience only: pre-selects the hospital this browser last signed in to.
+const LAST_HOSPITAL_KEY = 'lastSignInHospitalId';
+function readLastHospitalId(): string | null {
+  try { return localStorage.getItem(LAST_HOSPITAL_KEY); } catch { return null; }
+}
+function rememberLastHospitalId(id: string): void {
+  try { localStorage.setItem(LAST_HOSPITAL_KEY, id); } catch { /* storage unavailable */ }
+}
+
 export default function HospitalSelection() {
   const navigate = useNavigate();
   const { selectHospital } = useHospital();
@@ -39,15 +48,26 @@ export default function HospitalSelection() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // Separate from sign-in errors: only a failure to load hospitals locks the selector.
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     getHospitals()
       .then((data) => {
-        const activeHospital = data.find((hospital) => hospital.code?.toUpperCase() === 'HOSP-A') ?? data[0];
-        setHospitals(activeHospital ? [activeHospital] : []);
-        setHospitalId(activeHospital?.id ?? '');
+        // The server decides which hospitals are open for sign-in in this rollout.
+        const enabled = data.filter((hospital) => hospital.signInEnabled !== false);
+        setHospitals(enabled);
+        if (enabled.length === 0) {
+          setLoadError('No hospital is open for sign-in yet. Contact your administrator.');
+          return;
+        }
+        // Pre-select the last hospital used, or the only one; with several,
+        // make the user choose so nobody signs in to the wrong hospital.
+        const last = readLastHospitalId();
+        const preselected = enabled.find((hospital) => hospital.id === last) ?? (enabled.length === 1 ? enabled[0] : undefined);
+        setHospitalId(preselected?.id ?? '');
       })
-      .catch(() => setError('Unable to connect to the HP1 clinical gateway.'))
+      .catch(() => setLoadError('Unable to connect to the HP1 clinical gateway.'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -74,6 +94,7 @@ export default function HospitalSelection() {
       const authenticatedSession = await login({ hospitalId, username, password, remember });
       setAuthenticatedSession(authenticatedSession);
       selectHospital(hospital);
+      rememberLastHospitalId(hospital.id);
       navigate(authenticatedSession.user.resourceType === 'Patient' ? `/portal/${hospital.id}/${authenticatedSession.user.id}` : `/hospital/${hospital.id}/dashboard`);
     } catch (loginError) {
       const message = (loginError as { response?: { data?: { message?: string } } })
@@ -151,8 +172,8 @@ export default function HospitalSelection() {
             <span>Hospital</span>
             <span className="login-control">
               <Building2 size={19} />
-              <select value={hospitalId} onChange={(event) => setHospitalId(event.target.value)} disabled={loading || !!error}>
-                <option value="">{loading ? 'Loading hospitals…' : error ? 'HP1 unavailable' : 'Select Hospital'}</option>
+              <select value={hospitalId} onChange={(event) => setHospitalId(event.target.value)} disabled={loading || !!loadError}>
+                <option value="">{loading ? 'Loading hospitals…' : loadError ? 'HP1 unavailable' : 'Select Hospital'}</option>
                 {hospitals.map((hospital) => <option key={hospital.id} value={hospital.id}>{hospital.name}</option>)}
               </select>
             </span>
@@ -179,7 +200,7 @@ export default function HospitalSelection() {
             <button type="button">Forgot Password?</button>
           </div>
 
-          {error && <p className="login-error">{error}</p>}
+          {(loadError || error) && <p className="login-error">{loadError || error}</p>}
           <button className="login-submit" type="submit" disabled={!hospitalId || !username || !password || signingIn}><LogIn size={21} /> {signingIn ? 'Signing In…' : 'Sign In'}</button>
 
           <footer className="login-security">

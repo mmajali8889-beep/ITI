@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { MedplumService } from '../medplum/medplum.service';
+import { isHospitalEnabled } from './enabled-hospitals';
 
 @Injectable()
 export class HospitalsService {
@@ -30,16 +31,20 @@ export class HospitalsService {
           ),
         ),
       )
-      .map((hospital) => ({
-        id: hospital.id,
-
-        name: hospital.name,
-
-        code: hospital.identifier?.find(
+      .map((hospital) => {
+        const code = hospital.identifier?.find(
           (identifier) =>
             identifier.system ===
             'https://hospital-ehr.local/organization-code',
-        )?.value,
-      }));
+        )?.value;
+
+        return {
+          id: hospital.id,
+          name: hospital.name,
+          code,
+          // Whether users may sign in to this hospital in the current rollout.
+          signInEnabled: isHospitalEnabled(code),
+        };
+      });
   }
 }
