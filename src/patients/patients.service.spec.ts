@@ -29,7 +29,7 @@ describe('PatientsService registration workflow', () => {
     medplum.createResourceIfNoneExist.mockImplementation(async (resource) => ({ ...resource, id: 'mrn-counter-1', meta: { versionId: '1' } }));
     medplum.updateResource.mockImplementation(async (resource) => ({ ...resource, meta: { versionId: '2' } }));
     const module: TestingModule = await Test.createTestingModule({ providers: [PatientsService,
-      { provide: MedplumService, useValue: { getClient: () => medplum } }] }).compile();
+      { provide: MedplumService, useValue: { getClient: () => medplum, updateIfUnchanged: (r: unknown) => medplum.updateResource(r) } }] }).compile();
     service = module.get(PatientsService);
   });
 

@@ -176,7 +176,8 @@ export class BedManagementService {
               : 'O',
       display: state,
     };
-    return this.map(await this.medplumService.getClient().updateResource(bed));
+    // Guarded so two requests cannot both move the same bed (e.g. two admissions).
+    return this.map(await this.medplumService.updateIfUnchanged(bed));
   }
   private async read(id: string, hospitalId: string) {
     let b: Location;

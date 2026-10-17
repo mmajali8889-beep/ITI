@@ -84,6 +84,7 @@ import { RolesGuard } from './auth/roles.guard';
 import { InventoryModule } from './inventory/inventory.module';
 import { PatientJourneyModule } from './patient-journey/patient-journey.module';
 import { PermissionsGuard } from './auth/permissions.guard';
+import { HospitalScopeGuard } from './auth/hospital-scope.guard';
 
 @Module({
   imports: [
@@ -160,6 +161,10 @@ import { PermissionsGuard } from './auth/permissions.guard';
     {
       provide: APP_GUARD,
       useClass: PermissionsGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: HospitalScopeGuard,
     },
     {
       provide: APP_FILTER,

@@ -1,8 +1,11 @@
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { isMedplumRateLimitError } from '../medplum/medplum-rate-limit.filter';
 import { MedplumClient, getDisplayString } from '@medplum/core';
 import type { ProfileResource } from '@medplum/core';
 import { createHmac, timingSafeEqual } from 'node:crypto';
@@ -218,6 +221,11 @@ export class AuthService {
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;
+      }
+      // Medplum throttles sign-in attempts per client address. Report that as
+      // such, or staff are told their (correct) password is wrong.
+      if (isMedplumRateLimitError(error)) {
+        throw new HttpException({ message: 'Too many sign-in attempts from this network; wait a few minutes and try again', code: 'SIGN_IN_THROTTLED' }, HttpStatus.TOO_MANY_REQUESTS);
       }
       throw new UnauthorizedException('Invalid username or password, or hospital access is not permitted');
     }

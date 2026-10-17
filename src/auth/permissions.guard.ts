@@ -9,6 +9,8 @@ const ROUTE_PERMISSIONS: Record<string, string> = {
   inpatient: 'inpatient', nursing: 'nursing', 'inpatient-rounds': 'rounds', surgery: 'surgery', icu: 'icu', consultations: 'consultations',
   'bed-management': 'bed-management', discharge: 'discharge', billing: 'billing', financial: 'billing', 'medical-records': 'medical-records',
   inventory: 'inventory', administration: 'administration', audit: 'administration',
+  // Hospital-wide clinical, financial and HIM totals; the dashboard tolerates a 403 here.
+  analytics: 'administration',
 };
 
 @Injectable()

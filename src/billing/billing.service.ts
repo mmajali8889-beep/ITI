@@ -7,7 +7,7 @@ import { AdjudicateClaimDto, BillableCategory, CaptureEncounterChargesDto, Creat
 const BASE = 'https://hospital-ehr.local/fhir/StructureDefinition';
 const HOSPITAL = `${BASE}/billing-hospital`, ENCOUNTER = `${BASE}/billing-encounter`, PAID = `${BASE}/invoice-paid`, BALANCE = `${BASE}/invoice-balance`, METHOD = `${BASE}/payment-method`, SOURCE = `${BASE}/charge-source`, CLAIM_INVOICE = `${BASE}/claim-invoice`;
 const TARIFF_CATEGORY=`${BASE}/tariff-category`;
-const CLAIM_OUTCOME=`${BASE}/claim-outcome`,RECEIPT=`${BASE}/receipt-number`;
+const CLAIM_OUTCOME=`${BASE}/claim-outcome`,CLAIM_PENDING=`${BASE}/claim-adjudication-pending`,RECEIPT=`${BASE}/receipt-number`;
 
 @Injectable()
 export class BillingService {
@@ -50,13 +50,30 @@ export class BillingService {
     if (updatedPaid > total) throw new ConflictException('Payment exceeds the outstanding invoice balance');
     const receiptNumber=`RCT-${randomUUID().slice(0,8).toUpperCase()}`;
     const reconciliation: PaymentReconciliation = { resourceType: 'PaymentReconciliation', status: 'active', created: new Date().toISOString(), outcome: 'complete', paymentDate: new Date().toISOString().slice(0, 10), paymentAmount: { value: dto.amount, currency }, paymentIdentifier: { system: `https://hospital-ehr.local/payment/${dto.hospitalId}`, value: dto.reference.trim() }, requestor: { reference: `Organization/${dto.hospitalId}` }, extension: [{ url: HOSPITAL, valueReference: { reference: `Organization/${dto.hospitalId}` } }, { url: METHOD, valueCode: dto.method }, { url: RECEIPT, valueString:receiptNumber }, { url: `${BASE}/payment-invoice`, valueReference: { reference: `Invoice/${invoiceId}` } }] };
-    const payment = await this.medplumService.getClient().createResource<PaymentReconciliation>(reconciliation);
-    const notice: PaymentNotice = { resourceType: 'PaymentNotice', status: 'active', created: new Date().toISOString(), request: { reference: `Invoice/${invoiceId}` }, provider: { reference: `Organization/${dto.hospitalId}` }, payment: { reference: `PaymentReconciliation/${payment.id}` }, paymentDate: reconciliation.paymentDate, recipient: { reference: `Organization/${dto.hospitalId}` }, amount: reconciliation.paymentAmount, paymentStatus: { text: 'Cleared' }, extension: [{ url: HOSPITAL, valueReference: { reference: `Organization/${dto.hospitalId}` } }] };
-    await this.medplumService.getClient().createResource<PaymentNotice>(notice);
+    // Reserve the payment on the invoice first with a guarded update: a parallel
+    // payment that read the same balance loses here instead of paying twice.
     invoice.extension = [...(invoice.extension ?? []).filter((item) => ![PAID, BALANCE].includes(item.url)), { url: PAID, valueMoney: { value: updatedPaid, currency } }, { url: BALANCE, valueMoney: { value: total - updatedPaid, currency } }];
     if (updatedPaid === total) invoice.status = 'balanced';
-    const updated = await this.medplumService.getClient().updateResource<Invoice>(invoice);
+    const updated = await this.medplumService.updateIfUnchanged<Invoice>(invoice);
+    let payment: PaymentReconciliation;
+    try {
+      payment = await this.medplumService.getClient().createResource<PaymentReconciliation>(reconciliation);
+      const notice: PaymentNotice = { resourceType: 'PaymentNotice', status: 'active', created: new Date().toISOString(), request: { reference: `Invoice/${invoiceId}` }, provider: { reference: `Organization/${dto.hospitalId}` }, payment: { reference: `PaymentReconciliation/${payment.id}` }, paymentDate: reconciliation.paymentDate, recipient: { reference: `Organization/${dto.hospitalId}` }, amount: reconciliation.paymentAmount, paymentStatus: { text: 'Cleared' }, extension: [{ url: HOSPITAL, valueReference: { reference: `Organization/${dto.hospitalId}` } }] };
+      await this.medplumService.getClient().createResource<PaymentNotice>(notice);
+    } catch (error) {
+      await this.releasePayment(invoiceId, dto.hospitalId, dto.amount).catch(() => undefined);
+      throw error;
+    }
     return { invoice: this.mapInvoice(updated), paymentId: payment.id, receiptNumber, amount: dto.amount, method: dto.method, reference: dto.reference };
+  }
+
+  /** Undoes a reserved payment when its receipt could not be recorded. */
+  private async releasePayment(invoiceId: string, hospitalId: string, amount: number) {
+    const invoice = await this.invoice(invoiceId, hospitalId);
+    const currency = invoice.totalGross?.currency ?? 'SAR', total = invoice.totalGross?.value ?? 0, paid = Math.max(0, this.money(invoice, PAID) - amount);
+    invoice.extension = [...(invoice.extension ?? []).filter((item) => ![PAID, BALANCE].includes(item.url)), { url: PAID, valueMoney: { value: paid, currency } }, { url: BALANCE, valueMoney: { value: total - paid, currency } }];
+    invoice.status = 'issued';
+    await this.medplumService.updateIfUnchanged<Invoice>(invoice);
   }
 
   async submitClaim(dto: SubmitClaimDto) {
@@ -76,12 +93,21 @@ export class BillingService {
     this.required(dto, ['hospitalId', 'outcome', 'adjudicationReference']);
     if (!['complete', 'partial', 'error'].includes(dto.outcome) || !Number.isFinite(dto.approvedAmount) || dto.approvedAmount < 0) throw new BadRequestException('Invalid adjudication');
     if (dto.outcome === 'error' && !dto.denialReason?.trim()) throw new BadRequestException('Denial reason is required');
-    const claim = await this.claim(claimId, dto.hospitalId);
+    let claim = await this.claim(claimId, dto.hospitalId);
     // The claim-outcome extension is written last and marks the adjudication as committed. A ClaimResponse
     // without it means an earlier attempt stopped part way (for example the insurance payment failed), so a
     // retry with the same details resumes from there instead of being rejected.
     if (this.ext(claim, CLAIM_OUTCOME)) throw new ConflictException('Claim is already adjudicated');
     const reference = dto.adjudicationReference.trim(), currency: NonNullable<Money['currency']> = claim.total?.currency ?? 'SAR';
+    // Claim the adjudication with a guarded update before doing any work, so of
+    // two parallel requests only one proceeds; the other gets a 409.
+    const pending = this.ext(claim, CLAIM_PENDING);
+    if (pending) {
+      const prior = JSON.parse(pending) as { outcome: string; approvedAmount: number; reference: string };
+      if (prior.outcome !== dto.outcome || prior.reference !== reference || prior.approvedAmount !== dto.approvedAmount) throw new ConflictException('Claim has an unfinished adjudication with different details; retry with the original outcome, amount and reference');
+    }
+    claim.extension = [...(claim.extension ?? []).filter((e) => e.url !== CLAIM_PENDING), { url: CLAIM_PENDING, valueString: JSON.stringify({ outcome: dto.outcome, approvedAmount: dto.approvedAmount, reference, at: new Date().toISOString() }) }];
+    claim = await this.medplumService.updateIfUnchanged<Claim>(claim);
     const responses = (await this.medplumService.getClient().searchResources('ClaimResponse', { request: `Claim/${claimId}`, _count: '20' })).filter((item) => this.hospitalId(item) === dto.hospitalId);
     let responseId: string | undefined;
     if (responses.length) {
@@ -93,8 +119,8 @@ export class BillingService {
       responseId = (await this.medplumService.getClient().createResource<ClaimResponse>(response)).id;
     }
     const reconciledInvoice = dto.approvedAmount > 0 ? await this.reconcileInsurancePayment(this.ext(claim, CLAIM_INVOICE)!, dto.hospitalId, dto.approvedAmount, currency, reference) : undefined;
-    claim.extension=[...(claim.extension??[]).filter(e=>e.url!==CLAIM_OUTCOME),{url:CLAIM_OUTCOME,valueString:JSON.stringify({outcome:dto.outcome,approvedAmount:dto.approvedAmount,denialReason:dto.denialReason,responseId,at:new Date().toISOString()})}];
-    await this.medplumService.getClient().updateResource(claim);
+    claim.extension=[...(claim.extension??[]).filter(e=>e.url!==CLAIM_OUTCOME&&e.url!==CLAIM_PENDING),{url:CLAIM_OUTCOME,valueString:JSON.stringify({outcome:dto.outcome,approvedAmount:dto.approvedAmount,denialReason:dto.denialReason,responseId,at:new Date().toISOString()})}];
+    claim = await this.medplumService.updateIfUnchanged<Claim>(claim);
     return { claim: this.mapClaim(claim), responseId, outcome: dto.outcome, approvedAmount: dto.approvedAmount, denialReason: dto.denialReason,invoice:reconciledInvoice };
   }
 

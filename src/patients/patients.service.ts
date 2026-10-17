@@ -20,7 +20,7 @@ import type {
   Basic,
 } from '@medplum/fhirtypes';
 
-import { MedplumService } from '../medplum/medplum.service';
+import { MedplumService, isVersionConflict } from '../medplum/medplum.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
 
 export interface DuplicateCheckOptions {
@@ -701,14 +701,17 @@ export class PatientsService {
       extension: [{ url: MRN_SEQUENCE_VALUE_URL, valueInteger: seed }],
     }, query);
 
-    for (let attempt = 0; attempt < 8; attempt += 1) {
+    // Compare-and-swap on the counter's version: a parallel registration that
+    // wins the race makes ours fail with a version conflict, and we retry.
+    const attempts = 20;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
       const current = counter.extension?.find(
         (extension) => extension.url === MRN_SEQUENCE_VALUE_URL,
       )?.valueInteger ?? 0;
       const next = Math.max(current, seed) + 1;
 
       try {
-        counter = await client.updateResource<Basic>({
+        counter = await this.medplumService.updateIfUnchanged<Basic>({
           ...counter,
           extension: [
             ...(counter.extension ?? []).filter(
@@ -719,7 +722,8 @@ export class PatientsService {
         });
         return `${hospitalCode}-${String(next).padStart(6, '0')}`;
       } catch (error) {
-        if (!counter.id || !this.isVersionConflict(error) || attempt === 7) throw error;
+        if (!counter.id || !isVersionConflict(error) || attempt === attempts - 1) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 20 + Math.random() * 80));
         counter = await client.readResource('Basic', counter.id);
       }
     }
@@ -744,11 +748,6 @@ export class PatientsService {
     }, 0);
   }
 
-  private isVersionConflict(error: unknown): boolean {
-    if (!error || typeof error !== 'object') return false;
-    const candidate = error as { status?: number; response?: { status?: number } };
-    return candidate.status === 409 || candidate.response?.status === 409;
-  }
 
   private validateRegistrationLinks(dto: CreatePatientDto): void {
     if (dto.insurance) {

@@ -102,13 +102,15 @@ export class InpatientService {
     const { medplum, encounter, bed } = await this.validateAssignment(dto.hospitalId, dto.encounterId, dto.bedId, dto.patientId);
     if (!dto.admissionReason?.trim()) throw new BadRequestException('Admission reason is required');
     await this.assertBedAvailable(dto.hospitalId, dto.bedId, dto.encounterId);
+    // Occupy the bed first: its guarded update lets only one of two racing
+    // admissions win, and the loser leaves the encounter untouched.
+    await this.bedManagement.updateState(dto.bedId, { hospitalId: dto.hospitalId, state: 'occupied', actorName: 'Admission Office', reason: dto.admissionReason, patientId: dto.patientId, encounterId: dto.encounterId });
     this.closeActiveLocations(encounter);
     encounter.status = 'in-progress';
     encounter.class = { system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode', code: 'IMP', display: 'Inpatient Encounter' };
     encounter.location = [...(encounter.location ?? []), { location: { reference: `Location/${dto.bedId}`, display: bed.name }, status: 'active', period: { start: new Date().toISOString() } }];
     encounter.hospitalization = { ...encounter.hospitalization, admitSource: { text: dto.admissionReason.trim() } };
     const admitted = await medplum.updateResource<Encounter>(encounter);
-    await this.bedManagement.updateState(dto.bedId, { hospitalId: dto.hospitalId, state: 'occupied', actorName: 'Admission Office', reason: dto.admissionReason, patientId: dto.patientId, encounterId: dto.encounterId });
     admissionRequest.status = 'completed';
     admissionRequest.output = [{ type: { text: 'Assigned bed' }, valueReference: { reference: `Location/${dto.bedId}`, display: bed.name } }];
     await medplum.updateResource(admissionRequest);

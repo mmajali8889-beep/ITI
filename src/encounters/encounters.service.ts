@@ -11,6 +11,9 @@ import type { Encounter, Observation, Patient } from '@medplum/fhirtypes';
 
 import { MedplumService } from '../medplum/medplum.service';
 
+const VISIT_LOCK = 'https://hospital-ehr.local/fhir/StructureDefinition/visit-opening-lock';
+const VISIT_LOCK_TTL_MS = 15_000;
+
 import {
   CreateEncounterDto,
   ArrivalMode,
@@ -140,9 +143,15 @@ export class EncountersService {
       );
     }
 
+    // Serialize visit opening per patient: a short-lived lock on the Patient,
+    // taken with a guarded update, so parallel requests cannot all pass the
+    // "no active encounter" check below and each create a visit.
+    patient = await this.acquireVisitLock(patient);
+
     const existingEncounters = await medplum.searchResources('Encounter', {
       subject: `Patient/${dto.patientId}`,
-      _count: '20',
+      status: 'planned,arrived,triaged,in-progress,onleave',
+      _count: '100',
     });
     const activeEncounter = existingEncounters.find(
       (item) =>
@@ -319,8 +328,36 @@ export class EncountersService {
     // ===================================================
 
     const created = await medplum.createResource<Encounter>(encounter);
+    await this.releaseVisitLock(dto.patientId);
 
     return this.mapEncounter(created);
+  }
+
+  /**
+   * Takes the per-patient visit lock. The guarded update lets only one of
+   * several parallel requests through; a lock younger than VISIT_LOCK_TTL_MS
+   * means another visit is being opened right now. The TTL frees a lock left
+   * behind by a request that failed before releasing it.
+   */
+  private async acquireVisitLock(patient: Patient): Promise<Patient> {
+    const held = patient.extension?.find((item) => item.url === VISIT_LOCK)?.valueDateTime;
+    if (held && Date.now() - Date.parse(held) < VISIT_LOCK_TTL_MS) {
+      throw new ConflictException({ message: 'Another visit is being opened for this patient; try again shortly', code: 'VISIT_OPENING_IN_PROGRESS' });
+    }
+    return this.medplumService.updateIfUnchanged<Patient>({
+      ...patient,
+      extension: [...(patient.extension ?? []).filter((item) => item.url !== VISIT_LOCK), { url: VISIT_LOCK, valueDateTime: new Date().toISOString() }],
+    });
+  }
+
+  private async releaseVisitLock(patientId: string): Promise<void> {
+    const medplum = this.medplumService.getClient();
+    const patient = await medplum.readResource('Patient', patientId).catch(() => undefined);
+    if (!patient?.extension?.some((item) => item.url === VISIT_LOCK)) return;
+    await this.medplumService.updateIfUnchanged<Patient>({
+      ...patient,
+      extension: patient.extension.filter((item) => item.url !== VISIT_LOCK),
+    }).catch(() => undefined); // the TTL clears it if this loses a race
   }
 
   // =====================================================

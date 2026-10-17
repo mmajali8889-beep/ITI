@@ -19,7 +19,9 @@ export class AuditAnalyticsService {
   async events(hospitalId: string, limit = 100) {
     if (!hospitalId) throw new BadRequestException('Hospital ID is required');
     const count = Math.min(Math.max(Number(limit) || 100, 1), 500);
-    const all = await this.medplumService.getClient().searchResources('AuditEvent', { _count: String(count) });
+    // Scope and order on the server: fetching an unfiltered page and filtering it
+    // here silently drops a hospital's recent events once others have older ones.
+    const all = await this.medplumService.getClient().searchResources('AuditEvent', { source: `Organization/${hospitalId}`, _sort: '-date', _count: String(count) });
     const events = all.filter((item) => this.hospitalId(item) === hospitalId).sort((a, b) => b.recorded.localeCompare(a.recorded)).slice(0, count).map((item) => ({ id: item.id, recorded: item.recorded, action: item.action, outcome: item.outcome, outcomeDescription: item.outcomeDesc, actorId: item.agent[0]?.who?.reference, actorName: item.agent[0]?.name ?? item.agent[0]?.who?.display, route: this.extension(item.extension, ROUTE)?.valueString, statusCode: this.extension(item.extension, HTTP_STATUS)?.valueInteger, durationMs: this.extension(item.extension, DURATION)?.valueInteger }));
     return { hospitalId, total: events.length, events };
   }

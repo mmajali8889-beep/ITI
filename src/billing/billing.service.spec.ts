@@ -15,7 +15,7 @@ describe('BillingService', () => {
     medplum.readResource.mockImplementation(async (type: string) => type === 'Encounter' ? encounter : type === 'Invoice' ? structuredClone(invoice) : type === 'Coverage' ? coverage : { resourceType: 'Claim', id: 'claim-1', status: 'active', patient: { reference: 'Patient/patient-1' }, provider: { reference: 'Organization/hospital-a' }, insurance: [{ coverage: { reference: 'Coverage/coverage-1' } }], type: { text: 'Professional' }, use: 'claim', total: { value: 250, currency: 'SAR' }, extension: [billingHospital, { url: 'https://hospital-ehr.local/fhir/StructureDefinition/claim-invoice', valueString: 'invoice-1' }] });
     medplum.createResource.mockImplementation(async (resource) => ({ ...resource, id: `${resource.resourceType.toLowerCase()}-1` }));
     medplum.updateResource.mockImplementation(async (resource) => resource);
-    service = new BillingService({ getClient: () => medplum } as never);
+    service = new BillingService({ getClient: () => medplum, updateIfUnchanged: (r: unknown) => medplum.updateResource(r) } as never);
   });
 
   it('captures a priced charge only after financial classification', async () => {
@@ -65,7 +65,9 @@ describe('BillingService', () => {
       return { ...resource, id: `${resource.resourceType.toLowerCase()}-1` };
     });
     await expect(service.adjudicate('claim-1', dto)).rejects.toThrow('Too Many Requests');
-    expect(medplum.updateResource).not.toHaveBeenCalledWith(expect.objectContaining({ resourceType: 'Claim' }));
+    // The claim carries only the in-progress marker: the failed attempt must not commit an outcome.
+    expect(medplum.updateResource).not.toHaveBeenCalledWith(expect.objectContaining({ resourceType: 'Claim', extension: expect.arrayContaining([expect.objectContaining({ url: 'https://hospital-ehr.local/fhir/StructureDefinition/claim-outcome' })]) }));
+    expect(medplum.updateResource).toHaveBeenCalledWith(expect.objectContaining({ resourceType: 'Claim', extension: expect.arrayContaining([expect.objectContaining({ url: 'https://hospital-ehr.local/fhir/StructureDefinition/claim-adjudication-pending' })]) }));
 
     const savedResponse = medplum.createResource.mock.calls.map(([resource]) => resource).find((resource) => resource.resourceType === 'ClaimResponse');
     medplum.createResource.mockReset();

@@ -482,7 +482,9 @@ async function main() {
   // Isolation rule: the main encounter must not be readable from the other hospital.
   console.log('\nIsolation');
   await step('ISO', 'Cross-hospital read is refused', async () => {
-    const other = (await get('/hospitals')).find((h) => h.id !== ctx.hospitalId);
+    const hospitals = await get('/hospitals');
+    const otherCode = process.env.HP1_OTHER_HOSPITAL_CODE;
+    const other = otherCode ? hospitals.find((h) => h.code === otherCode) : hospitals.find((h) => h.id !== ctx.hospitalId);
     if (!other) throw new Error('no second hospital to test with');
     try {
       await get(`/encounters/${ctx.encounterId}`, { hospitalId: other.id });

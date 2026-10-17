@@ -13,6 +13,10 @@ export class HospitalsService {
     const organizations =
       await medplum.searchResources('Organization', {
         active: 'true',
+        // Filter server-side: departments are Organizations too, and the
+        // default page size (20) would otherwise drop hospitals.
+        type: 'https://hospital-ehr.local/organization-type|hospital',
+        _count: '200',
       });
 
     return organizations
