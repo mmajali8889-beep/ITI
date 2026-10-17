@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  hospital-api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/hospital-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/hospital-api/package-lock.json
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit -p tsconfig.json
+      - name: Unit tests
+        run: npm test -- --ci
+      # app.e2e-spec boots the whole app and needs a live Medplum, so only the
+      # static workflow acceptance contract runs here.
+      - name: Workflow acceptance contract
+        run: npx jest --config ./test/jest-e2e.json --ci hp1-workflow
+      # ESLint is not enforced yet: the backend has existing lint errors, and its
+      # npm "lint" script runs with --fix. See docs/ROADMAP.md.
+
+  ehr-web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/ehr-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/ehr-web/package-lock.json
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck and build
+        run: npm run build

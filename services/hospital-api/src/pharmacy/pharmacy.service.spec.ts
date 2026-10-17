@@ -36,7 +36,7 @@ describe('PharmacyService', () => {
     medplum.readResource.mockResolvedValueOnce(rx);
     medplum.searchResources.mockImplementation(async (type:string) => type==='MedicationRequest'?[rx]:type==='Medication'?[stock]:[]);
     await service.dispense({ hospitalId:'hospital-a', medicationRequestId:'rx-1', quantity:10, pharmacistName:'Pharmacist', counselingProvided:true });
-    expect(stock.extension.find(item=>item.url.endsWith('stock-quantity'))?.valueInteger).toBe(10);
+    expect((stock.extension.find(item=>item.url.endsWith('stock-quantity')) as { valueInteger?: number } | undefined)?.valueInteger).toBe(10);
     expect(rx.status).toBe('completed');
   });
 

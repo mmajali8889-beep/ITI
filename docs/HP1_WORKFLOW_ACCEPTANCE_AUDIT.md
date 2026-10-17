@@ -80,7 +80,7 @@ All test patients are synthetic, named `UAT-…`/`Run<runId>`, and were created 
 
 ### Known limits and residual risks
 
-- **Sign-in throttling is per client address (Medplum).** Behind a shared hospital NAT, one user's repeated failures can briefly block sign-in for others on that network. Consider per-account lockout, or allow-listing internal addresses at the Medplum layer, before go-live. The exact threshold was not measured: earlier test runs had already used up the budget for this address.
+- **Sign-in throttling is per client address (Medplum).** Behind a shared hospital NAT, one user's repeated failures can briefly block sign-in for others on that network. The exact threshold was not measured: earlier test runs had already used up the budget for this address. *Update 2026-10-17:* the API now locks the individual account after 5 failed sign-ins (15 minutes, 423 `ACCOUNT_LOCKED`), so an attacker is stopped before Medplum's per-address limit. Allow-listing internal addresses at the Medplum layer remains advisable (see `docs/ROADMAP.md` 24.1 and 24.4).
 - **Medplum rate limit (about 50,000 points per minute):** the API now returns 503 rather than 500; the UAT scripts pace themselves (`HP1_STEP_DELAY_MS`).
 - **Single active hospital per API instance** (`ACTIVE_HOSPITAL_CODE`), so cross-hospital tests use one signed-in hospital and a foreign record set.
 - **The patient-portal login path** (a Patient profile session) was not exercised live; it is covered by the controller rule and the frontend route guard.

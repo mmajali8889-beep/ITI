@@ -234,15 +234,18 @@ async function main() {
   // ---- 5. Brute force (last: tripping Medplum's per-address sign-in throttle
   // blocks every further login from this machine for a while) ----------------
   console.log('\nBrute force');
-  { const attacker = new Actor('attacker'); const statuses = [];
+  // A random, nonexistent username: the lockout applies to any name (no account
+  // enumeration) and no real test account gets locked.
+  { const attacker = new Actor('attacker'); const statuses = []; const probeUser = `uat-bruteforce-${randomBytes(4).toString('hex')}`;
     for (let i = 0; i < 40; i += 1) {
-      const r = await attacker.request('POST', '/auth/login', { body: { hospitalId: H, username: users[H].cashier.username, password: `wrong-${i}`, remember: false } });
+      const r = await attacker.request('POST', '/auth/login', { body: { hospitalId: H, username: probeUser, password: `wrong-${i}`, remember: false } });
       statuses.push(r.status);
-      if (r.status === 429) break;
+      if (r.status === 429 || r.status === 423) break;
     }
-    const throttledAt = statuses.indexOf(429);
-    record('authn', 'Repeated failed sign-ins are throttled', throttledAt >= 0, `${statuses.length} attempts -> ${[...new Set(statuses)].join(',')}${throttledAt >= 0 ? ` (429 after ${throttledAt} failures)` : ''}`, 'medium');
-    record('authn', 'Throttling is reported as 429, not as a wrong password', throttledAt >= 0, 'throttled sign-ins must not say "invalid username or password"', 'medium'); }
+    // 423 = the API's per-account lockout; 429 = Medplum's per-address throttle.
+    const throttledAt = statuses.findIndex((s) => s === 423 || s === 429);
+    record('authn', 'Repeated failed sign-ins are throttled', throttledAt >= 0, `${statuses.length} attempts -> ${[...new Set(statuses)].join(',')}${throttledAt >= 0 ? ` (${statuses[throttledAt]} after ${throttledAt} failures)` : ''}`, 'medium');
+    record('authn', 'Lockout/throttling is reported as 423/429, not as a wrong password', throttledAt >= 0, 'throttled sign-ins must not say "invalid username or password"', 'medium'); }
 
   // ---- Summary -----------------------------------------------------------------
   const fails = results.filter((r) => r.status === 'FAIL');

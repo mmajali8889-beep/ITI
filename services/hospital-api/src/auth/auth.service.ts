@@ -19,6 +19,39 @@ const REMEMBERED_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 export class AuthService {
   private readonly sessions = new Map<string, AuthSession>();
   private readonly revokedSessions = new Set<string>();
+  // Per-account brute-force protection, keyed by hospital and username. Medplum
+  // only throttles per client address, which behind a hospital NAT blocks
+  // everyone at once. In-memory: one API instance; use a shared store to scale out.
+  private readonly failedLogins = new Map<string, { count: number; firstAt: number; lockedUntil?: number }>();
+  private readonly maxFailedLogins = Number(process.env.AUTH_MAX_FAILED_LOGINS ?? 5);
+  private readonly lockoutMs = Number(process.env.AUTH_LOCKOUT_MINUTES ?? 15) * 60 * 1000;
+
+  private assertNotLocked(key: string): void {
+    const entry = this.failedLogins.get(key);
+    if (!entry?.lockedUntil) return;
+    const remainingMs = entry.lockedUntil - Date.now();
+    if (remainingMs <= 0) {
+      this.failedLogins.delete(key);
+      return;
+    }
+    throw new HttpException({
+      message: 'This account is temporarily locked after repeated failed sign-ins; try again later or ask an administrator',
+      code: 'ACCOUNT_LOCKED',
+      retryAfterSeconds: Math.ceil(remainingMs / 1000),
+    }, HttpStatus.LOCKED);
+  }
+
+  private recordFailedLogin(key: string): void {
+    const now = Date.now();
+    for (const [k, v] of this.failedLogins) {
+      if ((v.lockedUntil ?? v.firstAt + this.lockoutMs) < now) this.failedLogins.delete(k);
+    }
+    const entry = this.failedLogins.get(key);
+    const current = entry && now - entry.firstAt < this.lockoutMs ? entry : { count: 0, firstAt: now };
+    current.count += 1;
+    if (current.count >= this.maxFailedLogins) current.lockedUntil = now + this.lockoutMs;
+    this.failedLogins.set(key, current);
+  }
   private readonly sessionSecret = this.getSessionSecret();
 
   private getSessionSecret(): string {
@@ -140,6 +173,9 @@ export class AuthService {
       throw new BadRequestException('Hospital, username, and password are required');
     }
 
+    const lockKey = `${hospitalId}:${username.toLowerCase()}`;
+    this.assertNotLocked(lockKey);
+
     const client = new MedplumClient({
       baseUrl: process.env.MEDPLUM_BASE_URL,
       clientId: process.env.MEDPLUM_CLIENT_ID,
@@ -217,6 +253,7 @@ export class AuthService {
       };
 
       this.sessions.set(session.id, session);
+      this.failedLogins.delete(lockKey);
       return session;
     } catch (error) {
       if (error instanceof UnauthorizedException) {
@@ -227,6 +264,7 @@ export class AuthService {
       if (isMedplumRateLimitError(error)) {
         throw new HttpException({ message: 'Too many sign-in attempts from this network; wait a few minutes and try again', code: 'SIGN_IN_THROTTLED' }, HttpStatus.TOO_MANY_REQUESTS);
       }
+      this.recordFailedLogin(lockKey);
       throw new UnauthorizedException('Invalid username or password, or hospital access is not permitted');
     }
   }
