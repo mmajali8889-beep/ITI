@@ -10,36 +10,38 @@ import {
 } from './context/HospitalContext';
 import { AuthProvider } from './context/AuthContext';
 
+import HospitalSelection from './pages/HospitalSelection';
+import HospitalLayout from './components/HospitalLayout';
+import ProtectedHospitalRoute from './components/ProtectedHospitalRoute';
+import { lazyPage } from './lazy-page';
+
 import './styles/modern-2026.css';
 
-import HospitalSelection from './pages/HospitalSelection';
-import Dashboard from './pages/Dashboard';
-import PatientAccessPage from './pages/PatientAccessPage';
-import PatientRegistrationPage from './pages/PatientRegistrationPage';
-import PatientLaboratoryWorkspace from './pages/PatientLaboratoryWorkspace';
-import PatientMedicationWorkspace from './pages/PatientMedicationWorkspace';
-import PatientProfile from './pages/PatientProfile';
-import EncounterWorkspace from './pages/EncounterWorkspace';
-import RadiologyWorklistPage from './components/RadiologyWorklistPage';
-import RadiologyStationsPage from './components/RadiologyStationsPage';
-import HospitalLayout from './components/HospitalLayout';
-import InpatientBedBoard from './pages/InpatientBedBoard';
-import ProtectedHospitalRoute from './components/ProtectedHospitalRoute';
-import AppointmentsPage from './pages/AppointmentsPage';
-import EmergencyBoard from './pages/EmergencyBoard';
-import PharmacyPage from './pages/PharmacyPage';
-import NursingWardPage from './pages/NursingWardPage';
-import InpatientRoundsPage from './pages/InpatientRoundsPage';
-import SurgeryTheatrePage from './pages/SurgeryTheatrePage';
-import IcuDashboardPage from './pages/IcuDashboardPage';
-import ConsultationsPage from './pages/ConsultationsPage';
-import BedManagementPage from './pages/BedManagementPage';
-import DischargePage from './pages/DischargePage';
-import BillingPage from './pages/BillingPage';
-import MedicalRecordsPage from './pages/MedicalRecordsPage';
-import PatientPortalPage from './pages/PatientPortalPage';
-import AdministrationPage from './pages/AdministrationPage';
-import InventoryPage from './pages/InventoryPage';
+const Dashboard = lazyPage(() => import('./pages/Dashboard'));
+const PatientAccessPage = lazyPage(() => import('./pages/PatientAccessPage'));
+const PatientRegistrationPage = lazyPage(() => import('./pages/PatientRegistrationPage'));
+const PatientLaboratoryWorkspace = lazyPage(() => import('./pages/PatientLaboratoryWorkspace'));
+const PatientMedicationWorkspace = lazyPage(() => import('./pages/PatientMedicationWorkspace'));
+const PatientProfile = lazyPage(() => import('./pages/PatientProfile'));
+const EncounterWorkspace = lazyPage(() => import('./pages/EncounterWorkspace'));
+const RadiologyWorklistPage = lazyPage(() => import('./components/RadiologyWorklistPage'));
+const RadiologyStationsPage = lazyPage(() => import('./components/RadiologyStationsPage'));
+const InpatientBedBoard = lazyPage(() => import('./pages/InpatientBedBoard'));
+const AppointmentsPage = lazyPage(() => import('./pages/AppointmentsPage'));
+const EmergencyBoard = lazyPage(() => import('./pages/EmergencyBoard'));
+const PharmacyPage = lazyPage(() => import('./pages/PharmacyPage'));
+const NursingWardPage = lazyPage(() => import('./pages/NursingWardPage'));
+const InpatientRoundsPage = lazyPage(() => import('./pages/InpatientRoundsPage'));
+const SurgeryTheatrePage = lazyPage(() => import('./pages/SurgeryTheatrePage'));
+const IcuDashboardPage = lazyPage(() => import('./pages/IcuDashboardPage'));
+const ConsultationsPage = lazyPage(() => import('./pages/ConsultationsPage'));
+const BedManagementPage = lazyPage(() => import('./pages/BedManagementPage'));
+const DischargePage = lazyPage(() => import('./pages/DischargePage'));
+const BillingPage = lazyPage(() => import('./pages/BillingPage'));
+const MedicalRecordsPage = lazyPage(() => import('./pages/MedicalRecordsPage'));
+const PatientPortalPage = lazyPage(() => import('./pages/PatientPortalPage'));
+const AdministrationPage = lazyPage(() => import('./pages/AdministrationPage'));
+const InventoryPage = lazyPage(() => import('./pages/InventoryPage'));
 
 function App() {
   return (
