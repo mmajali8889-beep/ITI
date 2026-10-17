@@ -18,6 +18,11 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import type { AuthSession } from './auth.types';
 import { PERMISSIONS_EXTENSION, permissionsForRoles } from './permissions';
 import { isHospitalEnabled } from '../hospitals/enabled-hospitals';
+import {
+  InMemoryLockoutStore,
+  MedplumLockoutStore,
+  type SignInLockoutStore,
+} from './sign-in-lockout.store';
 
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const REMEMBERED_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -46,11 +51,15 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
   // so a logout survives restarts and reaches other API instances on refresh.
   private readonly revokedTokenHashes = new Set<string>();
   private revocationRefresh?: NodeJS.Timeout;
+  private lockoutPurge?: NodeJS.Timeout;
   private readonly revocationRefreshMs =
     Number(process.env.AUTH_REVOCATION_REFRESH_SECONDS ?? 60) * 1000;
 
   constructor(@Optional() private readonly medplumService?: MedplumService) {
     assertDevAdminConfiguration();
+    this.lockoutStore = medplumService
+      ? new MedplumLockoutStore(medplumService)
+      : new InMemoryLockoutStore();
     if (this.devAdminEnabled()) {
       this.logger.warn(
         'Development admin login is ENABLED (AUTH_DEV_ADMIN_ENABLED=true); never use this outside local development',
@@ -69,10 +78,25 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       );
     }, this.revocationRefreshMs);
     this.revocationRefresh.unref?.();
+    // Hourly: drop sign-in failure records whose window and lock have expired.
+    this.lockoutPurge = setInterval(
+      () => {
+        this.lockoutStore
+          .purgeStale?.(this.lockoutMs)
+          .catch((error: unknown) =>
+            this.logger.warn(
+              `Purging sign-in failure records failed: ${String(error)}`,
+            ),
+          );
+      },
+      60 * 60 * 1000,
+    );
+    this.lockoutPurge.unref?.();
   }
 
   onModuleDestroy(): void {
     if (this.revocationRefresh) clearInterval(this.revocationRefresh);
+    if (this.lockoutPurge) clearInterval(this.lockoutPurge);
   }
 
   private hashToken(token: string): string {
@@ -142,23 +166,25 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
   }
   // Per-account brute-force protection, keyed by hospital and username. Medplum
   // only throttles per client address, which behind a hospital NAT blocks
-  // everyone at once. In-memory: one API instance; use a shared store to scale out.
-  private readonly failedLogins = new Map<
-    string,
-    { count: number; firstAt: number; lockedUntil?: number }
-  >();
+  // everyone at once. The counters live in Medplum (24.4), so they are shared
+  // by every API instance and survive restarts; memory is the fallback.
+  private readonly lockoutStore: SignInLockoutStore;
   private readonly maxFailedLogins = Number(
     process.env.AUTH_MAX_FAILED_LOGINS ?? 5,
   );
   private readonly lockoutMs =
     Number(process.env.AUTH_LOCKOUT_MINUTES ?? 15) * 60 * 1000;
 
-  private assertNotLocked(key: string): void {
-    const entry = this.failedLogins.get(key);
+  private async assertNotLocked(key: string): Promise<void> {
+    const entry = await this.lockoutStore.get(key).catch((error: unknown) => {
+      // If the store is unreachable, Medplum sign-in fails anyway; don't add a second error.
+      this.logger.warn(`Sign-in lockout check failed: ${String(error)}`);
+      return undefined;
+    });
     if (!entry?.lockedUntil) return;
     const remainingMs = entry.lockedUntil - Date.now();
     if (remainingMs <= 0) {
-      this.failedLogins.delete(key);
+      await this.lockoutStore.clear(key).catch(() => undefined);
       return;
     }
     throw new HttpException(
@@ -172,21 +198,25 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  private recordFailedLogin(key: string): void {
+  private async recordFailedLogin(key: string): Promise<void> {
     const now = Date.now();
-    for (const [k, v] of this.failedLogins) {
-      if ((v.lockedUntil ?? v.firstAt + this.lockoutMs) < now)
-        this.failedLogins.delete(k);
-    }
-    const entry = this.failedLogins.get(key);
-    const current =
-      entry && now - entry.firstAt < this.lockoutMs
-        ? entry
-        : { count: 0, firstAt: now };
-    current.count += 1;
-    if (current.count >= this.maxFailedLogins)
-      current.lockedUntil = now + this.lockoutMs;
-    this.failedLogins.set(key, current);
+    await this.lockoutStore
+      .update(key, (entry) => {
+        // Start a new window once the previous one (or its lock) has expired.
+        const current =
+          entry &&
+          now - entry.firstAt < this.lockoutMs &&
+          !(entry.lockedUntil && entry.lockedUntil <= now)
+            ? { ...entry }
+            : { count: 0, firstAt: now };
+        current.count += 1;
+        if (current.count >= this.maxFailedLogins)
+          current.lockedUntil = now + this.lockoutMs;
+        return current;
+      })
+      .catch((error: unknown) =>
+        this.logger.warn(`Could not record failed sign-in: ${String(error)}`),
+      );
   }
   private readonly sessionSecret = this.getSessionSecret();
 
@@ -324,7 +354,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     }
 
     const lockKey = `${hospitalId}:${username.toLowerCase()}`;
-    this.assertNotLocked(lockKey);
+    await this.assertNotLocked(lockKey);
 
     const client = new MedplumClient({
       baseUrl: process.env.MEDPLUM_BASE_URL,
@@ -448,7 +478,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       };
 
       this.sessions.set(session.id, session);
-      this.failedLogins.delete(lockKey);
+      await this.lockoutStore.clear(lockKey).catch(() => undefined);
       return session;
     } catch (error) {
       if (error instanceof UnauthorizedException) {
@@ -466,7 +496,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }
-      this.recordFailedLogin(lockKey);
+      await this.recordFailedLogin(lockKey);
       throw new UnauthorizedException(
         'Invalid username or password, or hospital access is not permitted',
       );
