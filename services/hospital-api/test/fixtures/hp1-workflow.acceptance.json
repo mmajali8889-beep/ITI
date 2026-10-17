@@ -1,0 +1,70 @@
+{
+  "scenarioId": "HP1-UAT-2026-001",
+  "hospital": {
+    "id": "hospital-one",
+    "code": "HP1",
+    "name": "مستشفى الاختبار الأول"
+  },
+  "patient": {
+    "hospitalId": "hospital-one",
+    "hospitalCode": "HP1",
+    "hospitalMrn": "HP1-UAT-000001",
+    "nationalId": "2999999999",
+    "firstNameAr": "مريض",
+    "familyNameAr": "اختبار القبول",
+    "firstNameEn": "Acceptance",
+    "familyNameEn": "Patient",
+    "gender": "male",
+    "birthDate": "1990-01-15",
+    "phone": "0500000001",
+    "preferredLanguage": "ar",
+    "registrationConfirmed": true
+  },
+  "encounter": {
+    "patientId": "Patient/created-at-runtime",
+    "hospitalId": "hospital-one",
+    "encounterType": "outpatient",
+    "department": "General Medicine",
+    "practitionerId": "Practitioner/uat-doctor-1",
+    "practitionerName": "د. طبيب الاختبار",
+    "reason": "Comprehensive workflow acceptance test",
+    "priority": "routine",
+    "arrivalMode": "walk-in",
+    "registrationConfirmed": true
+  },
+  "financialClass": {
+    "type": "insurance",
+    "payerId": "Organization/uat-payer-1",
+    "memberNumber": "UAT-MEMBER-0001",
+    "eligibilityExpected": "eligible"
+  },
+  "triage": {
+    "temperatureC": 37.1,
+    "heartRateBpm": 78,
+    "respiratoryRateBpm": 16,
+    "systolicBp": 122,
+    "diastolicBp": 78,
+    "spo2Percent": 98,
+    "acuity": "routine"
+  },
+  "clinical": {
+    "primaryDiagnosis": { "code": "J06.9", "display": "Acute upper respiratory infection, unspecified" },
+    "signedNoteText": "UAT clinical assessment completed and reviewed by the assigned physician.",
+    "medication": { "code": "UAT-PARACETAMOL-500", "display": "Paracetamol 500 mg" },
+    "laboratoryOrder": { "code": "718-7", "display": "Hemoglobin" },
+    "radiologyOrder": { "code": "36643-5", "display": "Chest X-ray" }
+  },
+  "disposition": {
+    "hospitalId": "hospital-one",
+    "disposition": "home",
+    "dischargeCondition": "improved",
+    "dischargeInstructions": "Continue treatment and return if symptoms worsen.",
+    "followUpDate": "2026-10-03T09:00:00.000Z",
+    "confirmation": true
+  },
+  "expectedFinancials": {
+    "chargeAmount": 250,
+    "currency": "SAR",
+    "claimOutcome": "queued"
+  }
+}
