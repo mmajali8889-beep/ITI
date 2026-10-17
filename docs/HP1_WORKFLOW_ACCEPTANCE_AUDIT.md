@@ -77,6 +77,7 @@ All test patients are synthetic, named `UAT-…`/`Run<runId>`, and were created 
 | Medium | Hospital list dropped hospitals beyond the first 20 Organizations | Filter by type on the server, `_count=200` |
 | Medium | Medplum sign-in throttling was reported as "invalid username or password" | Return 429 `SIGN_IN_THROTTLED` |
 | Low | `X-Powered-By: Express` disclosed; no `X-Content-Type-Options` | Header removed; `nosniff` set |
+| High | A radiology order could reach "images available" and a final report with no images in the PACS | Steps from `images-available` onward, and report finalization, require a PACS study linked to the order (409 `IMAGES_NOT_IN_PACS`); the live UAT now sends a real image first (2026-10-17) |
 
 ### Known limits and residual risks
 

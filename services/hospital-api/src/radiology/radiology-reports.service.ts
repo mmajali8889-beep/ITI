@@ -434,6 +434,12 @@ export class RadiologyReportsService {
       );
     }
 
+    // Check before saving: a refused finalization must leave the report as it was.
+    const reportOrderId = this.extractReferenceId(report.basedOn?.[0]?.reference, 'ServiceRequest');
+    if (reportOrderId) {
+      await this.radiologyService.assertImagesInPacs(reportOrderId);
+    }
+
     const now = new Date().toISOString();
     const extension = this.withVerifierExtensions(
       report.extension ?? [],

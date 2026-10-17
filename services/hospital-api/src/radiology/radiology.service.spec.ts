@@ -4,6 +4,7 @@ describe('RadiologyService RIS workflow', () => {
   const workflowUrl = 'http://hospital-ehr.local/fhir/StructureDefinition/radiology-workflow-status';
   let order: any;
   const medplum = { readResource: jest.fn(), updateResource: jest.fn() };
+  const imagingStudies = { getByOrder: jest.fn() };
   let service: RadiologyService;
 
   beforeEach(() => {
@@ -14,7 +15,9 @@ describe('RadiologyService RIS workflow', () => {
       extension: [{ url: workflowUrl, valueCode: 'exam-started' }] };
     medplum.readResource.mockImplementation(async () => order);
     medplum.updateResource.mockImplementation(async (resource) => { order = resource; return resource; });
-    service = new RadiologyService({ getClient: () => medplum } as never, {} as never);
+    // By default the PACS sync has linked a study to the order.
+    imagingStudies.getByOrder.mockResolvedValue({ orderId: 'rad-1', studies: [{ id: 'study-1' }] });
+    service = new RadiologyService({ getClient: () => medplum } as never, {} as never, imagingStudies as never);
   });
 
   it('advances acquisition through preliminary reporting to final', async () => {
@@ -36,5 +39,24 @@ describe('RadiologyService RIS workflow', () => {
     await expect(service.updateOrderStatus('rad-1', 'revoked', '')).rejects.toThrow('hospitalId is required.');
     expect(medplum.updateResource).not.toHaveBeenCalled();
     await expect(service.updateOrderStatus('rad-1', 'revoked', 'hospital-a')).resolves.toMatchObject({ status: 'revoked' });
+  });
+
+  it('refuses images-available and later steps until the PACS has the study (26.1)', async () => {
+    imagingStudies.getByOrder.mockResolvedValue({ orderId: 'rad-1', studies: [] });
+    order.identifier = [{ system: 'http://hospital-ehr.local/fhir/NamingSystem/radiology-accession', value: 'RAD-ACC-1' }];
+    // Acquisition is not gated: the modality may not have sent the images yet.
+    await expect(service.updateWorkflowStatus('rad-1', 'acquired')).resolves.toMatchObject({ workflowStatus: 'acquired' });
+    medplum.updateResource.mockClear();
+    for (const step of ['images-available', 'reporting', 'preliminary', 'final'] as const) {
+      const error = await service.updateWorkflowStatus('rad-1', step).catch((e: { getResponse(): unknown }) => e.getResponse());
+      expect(error).toMatchObject({ code: 'IMAGES_NOT_IN_PACS' });
+    }
+    expect(medplum.updateResource).not.toHaveBeenCalled();
+  });
+
+  it('allows images-available once the PACS sync has linked a study', async () => {
+    order.extension = [{ url: workflowUrl, valueCode: 'acquired' }];
+    await expect(service.updateWorkflowStatus('rad-1', 'images-available')).resolves.toMatchObject({ workflowStatus: 'images-available' });
+    expect(imagingStudies.getByOrder).toHaveBeenCalledWith('rad-1');
   });
 });

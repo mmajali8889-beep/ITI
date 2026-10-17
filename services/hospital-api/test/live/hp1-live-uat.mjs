@@ -153,6 +153,31 @@ async function diagnoseAndSign(patientId, encounterId) {
   return noteId;
 }
 
+/**
+ * Plays the modality: uploads the test DICOM to Orthanc and retags it with the
+ * order's accession and the patient's MRN. Uses the API's Orthanc service
+ * account from services/hospital-api/.env (never printed).
+ */
+async function sendStudyToPacs(accessionNumber, patientMrn, patientName) {
+  const envFile = readFileSync(resolve(here, '../../.env'), 'utf8');
+  const setting = (key) => envFile.split(/\r?\n/).find((line) => line.startsWith(`${key}=`))?.slice(key.length + 1);
+  const base = (process.env.ORTHANC_URL ?? setting('ORTHANC_URL') ?? 'http://localhost:8042').replace(/\/+$/, '');
+  const username = setting('ORTHANC_USERNAME');
+  const headers = username ? { authorization: 'Basic ' + Buffer.from(`${username}:${setting('ORTHANC_PASSWORD') ?? ''}`).toString('base64') } : {};
+  const orthanc = async (path, init = {}) => {
+    const response = await fetch(base + path, { ...init, headers: { ...headers, ...(init.headers ?? {}) } });
+    if (!response.ok) throw new Error(`Orthanc ${init.method ?? 'GET'} ${path} -> ${response.status}`);
+    return response.json();
+  };
+  const uploaded = await orthanc('/instances', { method: 'POST', body: readFileSync(resolve(here, '../../../../dicom-test/ct-test.dcm')) });
+  await orthanc(`/studies/${uploaded.ParentStudy}/modify`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ Replace: { AccessionNumber: accessionNumber, StudyID: accessionNumber, PatientID: patientMrn, PatientName: patientName, StudyDescription: `UAT ${RUN} synthetic image` }, Force: true }),
+  });
+  await orthanc(`/studies/${uploaded.ParentStudy}`, { method: 'DELETE' });
+}
+
 async function finish(encounterId, disposition, extra = {}) {
   return patch(`/encounters/${encounterId}/finish`, {
     ...fixture.disposition, hospitalId: ctx.hospitalId, disposition,
@@ -276,8 +301,30 @@ async function main() {
   }), ['labReportId']);
 
   // Results / reporting: radiology
-  for (const workflowStatus of ['scheduled', 'arrived', 'exam-started', 'acquired', 'images-available', 'reporting']) {
+  for (const workflowStatus of ['scheduled', 'arrived', 'exam-started', 'acquired']) {
     await step(7, `Radiology workflow -> ${workflowStatus}`, () => patch(`/radiology/orders/${ctx.radiologyOrderId}/workflow`, { workflowStatus }), ['radiologyOrderId']);
+  }
+  // 26.1: "images available" must be refused until the PACS actually has the study.
+  await step(7, 'Images-available refused before images reach PACS', async () => {
+    try {
+      await patch(`/radiology/orders/${ctx.radiologyOrderId}/workflow`, { workflowStatus: 'images-available' });
+    } catch (error) {
+      if (/-> 409:.*IMAGES_NOT_IN_PACS|-> 409:.*No PACS images/.test(error.message)) return;
+      throw error;
+    }
+    throw new Error('images-available was accepted with no study in the PACS');
+  }, ['radiologyOrderId']);
+  ctx.radiologyImagesSent = await step(7, 'Modality sends images to PACS and PACS sync links them', async () => {
+    const order = await get(`/radiology/orders/${ctx.radiologyOrderId}`, { hospitalId: ctx.hospitalId });
+    const accession = must((order.order ?? order).accessionNumber, 'accession number');
+    const patient = await get(`/patients/${ctx.patientId}`, { hospitalId: ctx.hospitalId });
+    await sendStudyToPacs(accession, patient.hospitalMrn ?? ctx.patientId, `UAT^Run${RUN}`);
+    const synced = await post(`/radiology/pacs/sync/accession/${encodeURIComponent(accession)}?hospitalId=${ctx.hospitalId}`, { hospitalId: ctx.hospitalId });
+    if (!(synced.studiesFound >= 1)) throw new Error(`PACS sync found no study for ${accession}`);
+    return true;
+  }, ['radiologyOrderId']);
+  for (const workflowStatus of ['images-available', 'reporting']) {
+    await step(7, `Radiology workflow -> ${workflowStatus}`, () => patch(`/radiology/orders/${ctx.radiologyOrderId}/workflow`, { workflowStatus }), ['radiologyOrderId', 'radiologyImagesSent']);
   }
   ctx.radiologyReportId = await step(7, 'Create radiology report', async () => must(idOf(await post('/radiology/reports', {
     orderId: ctx.radiologyOrderId, patientId: ctx.patientId, encounterId: ctx.encounterId, hospitalId: ctx.hospitalId,

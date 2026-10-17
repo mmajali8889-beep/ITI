@@ -11,6 +11,15 @@ import type { RadiologyWorkflowStatus } from './dto/update-radiology-workflow.dt
 import type { RadiologyWorklistQueryDto } from './dto/radiology-worklist-query.dto';
 import type { AssignRadiologistDto } from './dto/assign-radiologist.dto';
 import { RadiologistsService } from './radiologists.service';
+import { ImagingStudyService } from './imaging-study.service';
+
+/**
+ * Workflow steps that assert the images exist. Reaching any of them requires
+ * a study from the PACS linked to the order (an ImagingStudy created by the
+ * PACS sync). "acquired" is not gated: the modality may have captured images
+ * that have not reached the PACS yet.
+ */
+const REQUIRES_PACS_IMAGES = new Set<RadiologyWorkflowStatus>(['images-available', 'reporting', 'preliminary', 'final']);
 
 const RADIOLOGY_CATEGORY_SYSTEM =
   'http://snomed.info/sct';
@@ -71,7 +80,24 @@ export class RadiologyService {
   constructor(
     private readonly medplumService: MedplumService,
     private readonly radiologistsService: RadiologistsService,
+    private readonly imagingStudyService: ImagingStudyService,
   ) {}
+
+  /**
+   * Refuses to treat an order as imaged until the PACS sync has linked a study
+   * to it. Without this, "images available" and a final report could be
+   * recorded for an exam with no images at all.
+   */
+  async assertImagesInPacs(orderId: string, order?: ServiceRequest): Promise<void> {
+    const { studies } = await this.imagingStudyService.getByOrder(orderId);
+    if (studies.length > 0) return;
+    const accession = this.accessionNumber(order ?? (await this.readOrder(orderId)));
+    throw new ConflictException({
+      code: 'IMAGES_NOT_IN_PACS',
+      accessionNumber: accession,
+      message: `No PACS images are linked to accession ${accession ?? orderId} yet. Send the images from the modality, then sync the PACS before marking images available or finalizing the report.`,
+    });
+  }
 
   async createOrder(dto: CreateRadiologyOrderDto) {
     this.validateCreateDto(dto);
@@ -894,6 +920,10 @@ export class RadiologyService {
 
     if (currentStatus === workflowStatus) {
       return this.mapOrder(order);
+    }
+
+    if (REQUIRES_PACS_IMAGES.has(workflowStatus)) {
+      await this.assertImagesInPacs(orderId, order);
     }
 
     const now = new Date().toISOString();
