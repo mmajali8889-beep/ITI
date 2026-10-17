@@ -1,0 +1,7 @@
+[Unit]
+Description=UNITECH-EHR health check (application, backup age, backup disk)
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/unitech-ehr/backup.env
+ExecStart=/opt/unitech-ehr/infrastructure/production/monitoring/check-health.sh

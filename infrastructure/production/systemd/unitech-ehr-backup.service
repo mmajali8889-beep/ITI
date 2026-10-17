@@ -1,0 +1,12 @@
+[Unit]
+Description=UNITECH-EHR backup (Medplum PostgreSQL + Orthanc)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/unitech-ehr/backup.env
+ExecStart=/opt/unitech-ehr/infrastructure/production/backup/backup.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

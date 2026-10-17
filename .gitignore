@@ -20,3 +20,4 @@ kimi/
 # On-premise deployment: secrets, certificates and local settings
 infrastructure/production/secrets/
 infrastructure/production/certs/
+infrastructure/production/medplum/secrets/

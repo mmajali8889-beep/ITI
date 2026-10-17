@@ -6,8 +6,9 @@
 #   docker compose up -d --build
 #
 # Only the proxy publishes ports (80 -> HTTPS redirect, 443). The API and
-# Orthanc are reachable only inside this network. Medplum runs as its own stack
-# (see upstream Medplum docs) and is reached at MEDPLUM_BASE_URL.
+# Orthanc are reachable only inside this network. Medplum runs as its own,
+# pinned stack (./medplum, start it first); the API reaches it over the shared
+# "unitech-medplum" network at MEDPLUM_BASE_URL.
 
 name: unitech-ehr
 
@@ -29,6 +30,12 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    healthcheck:
+      # Caddy's admin endpoint (loopback inside the container only).
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   api:
     build:
@@ -56,9 +63,12 @@ services:
       - medplum_client_secret
       - medplum_provisioning_password
       - orthanc_password
-    extra_hosts:
-      # Lets MEDPLUM_BASE_URL point at a Medplum running on this same server.
-      - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      - medplum
+    depends_on:
+      orthanc:
+        condition: service_healthy
 
   orthanc:
     image: orthancteam/orthanc:24.10.3
@@ -75,6 +85,13 @@ services:
       - orthanc-db:/var/lib/orthanc/db
       # The service account, generated into a git-ignored file.
       - ./secrets/orthanc_users.json:/etc/orthanc/users.json:ro
+    healthcheck:
+      # /system needs credentials; an unauthenticated 401 still proves Orthanc serves.
+      test: ["CMD", "python3", "-c", "import urllib.request as u, urllib.error as e\ntry: u.urlopen('http://127.0.0.1:8042/system', timeout=4)\nexcept e.HTTPError as x: exit(0 if x.code == 401 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     ports:
       # DICOM from modalities on the hospital network (restrict by firewall).
       - "${ORTHANC_DICOM_BIND:-4242}:4242"
@@ -92,3 +109,9 @@ secrets:
 volumes:
   caddy-data:
   orthanc-db:
+
+networks:
+  medplum:
+    # Created by the Medplum stack (./medplum); start that stack first.
+    external: true
+    name: ${MEDPLUM_NETWORK:-unitech-medplum}

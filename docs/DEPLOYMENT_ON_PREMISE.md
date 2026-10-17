@@ -1,4 +1,4 @@
-# On-premise deployment (roadmap 24.7 and 24.8)
+# On-premise deployment (roadmap 24.7, 24.8 and 28)
 
 How to run UNITECH-EHR on the hospital's own server with HTTPS and properly
 protected secrets. Everything lives in `infrastructure/production/`.
@@ -10,7 +10,7 @@ protected secrets. Everything lives in `infrastructure/production/`.
 | `proxy` (Caddy and the built web app) | TLS termination, security headers, serves the app, routes `/api`, `/ohif`, `/dicom-web` to the API | **Yes: 443 (HTTPS) and 80 (redirects to HTTPS)** |
 | `api` (hospital API) | Business logic; talks to Medplum and Orthanc | No |
 | `orthanc` (PACS and OHIF plugin) | Image storage, DICOMweb, viewer | Only DICOM port 4242, for modalities |
-| Medplum (separate stack) | FHIR server and patient data | Only from the API (see below) |
+| Medplum (separate stack in `medplum/`: server, Postgres, Redis) | FHIR server and patient data | No: the API reaches it over a private Docker network; admins use an SSH tunnel |
 
 Staff use a single address, for example `https://ehr.hospital.local`. The
 browser never talks to Orthanc or Medplum directly and never receives their
@@ -21,10 +21,45 @@ credentials.
 - A Linux server with Docker Engine and the Compose plugin.
 - A DNS name on the hospital network (for example `ehr.hospital.local`) that
   points to the server.
-- Medplum running (its own Docker stack), plus a **ClientApplication** for
+- Medplum running from `medplum/` (step 0), plus a **ClientApplication** for
   the API: its client ID and secret.
 - A TLS certificate for the DNS name from hospital IT. This is recommended, so
   every hospital PC already trusts it.
+
+## 0. Medplum (28.3)
+
+```bash
+cd infrastructure/production/medplum
+cp .env.example .env
+./generate-secrets.sh        # secrets/: Postgres, Redis, Medplum config, admin password
+docker compose up -d
+docker compose ps            # medplum-server "healthy"
+```
+
+- Every image is pinned to an exact version (`medplum-server`/`medplum-app`
+  5.1.30, `postgres:16.15`, `redis:7.4.11`), never `:latest`. To upgrade: take a
+  backup, change the tags, read the Medplum release notes, test on staging, then
+  `docker compose up -d`. Keep the Postgres major version unless you plan a
+  dump-and-restore migration.
+- Postgres and Redis publish no ports and have generated passwords (Postgres
+  via `POSTGRES_PASSWORD_FILE`, Redis via a mounted config). The Medplum
+  config, with those passwords, is a secret file, not environment variables.
+  Self-registration and VM bots are off.
+- The server is bound to `127.0.0.1:8103` on the host for administration only.
+  The admin app starts only when you ask for it:
+
+  ```bash
+  docker compose --profile admin up -d medplum-app
+  # from your PC: ssh -L 8103:127.0.0.1:8103 -L 3000:127.0.0.1:3000 admin@<server>
+  # then open http://localhost:3000
+  ```
+
+- **First sign-in:** `admin@example.com` with the password in
+  `secrets/admin_password` (generated; the upstream default is not used).
+  Change the password, create the API's ClientApplication (its ID goes in
+  `../.env`, its secret in `../generate-secrets.sh`), then delete
+  `secrets/admin_password` and stop the admin app
+  (`docker compose --profile admin stop medplum-app`).
 
 ## 1. Certificate (24.8)
 
@@ -85,6 +120,76 @@ Open `https://<EHR_HOSTNAME>`.
 - Sign-in sets a `Secure; HttpOnly; SameSite=Lax` session cookie.
 - `docker compose ps` shows published ports only for `proxy` (and 4242 on
   `orthanc`).
+- `https://<host>/api/health` returns `{"status":"ok", ...}` with Medplum and
+  Orthanc both `ok`.
+
+## 5. Backups (28.1)
+
+`backup/backup.sh` writes one set per night to `/var/backups/unitech-ehr/<UTC time>/`:
+
+| File | Contents |
+|---|---|
+| `medplum.pgdump` | Medplum Postgres (`pg_dump -Fc`): every FHIR resource, i.e. all clinical, billing and audit data |
+| `medplum-binary.tar.gz` | Medplum file storage (attachments) |
+| `orthanc-db.tar.gz` | Orthanc images and index; Orthanc is paused for the few seconds of the archive so both stay consistent |
+| `MANIFEST`, `SHA256SUMS` | Versions, sizes, patient count; checksums |
+
+The script checks the dump is readable before calling the set complete, keeps
+`RETENTION_DAYS` (default 14) of sets, and copies each finished set off the
+server when `OFFSITE_CMD` is set. **Set it:** a backup on the same disk does not
+survive a disk or server loss. No passwords are needed; it uses `docker exec`.
+
+Install the scheduled jobs (systemd, as root). The units expect this
+repository checked out at `/opt/unitech-ehr`; edit their `ExecStart` lines if
+it lives elsewhere.
+
+```bash
+sudo mkdir -p /etc/unitech-ehr
+sudo install -m 600 infrastructure/production/systemd/backup.env.example /etc/unitech-ehr/backup.env
+sudo nano /etc/unitech-ehr/backup.env        # EHR_URL, OFFSITE_CMD, ALERT_CMD
+sudo cp infrastructure/production/systemd/*.service infrastructure/production/systemd/*.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now unitech-ehr-backup.timer unitech-ehr-backup-verify.timer unitech-ehr-health.timer
+sudo systemctl start unitech-ehr-backup.service && journalctl -u unitech-ehr-backup -n 20
+```
+
+| Timer | When | What |
+|---|---|---|
+| `unitech-ehr-backup` | daily 02:30 (catches up after downtime) | `backup.sh` |
+| `unitech-ehr-backup-verify` | Sundays 04:00 | `restore.sh verify latest`: restores the newest set into scratch copies, compares the patient count with the manifest, starts the restored Orthanc, then removes the copies. Live data is not touched |
+| `unitech-ehr-health` | every 5 minutes | `check-health.sh` |
+
+## 6. Monitoring (28.2)
+
+- `GET /api/health/live`: the API process answers (used by the container health check).
+- `GET /api/health`: readiness. 200 when Medplum and Orthanc answer, 503
+  otherwise. Public and terse: up/down and latency only.
+- Every container has a Docker health check; `docker compose ps` shows it.
+- `monitoring/check-health.sh` alerts when the application is not healthy,
+  the last complete backup is older than `MAX_BACKUP_AGE_HOURS` (26), or the
+  backup disk has less than `MIN_FREE_GB` (20) free. Problems go to the system
+  log (`journalctl -t unitech-ehr`) and to `ALERT_CMD` (for example
+  `mail -s "EHR alert" it@hospital.local`). It exits non-zero, so Zabbix or
+  Nagios can run it directly instead.
+- Failed backup or verify runs show as failed units: `systemctl --failed`.
+
+## 7. Disaster recovery (28.4)
+
+1. Install Docker, check out this repository, and copy back `.env` files and
+   `secrets/` from your secure off-server copy (or regenerate them; then
+   recreate the ClientApplication secret).
+2. Start the empty stacks: `medplum/` first, then this directory.
+3. Copy the newest backup set from off-site, then check it:
+   `backup/restore.sh verify <set-dir>`.
+4. Restore it, replacing the (empty) live data:
+   `backup/restore.sh restore <set-dir> --replace-live-data`.
+   This stops the API and Medplum, restores Postgres, Medplum files and Orthanc,
+   then starts them again.
+5. Check `https://<host>/api/health`, sign in, open a patient with images.
+
+Rehearse this on a spare machine at least twice a year, and record how long it
+took (that time is the recovery time objective). The nightly backup sets the
+data you can lose: at most one day, unless backups run more often.
 
 ## Firewall
 
@@ -93,7 +198,7 @@ Open `https://<EHR_HOSTNAME>`.
 | 443/tcp | Hospital staff network |
 | 80/tcp | Same (redirect only) |
 | 4242/tcp | Modality IPs only (CT, MR, CR …) |
-| Medplum 8103/3000 | Not from staff PCs; only from the API, and admins on 3000 |
+| Medplum 8103/3000 | Nothing: bound to loopback, reached by admins over SSH |
 
 ## Operations
 
@@ -101,14 +206,15 @@ Open `https://<EHR_HOSTNAME>`.
 - **Rotate a secret:** delete the file in `secrets/`, run
   `./generate-secrets.sh`, then `docker compose up -d`. If you rotate
   `orthanc_password`, restart both `orthanc` and `api`.
-- **Backups:** the `orthanc-db` volume (images) and Medplum's Postgres (all
-  clinical data); see roadmap 28.1.
+- **Backups:** see section 5. Keep a copy of both `secrets/` directories and
+  `.env` files off the server too; backups do not include them.
 - **Client IPs in the audit log:** the API trusts `X-Forwarded-For` only from
   the proxy (`TRUST_PROXY=uniquelocal`).
 
 ## Not covered here
 
-- **Medplum's own hardening:** TLS for its admin app, and Postgres and Redis
-  passwords. Follow Medplum's production guide.
+- **Central log collection** (for example Loki or Graylog) and metrics such as
+  5xx and 429 rates: the health check covers availability; collecting
+  `docker compose logs` centrally is the next step.
 - **An external secrets vault:** files with tight permissions are the baseline;
   a vault (for example HashiCorp Vault) can later write the same files.

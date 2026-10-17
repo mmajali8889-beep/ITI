@@ -1,0 +1,10 @@
+[Unit]
+Description=UNITECH-EHR restore drill (verifies the newest backup restores)
+After=docker.service unitech-ehr-backup.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/unitech-ehr/backup.env
+ExecStart=/opt/unitech-ehr/infrastructure/production/backup/restore.sh verify latest
+Nice=10

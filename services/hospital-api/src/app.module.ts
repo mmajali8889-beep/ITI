@@ -11,6 +11,7 @@ import { AppService } from './app.service';
 import { MedplumModule } from './medplum/medplum.module';
 
 import { HospitalsModule } from './hospitals/hospitals.module';
+import { HealthModule } from './health/health.module';
 
 import { PatientsModule } from './patients/patients.module';
 
@@ -70,6 +71,7 @@ import { HospitalScopeGuard } from './auth/hospital-scope.guard';
     MedplumModule,
 
     HospitalsModule,
+    HealthModule,
 
     PatientsModule,
 

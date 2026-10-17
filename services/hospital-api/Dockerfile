@@ -18,5 +18,5 @@ COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:4000/api/hospitals >/dev/null || exit 1
+  CMD wget -qO- http://127.0.0.1:4000/api/health/live >/dev/null || exit 1
 CMD ["node", "dist/main"]

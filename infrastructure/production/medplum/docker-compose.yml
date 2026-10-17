@@ -1,0 +1,121 @@
+# Medplum (FHIR server) for the UNITECH-EHR on-premise deployment (roadmap 28.3).
+#
+#   cd infrastructure/production/medplum
+#   cp .env.example .env
+#   ./generate-secrets.sh           # ./secrets: database, Redis, Medplum config
+#   docker compose up -d            # before the EHR stack in ../
+#
+# Every image is pinned to an exact version; upgrade deliberately (take a backup,
+# change the tag here, read the Medplum release notes, test on staging first).
+# Nothing is published to the hospital network: Postgres and Redis have no
+# ports, and the server is bound to this machine's loopback for administration.
+# The EHR API reaches Medplum over the shared "unitech-medplum" network.
+
+name: unitech-medplum
+
+services:
+  postgres:
+    image: postgres:16.15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: medplum
+      POSTGRES_DB: medplum
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    command:
+      - postgres
+      - -c
+      - statement_timeout=60000
+      - -c
+      - default_transaction_isolation=REPEATABLE READ
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medplum -d medplum"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.4.11
+    restart: unless-stopped
+    # requirepass lives in a generated config file, not on the command line.
+    command: ["redis-server", "/run/secrets/redis.conf"]
+    secrets:
+      - redis.conf
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$(sed -n 's/^requirepass //p' /run/secrets/redis.conf)\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # A new named volume is owned by root; the server runs as uid 1000.
+  binary-permissions:
+    image: redis:7.4.11
+    entrypoint: ["chown", "1000:1000", "/binary"]
+    volumes:
+      - binary-data:/binary
+
+  medplum-server:
+    image: medplum/medplum-server:5.1.30
+    restart: unless-stopped
+    command: ["file:/run/secrets/medplum.config.json"]
+    secrets:
+      - medplum.config.json
+    volumes:
+      - binary-data:/usr/src/medplum/binary
+    ports:
+      # Loopback only: administrators use an SSH tunnel (see the deployment guide).
+      - "${MEDPLUM_ADMIN_BIND:-127.0.0.1:8103}:8103"
+    networks:
+      default:
+      ehr:
+        aliases: [medplum-server]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      binary-permissions:
+        condition: service_completed_successfully
+    healthcheck:
+      # The image has no shell, curl or wget.
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8103/healthcheck').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Medplum's admin web app, for one-off tasks (ClientApplication, admin users).
+  # Started only on request:  docker compose --profile admin up -d medplum-app
+  medplum-app:
+    image: medplum/medplum-app:5.1.30
+    profiles: [admin]
+    restart: "no"
+    environment:
+      MEDPLUM_BASE_URL: ${MEDPLUM_ADMIN_URL:-http://localhost:8103/}
+      MEDPLUM_REGISTER_ENABLED: "false"
+      RECAPTCHA_SITE_KEY: ""
+    ports:
+      - "${MEDPLUM_APP_BIND:-127.0.0.1:3000}:3000"
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password
+  redis.conf:
+    file: ./secrets/redis.conf
+  medplum.config.json:
+    file: ./secrets/medplum.config.json
+
+networks:
+  ehr:
+    # Joined by the EHR API (../docker-compose.yml) to reach medplum-server:8103.
+    name: unitech-medplum
+
+volumes:
+  postgres-data:
+  redis-data:
+  binary-data:
