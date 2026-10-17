@@ -7,8 +7,7 @@
 node_modules/
 dist/
 
-# Nested repositories (have their own .git; add as submodules if they belong here)
-services/hospital-api/
+# Nested repositories (have their own .git)
 upstream/
 
 
