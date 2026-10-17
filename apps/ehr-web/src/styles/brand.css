@@ -1,0 +1,17 @@
+:root {
+  --brand-navy:#061d55;
+  --brand-navy-2:#072f70;
+  --brand-blue:#0878f5;
+  --brand-blue-deep:#0349bd;
+  --brand-cyan:#08c9e5;
+  --brand-sky:#eef7ff;
+  --brand-ink:#10234d;
+  --brand-muted:#687da7;
+  --brand-line:#d7e4f2;
+  --brand-surface:#ffffff;
+  --brand-gradient:linear-gradient(110deg,#16bdf2 0%,#0878f5 48%,#0349bd 100%);
+  --brand-shadow:0 22px 55px rgba(4,48,112,.14);
+}
+
+::selection { color:#fff; background:var(--brand-blue); }
+:where(button,a,input,select):focus-visible { outline:3px solid rgba(8,201,229,.28); outline-offset:2px; }

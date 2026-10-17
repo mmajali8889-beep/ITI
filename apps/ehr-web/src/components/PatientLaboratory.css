@@ -1,0 +1,464 @@
+.patient-lab {
+  --border: #dce5ef;
+  --muted: #667085;
+  --blue: #155eef;
+  --blue-soft: #eef4ff;
+  --green: #067647;
+  --green-soft: #ecfdf3;
+  --amber: #b54708;
+  --amber-soft: #fffaeb;
+  --red: #b42318;
+  --red-soft: #fef3f2;
+  color: #172033;
+  display: grid;
+  gap: 15px;
+}
+
+.patient-lab-header,
+.patient-lab-toolbar,
+.patient-lab-group > header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.patient-lab-header {
+  align-items: flex-start;
+}
+
+.patient-lab-eyebrow {
+  align-items: center;
+  color: #475467;
+  display: flex;
+  font-size: 10px;
+  font-weight: 900;
+  gap: 6px;
+  letter-spacing: .08em;
+}
+
+.patient-lab-header h2 {
+  font-size: 22px;
+  margin: 4px 0 3px;
+}
+
+.patient-lab-header p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.patient-lab-refresh {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: #344054;
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 11px;
+}
+
+.patient-lab-error,
+.patient-lab-critical {
+  align-items: center;
+  border: 1px solid #fda29b;
+  border-radius: 10px;
+  color: var(--red);
+  display: flex;
+  gap: 9px;
+  padding: 10px 12px;
+}
+
+.patient-lab-error {
+  background: var(--red-soft);
+}
+
+.patient-lab-critical {
+  background: linear-gradient(90deg, #fff, var(--red-soft));
+  border-left: 4px solid #d92d20;
+}
+
+.patient-lab-critical > div {
+  display: grid;
+  gap: 2px;
+}
+
+.patient-lab-critical span {
+  font-size: 10px;
+}
+
+.patient-lab-stats {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.patient-lab-stat {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: grid;
+  gap: 2px;
+  grid-template-columns: auto 1fr;
+  min-height: 74px;
+  padding: 10px;
+}
+
+.patient-lab-stat > div {
+  align-items: center;
+  background: var(--blue-soft);
+  border-radius: 8px;
+  color: var(--blue);
+  display: flex;
+  grid-row: span 2;
+  height: 33px;
+  justify-content: center;
+  width: 33px;
+}
+
+.patient-lab-stat span {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.patient-lab-stat strong {
+  font-size: 20px;
+}
+
+.patient-lab-stat.warning {
+  background: var(--amber-soft);
+  border-color: #fedf89;
+}
+
+.patient-lab-stat.warning > div {
+  background: #fef0c7;
+  color: var(--amber);
+}
+
+.patient-lab-stat.critical {
+  background: var(--red-soft);
+  border-color: #fda29b;
+}
+
+.patient-lab-stat.critical > div {
+  background: #fee4e2;
+  color: var(--red);
+}
+
+.patient-lab-stat.success > div {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.patient-lab-toolbar {
+  align-items: center;
+}
+
+.patient-lab-search {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: #98a2b3;
+  display: flex;
+  gap: 6px;
+  max-width: 420px;
+  padding: 0 9px;
+  width: 100%;
+}
+
+.patient-lab-search input {
+  border: 0;
+  font: inherit;
+  font-size: 11px;
+  min-height: 37px;
+  outline: none;
+  width: 100%;
+}
+
+.patient-lab-filters {
+  background: #f2f4f7;
+  border-radius: 9px;
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+}
+
+.patient-lab-filters button {
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: #667085;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 7px 9px;
+}
+
+.patient-lab-filters button.active {
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, .1);
+  color: #344054;
+}
+
+.patient-lab-groups {
+  display: grid;
+  gap: 11px;
+}
+
+.patient-lab-group {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  overflow: hidden;
+}
+
+.patient-lab-group.abnormal {
+  border-left: 4px solid #f79009;
+}
+
+.patient-lab-group.critical {
+  border-left: 4px solid #d92d20;
+}
+
+.patient-lab-group > header {
+  background: #fbfcfd;
+  border-bottom: 1px solid var(--border);
+  padding: 11px 13px;
+}
+
+.patient-lab-order-code {
+  color: var(--blue);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.patient-lab-group h3 {
+  font-size: 14px;
+  margin: 2px 0;
+}
+
+.patient-lab-group header p {
+  color: var(--muted);
+  font-size: 9px;
+  margin: 0;
+}
+
+.patient-lab-group-actions {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+}
+
+.patient-lab-group-actions button {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 6px 8px;
+}
+
+.patient-lab-badge,
+.patient-lab-flag {
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 5px 7px;
+}
+
+.patient-lab-badge.abnormal,
+.patient-lab-flag.abnormal {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.patient-lab-badge.critical,
+.patient-lab-flag.critical {
+  background: var(--red-soft);
+  border: 1px solid #fda29b;
+  color: var(--red);
+}
+
+.patient-lab-flag.normal {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.patient-lab-result-grid {
+  display: grid;
+}
+
+.patient-lab-result {
+  align-items: center;
+  display: grid;
+  gap: 11px;
+  grid-template-columns: minmax(180px, 1.4fr) minmax(100px, .7fr) minmax(140px, .9fr) auto;
+  min-height: 62px;
+  padding: 9px 13px;
+}
+
+.patient-lab-result + .patient-lab-result {
+  border-top: 1px solid #edf1f5;
+}
+
+.patient-lab-result.abnormal {
+  background: #fffcf5;
+}
+
+.patient-lab-result.critical {
+  background: #fff5f4;
+}
+
+.patient-lab-result > div {
+  display: grid;
+  gap: 2px;
+}
+
+.patient-lab-result > div:first-child strong {
+  font-size: 11px;
+}
+
+.patient-lab-result > div:first-child span,
+.patient-lab-value span,
+.patient-lab-reference span {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.patient-lab-value strong {
+  font-size: 16px;
+}
+
+.patient-lab-reference strong {
+  font-size: 10px;
+}
+
+.patient-lab-empty,
+.patient-lab-loading {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  justify-content: center;
+  min-height: 250px;
+  text-align: center;
+}
+
+.patient-lab-empty strong {
+  color: #344054;
+}
+
+.patient-lab-empty span {
+  font-size: 10px;
+}
+
+@media (max-width: 950px) {
+  .patient-lab-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .patient-lab-result {
+    grid-template-columns: minmax(160px, 1.4fr) 1fr auto;
+  }
+
+  .patient-lab-reference {
+    display: none !important;
+  }
+}
+
+@media (max-width: 680px) {
+  .patient-lab-header,
+  .patient-lab-toolbar,
+  .patient-lab-group > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .patient-lab-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .patient-lab-filters {
+    overflow-x: auto;
+  }
+
+  .patient-lab-result {
+    grid-template-columns: 1fr auto;
+  }
+}
+
+
+.patient-lab-report-loading {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--pl-border);
+  border-radius: 12px;
+  background: var(--pl-surface);
+  color: var(--pl-muted);
+  font-size: 13px;
+}
+
+.patient-lab-report-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.patient-lab-report-status.final,
+.patient-lab-report-status.amended,
+.patient-lab-report-status.corrected,
+.patient-lab-report-status.appended {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.patient-lab-report-status.preliminary,
+.patient-lab-report-status.partial,
+.patient-lab-report-status.registered {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.patient-lab-report-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.patient-lab-report-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  padding: 24px;
+  overflow: auto;
+  background: rgba(15, 23, 42, .58);
+  backdrop-filter: blur(5px);
+}
+
+.patient-lab-report-modal {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+@media (max-width: 720px) {
+  .patient-lab-report-overlay { padding: 8px; }
+}

@@ -1,0 +1,22 @@
+{
+  "resourceType": "Organization",
+  "active": true,
+  "identifier": [
+    {
+      "system": "https://hospital-ehr.local/organization-code",
+      "value": "GROUP-001"
+    }
+  ],
+  "type": [
+    {
+      "coding": [
+        {
+          "system": "https://hospital-ehr.local/organization-type",
+          "code": "healthcare-group",
+          "display": "Healthcare Group"
+        }
+      ]
+    }
+  ],
+  "name": "EHR Healthcare Group"
+}

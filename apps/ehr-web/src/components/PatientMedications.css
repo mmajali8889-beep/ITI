@@ -1,0 +1,661 @@
+.patient-medications {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.patient-medications-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.patient-medications-heading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.patient-medications-heading-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #eef4ff;
+  color: #175cd3;
+}
+
+.patient-medications-heading h2 {
+  margin: 0;
+  color: #344054;
+  font-size: 15px;
+}
+
+.patient-medications-heading p {
+  margin: 3px 0 0;
+  color: #98a2b3;
+  font-size: 9px;
+}
+
+.patient-medications-refresh {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #fff;
+  color: #475467;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.patient-medications-refresh:hover {
+  background: #f9fafb;
+}
+
+.patient-medications-refresh:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   SUMMARY
+========================================================= */
+
+.patient-medication-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.patient-medication-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 63px;
+  padding: 10px 11px;
+  border: 1px solid #eaecf0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.patient-medication-summary-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #f2f4f7;
+  color: #667085;
+}
+
+.patient-medication-summary-card.active
+.patient-medication-summary-icon {
+  background: #ecfdf3;
+  color: #039855;
+}
+
+.patient-medication-summary-card.hold
+.patient-medication-summary-icon {
+  background: #fffaeb;
+  color: #dc6803;
+}
+
+.patient-medication-summary-card.completed
+.patient-medication-summary-icon {
+  background: #eff8ff;
+  color: #1570ef;
+}
+
+.patient-medication-summary-card.stopped
+.patient-medication-summary-icon {
+  background: #fef3f2;
+  color: #d92d20;
+}
+
+.patient-medication-summary-card > div:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.patient-medication-summary-card strong {
+  color: #101828;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.patient-medication-summary-card span {
+  margin-top: 4px;
+  color: #667085;
+  font-size: 8px;
+}
+
+
+/* =========================================================
+   TOOLBAR
+========================================================= */
+
+.patient-medications-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.patient-medications-search {
+  min-width: 280px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #fff;
+  color: #98a2b3;
+}
+
+.patient-medications-search:focus-within {
+  border-color: #84adff;
+  box-shadow: 0 0 0 3px rgba(47, 128, 237, .08);
+}
+
+.patient-medications-search input {
+  width: 100%;
+  height: 36px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #344054;
+  font-family: inherit;
+  font-size: 9px;
+}
+
+.patient-medications-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.patient-medication-filter {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid #eaecf0;
+  border-radius: 7px;
+  background: #fff;
+  color: #667085;
+  font-family: inherit;
+  font-size: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.patient-medication-filter:hover {
+  background: #f9fafb;
+}
+
+.patient-medication-filter.active {
+  border-color: #b2ccff;
+  background: #eff4ff;
+  color: #175cd3;
+}
+
+
+/* =========================================================
+   ERROR
+========================================================= */
+
+.patient-medications-error {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 12px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: #b42318;
+  font-size: 9px;
+}
+
+
+/* =========================================================
+   LIST
+========================================================= */
+
+.patient-medication-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.patient-medication-card {
+  position: relative;
+  overflow: hidden;
+  padding: 13px 14px 12px 17px;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  background: #fff;
+  transition:
+    border-color .15s ease,
+    box-shadow .15s ease;
+}
+
+.patient-medication-card:hover {
+  border-color: #d0d5dd;
+  box-shadow: 0 3px 10px rgba(16, 24, 40, .04);
+}
+
+.patient-medication-status-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: #98a2b3;
+}
+
+.patient-medication-card.status-active
+.patient-medication-status-bar {
+  background: #12b76a;
+}
+
+.patient-medication-card.status-on-hold
+.patient-medication-status-bar {
+  background: #f79009;
+}
+
+.patient-medication-card.status-completed
+.patient-medication-status-bar {
+  background: #2e90fa;
+}
+
+.patient-medication-card.status-stopped
+.patient-medication-status-bar,
+.patient-medication-card.status-cancelled
+.patient-medication-status-bar {
+  background: #f04438;
+}
+
+
+/* =========================================================
+   CARD HEADER
+========================================================= */
+
+.patient-medication-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.patient-medication-name {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.patient-medication-icon {
+  width: 35px;
+  height: 35px;
+  flex: 0 0 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #eef4ff;
+  color: #175cd3;
+}
+
+.patient-medication-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.patient-medication-title-row h3 {
+  margin: 0;
+  color: #101828;
+  font-size: 11px;
+}
+
+.patient-medication-code {
+  display: block;
+  margin-top: 3px;
+  color: #98a2b3;
+  font-size: 7px;
+}
+
+.patient-medication-status,
+.patient-medication-priority {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 6px;
+  border-radius: 999px;
+  font-size: 6px;
+  font-weight: 800;
+}
+
+.patient-medication-status.active {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.patient-medication-status.on-hold {
+  background: #fffaeb;
+  color: #b54708;
+}
+
+.patient-medication-status.completed {
+  background: #eff8ff;
+  color: #175cd3;
+}
+
+.patient-medication-status.stopped,
+.patient-medication-status.cancelled {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.patient-medication-status.draft,
+.patient-medication-status.unknown {
+  background: #f2f4f7;
+  color: #475467;
+}
+
+.patient-medication-priority.urgent,
+.patient-medication-priority.asap {
+  background: #fff6ed;
+  color: #c4320a;
+}
+
+.patient-medication-priority.stat {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.patient-medication-encounter {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid #dbe7f7;
+  border-radius: 7px;
+  background: #f8fbff;
+  color: #175cd3;
+  font-family: inherit;
+  font-size: 7px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.patient-medication-encounter:hover {
+  border-color: #84adff;
+  background: #eff4ff;
+}
+
+
+/* =========================================================
+   DETAILS
+========================================================= */
+
+.patient-medication-details {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.patient-medication-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px;
+  border-radius: 7px;
+  background: #f9fafb;
+}
+
+.patient-medication-detail span {
+  color: #98a2b3;
+  font-size: 6px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: .2px;
+}
+
+.patient-medication-detail strong {
+  overflow: hidden;
+  color: #475467;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   DATES
+========================================================= */
+
+.patient-medication-dates {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.patient-medication-date {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #98a2b3;
+  font-size: 7px;
+}
+
+.patient-medication-date strong {
+  color: #667085;
+  font-size: 7px;
+}
+
+
+/* =========================================================
+   INSTRUCTIONS
+========================================================= */
+
+.patient-medication-instructions {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-left: 3px solid #84adff;
+  border-radius: 5px;
+  background: #f8fbff;
+}
+
+.patient-medication-instructions span {
+  display: block;
+  color: #667085;
+  font-size: 6px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.patient-medication-instructions p {
+  margin: 3px 0 0;
+  color: #344054;
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.patient-medication-requester {
+  margin-top: 8px;
+  color: #98a2b3;
+  font-size: 7px;
+}
+
+.patient-medication-requester strong {
+  margin-left: 4px;
+  color: #667085;
+}
+
+
+/* =========================================================
+   ACTIONS
+========================================================= */
+
+.patient-medication-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 11px;
+  padding-top: 9px;
+  border-top: 1px solid #f2f4f7;
+}
+
+.medication-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 29px;
+  padding: 0 8px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  background: #fff;
+  color: #475467;
+  font-family: inherit;
+  font-size: 7px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.medication-action:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.medication-action.hold {
+  border-color: #fedf89;
+  color: #b54708;
+}
+
+.medication-action.complete {
+  border-color: #b2ddff;
+  color: #175cd3;
+}
+
+.medication-action.stop {
+  border-color: #fecdca;
+  color: #b42318;
+}
+
+.medication-action.resume {
+  border-color: #abefc6;
+  color: #027a48;
+}
+
+.patient-medication-updating {
+  color: #98a2b3;
+  font-size: 7px;
+}
+
+
+/* =========================================================
+   EMPTY / LOADING
+========================================================= */
+
+.patient-medications-empty,
+.patient-medications-state {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 30px;
+  border: 1px solid #eaecf0;
+  border-radius: 11px;
+  background: #fff;
+  color: #98a2b3;
+  text-align: center;
+}
+
+.patient-medications-empty strong,
+.patient-medications-state strong {
+  color: #475467;
+  font-size: 11px;
+}
+
+.patient-medications-empty span,
+.patient-medications-state span {
+  max-width: 400px;
+  font-size: 8px;
+}
+
+.patient-medications-spinner {
+  width: 25px;
+  height: 25px;
+  border: 3px solid #eaecf0;
+  border-top-color: #175cd3;
+  border-radius: 50%;
+  animation: medication-spin .8s linear infinite;
+}
+
+.medication-spin {
+  animation: medication-spin .8s linear infinite;
+}
+
+@keyframes medication-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1050px) {
+  .patient-medication-summary {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .patient-medication-details {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 750px) {
+  .patient-medications-header,
+  .patient-medications-toolbar,
+  .patient-medication-card-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .patient-medication-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .patient-medication-details {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .patient-medications-search {
+    min-width: 0;
+  }
+
+  .patient-medication-encounter {
+    justify-content: center;
+  }
+}

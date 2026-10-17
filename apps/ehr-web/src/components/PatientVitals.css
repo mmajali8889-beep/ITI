@@ -1,0 +1,557 @@
+.patient-vitals {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.patient-vitals-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.patient-vitals-title-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.patient-vitals-title-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: #edf5ff;
+  color: #1769e0;
+}
+
+.patient-vitals-header h2 {
+  margin: 0;
+  color: #344054;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.patient-vitals-header p {
+  margin: 3px 0 0;
+  color: #98a2b3;
+  font-size: 9px;
+}
+
+.patient-vitals-refresh {
+  min-height: 37px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid #dce3ec;
+  border-radius: 8px;
+  background: #fff;
+  color: #475467;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.patient-vitals-refresh:hover {
+  background: #f8fafc;
+}
+
+.patient-vitals-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spin {
+  animation: patient-vitals-spin 0.8s linear infinite;
+}
+
+@keyframes patient-vitals-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================
+   ALERT
+========================================= */
+
+.patient-vitals-alert {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 14px;
+  border: 1px solid #fda29b;
+  border-radius: 10px;
+  background: #fef3f2;
+}
+
+.patient-vitals-alert-icon {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #fee4e2;
+  color: #d92d20;
+}
+
+.patient-vitals-alert > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.patient-vitals-alert strong {
+  color: #b42318;
+  font-size: 10px;
+}
+
+.patient-vitals-alert span {
+  color: #b54708;
+  font-size: 8px;
+}
+
+/* =========================================
+   SECTION
+========================================= */
+
+.patient-vitals-section,
+.patient-vitals-history {
+  border: 1px solid #e4e9f0;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.patient-vitals-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #edf0f4;
+}
+
+.patient-vitals-section-heading h3 {
+  margin: 0;
+  color: #344054;
+  font-size: 11px;
+}
+
+.patient-vitals-section-heading p {
+  margin: 3px 0 0;
+  color: #98a2b3;
+  font-size: 8px;
+}
+
+.patient-vitals-total {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #667085;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+/* =========================================
+   CARDS
+========================================= */
+
+.patient-vital-cards {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 11px;
+  padding: 14px;
+}
+
+.patient-vital-card {
+  position: relative;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid #e4e9f0;
+  border-radius: 11px;
+  background: #fff;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.patient-vital-card:hover {
+  transform: translateY(-1px);
+  border-color: #cfd8e6;
+  box-shadow:
+    0 5px 15px
+    rgba(16, 24, 40, 0.05);
+}
+
+/*
+ * IMPORTANT:
+ * Entire vital card becomes red
+ * when the latest reading is abnormal.
+ */
+.patient-vital-card.abnormal {
+  border: 2px solid #d92d20;
+  background:
+    linear-gradient(
+      180deg,
+      #fff5f4 0%,
+      #ffffff 100%
+    );
+  box-shadow:
+    0 0 0 3px
+    rgba(217, 45, 32, 0.06);
+}
+
+.patient-vital-card.abnormal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 3px;
+  border-radius:
+    0 0 5px 5px;
+  background: #d92d20;
+}
+
+.patient-vital-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+}
+
+.patient-vital-icon {
+  width: 35px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #edf5ff;
+  color: #1769e0;
+}
+
+.patient-vital-card.abnormal
+.patient-vital-icon {
+  background: #fee4e2;
+  color: #d92d20;
+}
+
+.patient-vital-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 7px;
+  font-weight: 800;
+}
+
+.patient-vital-state.normal {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.patient-vital-state.abnormal {
+  background: #fee4e2;
+  color: #b42318;
+}
+
+.patient-vital-state.empty {
+  background: #f2f4f7;
+  color: #98a2b3;
+}
+
+.patient-vital-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 12px;
+}
+
+.patient-vital-label span {
+  color: #1769e0;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.patient-vital-card.abnormal
+.patient-vital-label span {
+  color: #d92d20;
+}
+
+.patient-vital-label strong {
+  color: #667085;
+  font-size: 8px;
+  font-weight: 650;
+}
+
+.patient-vital-value {
+  margin-top: 7px;
+  color: #1d2939;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+}
+
+.patient-vital-value.abnormal {
+  color: #b42318;
+}
+
+.patient-vital-footer {
+  min-height: 24px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid #f0f2f5;
+}
+
+.patient-vital-footer > span {
+  color: #98a2b3;
+  font-size: 7px;
+}
+
+.patient-vital-footer button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1769e0;
+  font-size: 7px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+/* =========================================
+   HISTORY
+========================================= */
+
+.patient-vitals-table-wrapper {
+  overflow-x: auto;
+}
+
+.patient-vitals-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.patient-vitals-table th {
+  padding: 10px 13px;
+  border-bottom: 1px solid #e4e7ec;
+  background: #f8fafc;
+  color: #667085;
+  font-size: 7px;
+  font-weight: 800;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.patient-vitals-table td {
+  padding: 11px 13px;
+  border-bottom: 1px solid #f0f2f5;
+  color: #475467;
+  font-size: 8px;
+  vertical-align: middle;
+}
+
+.patient-vitals-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.patient-vitals-table tbody tr:hover {
+  background: #fafcff;
+}
+
+.patient-vitals-table
+tr.abnormal-row {
+  background: #fffafa;
+}
+
+.patient-vitals-table
+tr.abnormal-row:hover {
+  background: #fff5f4;
+}
+
+.vital-history-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #667085;
+  white-space: nowrap;
+}
+
+.vital-history-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vital-history-name strong {
+  color: #344054;
+  font-size: 8px;
+}
+
+.vital-history-name span {
+  color: #98a2b3;
+  font-size: 7px;
+}
+
+.vital-history-value {
+  color: #344054;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.vital-history-value.abnormal {
+  color: #b42318;
+}
+
+.vital-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 7px;
+  font-weight: 800;
+}
+
+.vital-status.normal {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.vital-status.abnormal {
+  background: #fee4e2;
+  color: #b42318;
+}
+
+.open-vital-encounter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1px solid #dbe7f7;
+  border-radius: 6px;
+  background: #f8fbff;
+  color: #1769e0;
+  font-size: 7px;
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.open-vital-encounter:hover {
+  border-color: #1769e0;
+  background: #edf5ff;
+}
+
+.no-encounter {
+  color: #98a2b3;
+}
+
+/* =========================================
+   EMPTY / STATE
+========================================= */
+
+.patient-vitals-empty,
+.patient-vitals-state {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 25px;
+  border: 1px solid #e4e9f0;
+  border-radius: 12px;
+  background: #fff;
+  color: #98a2b3;
+  text-align: center;
+}
+
+.patient-vitals-empty {
+  min-height: 180px;
+  border: 0;
+  border-radius: 0;
+}
+
+.patient-vitals-empty strong,
+.patient-vitals-state strong {
+  color: #475467;
+  font-size: 11px;
+}
+
+.patient-vitals-empty span,
+.patient-vitals-state span {
+  font-size: 8px;
+}
+
+.patient-vitals-state.error {
+  color: #d92d20;
+}
+
+.patient-vitals-state.error button {
+  margin-top: 5px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: #1769e0;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.patient-vitals-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e4e7ec;
+  border-top-color: #1769e0;
+  border-radius: 50%;
+  animation:
+    patient-vitals-spin
+    0.8s linear infinite;
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 1050px) {
+  .patient-vital-cards {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .patient-vitals-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .patient-vital-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-vitals-refresh {
+    width: 100%;
+    justify-content: center;
+  }
+}

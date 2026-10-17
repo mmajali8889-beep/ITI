@@ -1,0 +1,1069 @@
+.medication-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+
+/* =========================================================
+   SUMMARY
+========================================================= */
+
+.medication-summary-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
+
+  gap: 12px;
+}
+
+
+.medication-summary-card {
+  min-height: 86px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 15px;
+
+  border: 1px solid #e1e7ef;
+
+  border-radius: 12px;
+
+  background: white;
+
+  box-shadow:
+    0 4px 14px
+    rgba(
+      31,
+      48,
+      74,
+      0.03
+    );
+}
+
+
+.medication-summary-icon {
+  width: 43px;
+  height: 43px;
+
+  min-width: 43px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 11px;
+}
+
+
+.medication-summary-card.blue
+.medication-summary-icon {
+  background: #edf5ff;
+
+  color: #1769e0;
+}
+
+
+.medication-summary-card.green
+.medication-summary-icon {
+  background: #ecfdf3;
+
+  color: #039855;
+}
+
+
+.medication-summary-card.safety
+.medication-summary-icon {
+  background: #fff6ed;
+
+  color: #dc6803;
+}
+
+
+.medication-summary-card > div:last-child {
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+
+.medication-summary-card span {
+  color: #98a2b3;
+
+  font-size: 9px;
+}
+
+
+.medication-summary-card strong {
+  color: #344054;
+
+  font-size: 21px;
+}
+
+
+.medication-summary-card
+.summary-text-value {
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   ALLERGY ALERT
+========================================================= */
+
+.drug-allergy-alert {
+  display: flex;
+
+  gap: 13px;
+
+  padding: 16px;
+
+  border: 2px solid #d92d20;
+
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #fff5f4,
+      #fef3f2
+    );
+
+  box-shadow:
+    0 5px 18px
+    rgba(
+      217,
+      45,
+      32,
+      0.09
+    );
+}
+
+
+.drug-allergy-alert-icon {
+  width: 46px;
+  height: 46px;
+
+  min-width: 46px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 12px;
+
+  background: #d92d20;
+
+  color: white;
+}
+
+
+.drug-allergy-alert-content {
+  flex: 1;
+}
+
+
+.drug-allergy-alert-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 10px;
+}
+
+
+.drug-allergy-alert-heading strong {
+  color: #d92d20;
+
+  font-size: 9px;
+
+  letter-spacing: 0.8px;
+}
+
+
+.drug-allergy-alert-heading h3 {
+  margin: 3px 0 0;
+
+  color: #912018;
+
+  font-size: 15px;
+}
+
+
+.drug-allergy-alert-heading
+> span {
+  padding: 4px 8px;
+
+  border-radius: 999px;
+
+  background: #d92d20;
+
+  color: white;
+
+  font-size: 7px;
+  font-weight: 900;
+}
+
+
+.drug-allergy-alert-content p {
+  margin: 10px 0;
+
+  color: #7a271a;
+
+  font-size: 10px;
+
+  line-height: 1.55;
+}
+
+
+.allergy-warning-list {
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+}
+
+
+.allergy-warning-row {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0, 1fr)
+    );
+
+  gap: 10px;
+
+  padding: 10px;
+
+  border: 1px solid #fecdca;
+
+  border-radius: 8px;
+
+  background: white;
+}
+
+
+.allergy-warning-row > div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+
+.allergy-warning-row span {
+  color: #98a2b3;
+
+  font-size: 8px;
+}
+
+
+.allergy-warning-row strong {
+  color: #b42318;
+
+  font-size: 9px;
+}
+
+
+.drug-allergy-advice {
+  margin-top: 10px;
+
+  color: #b42318;
+
+  font-size: 9px;
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   ORDER FORM
+========================================================= */
+
+.medication-order-card,
+.medication-list-card {
+  overflow: hidden;
+
+  border: 1px solid #e1e7ef;
+
+  border-radius: 12px;
+
+  background: white;
+
+  box-shadow:
+    0 4px 14px
+    rgba(
+      31,
+      48,
+      74,
+      0.025
+    );
+}
+
+
+.medication-card-header {
+  min-height: 64px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 13px 17px;
+
+  border-bottom: 1px solid #edf0f4;
+}
+
+
+.medication-header-icon {
+  width: 38px;
+  height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 9px;
+
+  background: #edf5ff;
+
+  color: #1769e0;
+}
+
+
+.medication-card-header h2,
+.medication-list-header h2 {
+  margin: 0;
+
+  color: #344054;
+
+  font-size: 12px;
+  font-weight: 750;
+}
+
+
+.medication-card-header p,
+.medication-list-header p {
+  margin: 3px 0 0;
+
+  color: #98a2b3;
+
+  font-size: 9px;
+}
+
+
+.medication-form-body {
+  padding: 17px;
+}
+
+
+.medication-primary-grid {
+  display: grid;
+
+  grid-template-columns:
+    1.5fr 1fr 0.7fr;
+
+  gap: 12px;
+
+  margin-bottom: 14px;
+}
+
+
+.medication-dose-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0, 1fr)
+    );
+
+  gap: 12px;
+
+  margin-bottom: 14px;
+}
+
+
+.medication-duration-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0, 1fr)
+    );
+
+  gap: 12px;
+
+  margin-bottom: 14px;
+}
+
+
+.medication-date-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+
+  gap: 12px;
+
+  margin-bottom: 14px;
+}
+
+
+.medication-field {
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+}
+
+
+.medication-field > span {
+  color: #536176;
+
+  font-size: 9px;
+  font-weight: 700;
+}
+
+
+.medication-field input,
+.medication-field select,
+.medication-field textarea {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  border: 1px solid #dce3ec;
+
+  border-radius: 8px;
+
+  background: white;
+
+  color: #344054;
+
+  outline: none;
+
+  font-family: inherit;
+  font-size: 10px;
+}
+
+
+.medication-field input,
+.medication-field select {
+  height: 40px;
+
+  padding: 0 10px;
+}
+
+
+.medication-field textarea {
+  min-height: 76px;
+
+  padding: 10px;
+
+  resize: vertical;
+}
+
+
+.medication-field input:focus,
+.medication-field select:focus,
+.medication-field textarea:focus {
+  border-color: #1769e0;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(
+      23,
+      105,
+      224,
+      0.08
+    );
+}
+
+
+.medication-input-unit {
+  height: 40px;
+
+  display: flex;
+
+  overflow: hidden;
+
+  border: 1px solid #dce3ec;
+
+  border-radius: 8px;
+}
+
+
+.medication-input-unit input {
+  flex: 1;
+
+  height: 100%;
+
+  border: 0;
+
+  border-radius: 0;
+}
+
+
+.medication-input-unit span {
+  min-width: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-left: 1px solid #e1e7ef;
+
+  background: #f8fafc;
+
+  color: #98a2b3;
+
+  font-size: 8px;
+}
+
+
+.medication-prn-field {
+  min-height: 40px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  margin-top: 18px;
+
+  padding: 0 10px;
+
+  border: 1px solid #dce3ec;
+
+  border-radius: 8px;
+
+  background: #fbfcfe;
+}
+
+
+.medication-prn-field input {
+  width: 15px;
+  height: 15px;
+}
+
+
+.medication-prn-field > div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 1px;
+}
+
+
+.medication-prn-field strong {
+  color: #344054;
+
+  font-size: 9px;
+}
+
+
+.medication-prn-field span {
+  color: #98a2b3;
+
+  font-size: 8px;
+}
+
+
+/* =========================================================
+   MESSAGE
+========================================================= */
+
+.medication-message {
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+
+  margin-top: 13px;
+
+  padding: 9px 11px;
+
+  border-radius: 8px;
+
+  font-size: 9px;
+}
+
+
+.medication-message.error {
+  border: 1px solid #fecdca;
+
+  background: #fef3f2;
+
+  color: #b42318;
+}
+
+
+.medication-message.success {
+  border: 1px solid #abefc6;
+
+  background: #ecfdf3;
+
+  color: #027a48;
+}
+
+
+.medication-form-actions {
+  display: flex;
+  justify-content: flex-end;
+
+  margin-top: 15px;
+}
+
+
+.create-medication-button {
+  height: 40px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  padding: 0 15px;
+
+  border: 0;
+
+  border-radius: 8px;
+
+  background: #1769e0;
+
+  color: white;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+
+.create-medication-button:hover {
+  background: #125ac5;
+}
+
+
+.create-medication-button:disabled {
+  opacity: 0.55;
+
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   MEDICATION LIST
+========================================================= */
+
+.medication-list-header {
+  min-height: 63px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 15px;
+
+  padding: 13px 17px;
+
+  border-bottom: 1px solid #edf0f4;
+}
+
+
+.medication-list-title {
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+}
+
+
+.medication-list-title
+> div:first-child {
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 9px;
+
+  background: #edf5ff;
+
+  color: #1769e0;
+}
+
+
+.medication-list-count {
+  min-width: 28px;
+  height: 25px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 999px;
+
+  background: #edf5ff;
+
+  color: #1769e0;
+
+  font-size: 9px;
+  font-weight: 750;
+}
+
+
+.medication-table-wrapper {
+  overflow-x: auto;
+}
+
+
+.medication-table {
+  width: 100%;
+
+  border-collapse: collapse;
+}
+
+
+.medication-table th {
+  padding: 10px 13px;
+
+  border-bottom: 1px solid #e7ebf1;
+
+  background: #f8fafc;
+
+  color: #7e8b9d;
+
+  text-align: left;
+
+  font-size: 8px;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.4px;
+
+  white-space: nowrap;
+}
+
+
+.medication-table td {
+  padding: 12px 13px;
+
+  border-bottom: 1px solid #edf1f5;
+
+  color: #59677a;
+
+  font-size: 9px;
+
+  vertical-align: middle;
+}
+
+
+.medication-table
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+
+.medication-name-cell {
+  min-width: 180px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+}
+
+
+.medication-table-pill-icon {
+  width: 29px;
+  height: 29px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 7px;
+
+  background: #edf5ff;
+
+  color: #1769e0;
+}
+
+
+.medication-name-cell
+> div:last-child {
+  display: flex;
+  flex-direction: column;
+
+  gap: 2px;
+}
+
+
+.medication-name-cell strong {
+  color: #344054;
+
+  font-size: 10px;
+}
+
+
+.medication-name-cell span {
+  color: #98a2b3;
+
+  font-size: 8px;
+}
+
+
+/* =========================================================
+   STATUS / PRIORITY
+========================================================= */
+
+.medication-status {
+  display: inline-flex;
+  align-items: center;
+
+  gap: 5px;
+
+  padding: 4px 7px;
+
+  border-radius: 999px;
+
+  background: #f2f4f7;
+
+  color: #667085;
+
+  font-size: 8px;
+  font-weight: 700;
+}
+
+
+.medication-status > span {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: #98a2b3;
+}
+
+
+.medication-status.active {
+  background: #ecfdf3;
+
+  color: #027a48;
+}
+
+
+.medication-status.active
+> span {
+  background: #12b76a;
+}
+
+
+.medication-status.stopped,
+.medication-status.cancelled {
+  background: #fef3f2;
+
+  color: #b42318;
+}
+
+
+.medication-status.stopped
+> span,
+.medication-status.cancelled
+> span {
+  background: #d92d20;
+}
+
+
+.medication-status.completed {
+  background: #edf5ff;
+
+  color: #1769e0;
+}
+
+
+.medication-priority {
+  padding: 4px 7px;
+
+  border-radius: 999px;
+
+  background: #f2f4f7;
+
+  color: #667085;
+
+  font-size: 8px;
+  font-weight: 700;
+}
+
+
+.medication-priority.stat {
+  background: #fef3f2;
+
+  color: #b42318;
+}
+
+
+.medication-priority.urgent,
+.medication-priority.asap {
+  background: #fff6ed;
+
+  color: #b54708;
+}
+
+
+/* =========================================================
+   ACTION
+========================================================= */
+
+.medication-action-cell {
+  text-align: right;
+}
+
+
+.stop-medication-button {
+  height: 30px;
+
+  display: inline-flex;
+  align-items: center;
+
+  gap: 5px;
+
+  padding: 0 8px;
+
+  border: 1px solid #fda29b;
+
+  border-radius: 7px;
+
+  background: white;
+
+  color: #b42318;
+
+  font-size: 8px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+
+.medication-no-action {
+  color: #c4cad4;
+}
+
+
+.medication-empty {
+  min-height: 135px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 5px;
+
+  padding: 20px;
+
+  color: #98a2b3;
+
+  text-align: center;
+
+  font-size: 9px;
+}
+
+
+.medication-empty strong {
+  color: #667085;
+
+  font-size: 10px;
+}
+
+
+.medication-refresh-button {
+  width: fit-content;
+
+  height: 34px;
+
+  display: inline-flex;
+  align-items: center;
+
+  gap: 6px;
+
+  padding: 0 10px;
+
+  border: 1px solid #dce3ec;
+
+  border-radius: 7px;
+
+  background: white;
+
+  color: #536176;
+
+  font-size: 9px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (
+  max-width: 1100px
+) {
+  .medication-primary-grid,
+  .medication-dose-grid,
+  .medication-duration-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        1fr
+      );
+  }
+
+  .allergy-warning-row {
+    grid-template-columns:
+      repeat(
+        2,
+        1fr
+      );
+  }
+}
+
+
+@media (
+  max-width: 700px
+) {
+  .medication-summary-grid,
+  .medication-primary-grid,
+  .medication-dose-grid,
+  .medication-duration-grid,
+  .medication-date-grid,
+  .allergy-warning-row {
+    grid-template-columns:
+      1fr;
+  }
+
+  .drug-allergy-alert {
+    flex-direction: column;
+  }
+}

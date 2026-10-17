@@ -1,0 +1,673 @@
+.patient-problems {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* =========================================
+   HEADER
+========================================= */
+
+.patient-problems-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.patient-problems-title {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.patient-problems-title-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: #edf5ff;
+  color: #1769e0;
+}
+
+.patient-problems-header h2 {
+  margin: 0;
+  color: #344054;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.patient-problems-header p {
+  margin: 3px 0 0;
+  color: #98a2b3;
+  font-size: 9px;
+}
+
+.patient-problems-refresh {
+  min-height: 37px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid #dce3ec;
+  border-radius: 8px;
+  background: #fff;
+  color: #475467;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.patient-problems-refresh:hover {
+  background: #f8fafc;
+}
+
+.patient-problems-refresh:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.problem-spin {
+  animation: problem-spin 0.8s linear infinite;
+}
+
+@keyframes problem-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================
+   ERROR
+========================================= */
+
+.patient-problems-error {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 12px;
+  border: 1px solid #fecdca;
+  border-radius: 9px;
+  background: #fef3f2;
+  color: #b42318;
+  font-size: 9px;
+}
+
+/* =========================================
+   SUMMARY
+========================================= */
+
+.problem-summary-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.problem-summary-card {
+  min-height: 79px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px;
+  border: 1px solid #e4e9f0;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.problem-summary-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #edf5ff;
+  color: #1769e0;
+}
+
+.problem-summary-card.active
+.problem-summary-icon {
+  background: #fff4ed;
+  color: #e04f16;
+}
+
+.problem-summary-card.resolved
+.problem-summary-icon {
+  background: #ecfdf3;
+  color: #039855;
+}
+
+.problem-summary-card.confirmed
+.problem-summary-icon {
+  background: #f4f3ff;
+  color: #6938ef;
+}
+
+.problem-summary-card > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.problem-summary-card span {
+  color: #98a2b3;
+  font-size: 8px;
+}
+
+.problem-summary-card strong {
+  color: #344054;
+  font-size: 20px;
+}
+
+/* =========================================
+   TOOLBAR
+========================================= */
+
+.patient-problems-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px;
+  border: 1px solid #e4e9f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.patient-problem-search {
+  width: min(380px, 100%);
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid #dce3ec;
+  border-radius: 8px;
+  color: #98a2b3;
+  background: #fff;
+}
+
+.patient-problem-search:focus-within {
+  border-color: #1769e0;
+  box-shadow:
+    0 0 0 3px
+    rgba(23, 105, 224, 0.07);
+}
+
+.patient-problem-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #344054;
+  font-family: inherit;
+  font-size: 9px;
+}
+
+.patient-problem-search input::placeholder {
+  color: #98a2b3;
+}
+
+.problem-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.problem-filter {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 1px solid #e4e7ec;
+  border-radius: 7px;
+  background: #fff;
+  color: #667085;
+  font-size: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.problem-filter span {
+  min-width: 18px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #667085;
+  font-size: 7px;
+}
+
+.problem-filter.active {
+  border-color: #1769e0;
+  background: #edf5ff;
+  color: #175cd3;
+}
+
+.problem-filter.active span {
+  background: #1769e0;
+  color: #fff;
+}
+
+/* =========================================
+   LIST CONTAINER
+========================================= */
+
+.patient-problem-list-card {
+  border: 1px solid #e4e9f0;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.patient-problem-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #edf0f4;
+}
+
+.patient-problem-list-heading h3 {
+  margin: 0;
+  color: #344054;
+  font-size: 11px;
+}
+
+.patient-problem-list-heading p {
+  margin: 3px 0 0;
+  color: #98a2b3;
+  font-size: 8px;
+}
+
+.patient-problem-list-heading > span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #667085;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.patient-problem-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================================
+   PROBLEM CARD
+========================================= */
+
+.patient-problem-card {
+  position: relative;
+  border-bottom: 1px solid #edf0f4;
+  background: #fff;
+}
+
+.patient-problem-card:last-child {
+  border-bottom: 0;
+}
+
+.patient-problem-card:hover {
+  background: #fcfcfd;
+}
+
+.problem-card-status-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: #98a2b3;
+}
+
+.patient-problem-card.active
+.problem-card-status-bar {
+  background: #f04438;
+}
+
+.problem-card-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 15px 16px 13px 18px;
+}
+
+.problem-card-icon {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #f2f4f7;
+  color: #667085;
+}
+
+.patient-problem-card.active
+.problem-card-icon {
+  background: #fef3f2;
+  color: #d92d20;
+}
+
+.problem-card-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.problem-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.problem-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.problem-title-row h4 {
+  margin: 0;
+  color: #344054;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.problem-icd-code {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: #edf5ff;
+  color: #175cd3;
+  font-size: 7px;
+  font-weight: 800;
+}
+
+.problem-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.problem-clinical-status,
+.problem-verification,
+.problem-severity {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 7px;
+  font-weight: 800;
+}
+
+.problem-clinical-status.active,
+.problem-clinical-status.recurrence,
+.problem-clinical-status.relapse {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.problem-clinical-status.resolved {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.problem-clinical-status.inactive,
+.problem-clinical-status.remission {
+  background: #f2f4f7;
+  color: #475467;
+}
+
+.problem-verification {
+  background: #f2f4f7;
+  color: #667085;
+}
+
+.problem-verification.confirmed {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.problem-verification.provisional,
+.problem-verification.differential,
+.problem-verification.unconfirmed {
+  background: #fffaeb;
+  color: #b54708;
+}
+
+.problem-verification.refuted,
+.problem-verification.entered-in-error {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.problem-severity {
+  background: #f9f5ff;
+  color: #6941c6;
+}
+
+/* =========================================
+   DETAILS
+========================================= */
+
+.problem-details-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.problem-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 9px;
+  border-radius: 7px;
+  background: #f8fafc;
+}
+
+.problem-detail span {
+  color: #98a2b3;
+  font-size: 7px;
+}
+
+.problem-detail strong {
+  color: #475467;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.problem-note {
+  margin-top: 10px;
+  padding: 9px 10px;
+  border-left: 3px solid #84adff;
+  border-radius: 0 7px 7px 0;
+  background: #f5f8ff;
+}
+
+.problem-note strong {
+  display: block;
+  color: #344054;
+  font-size: 8px;
+}
+
+.problem-note p {
+  margin: 3px 0 0;
+  color: #667085;
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+/* =========================================
+   FOOTER
+========================================= */
+
+.problem-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding:
+    9px 16px
+    10px 65px;
+  border-top: 1px solid #f2f4f7;
+  background: #fcfcfd;
+}
+
+.problem-open-encounter,
+.problem-resolve-button,
+.problem-reactivate-button {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 9px;
+  border-radius: 7px;
+  font-size: 7px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.problem-open-encounter {
+  border: 1px solid #dbe7f7;
+  background: #f8fbff;
+  color: #1769e0;
+}
+
+.problem-open-encounter:hover {
+  border-color: #1769e0;
+  background: #edf5ff;
+}
+
+.problem-resolve-button {
+  border: 1px solid #abefc6;
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.problem-reactivate-button {
+  border: 1px solid #d0d5dd;
+  background: #fff;
+  color: #475467;
+}
+
+.problem-resolve-button:disabled,
+.problem-reactivate-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.problem-no-encounter {
+  color: #98a2b3;
+  font-size: 7px;
+}
+
+/* =========================================
+   EMPTY / LOADING
+========================================= */
+
+.patient-problems-empty,
+.patient-problems-state {
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 25px;
+  color: #98a2b3;
+  text-align: center;
+}
+
+.patient-problems-state {
+  border: 1px solid #e4e9f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.patient-problems-empty strong,
+.patient-problems-state strong {
+  color: #475467;
+  font-size: 11px;
+}
+
+.patient-problems-empty span,
+.patient-problems-state span {
+  max-width: 390px;
+  font-size: 8px;
+}
+
+.patient-problems-spinner {
+  width: 25px;
+  height: 25px;
+  border: 3px solid #e4e7ec;
+  border-top-color: #1769e0;
+  border-radius: 50%;
+  animation:
+    problem-spin
+    0.8s linear infinite;
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 1000px) {
+  .problem-summary-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .problem-details-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .patient-problems-header,
+  .patient-problems-toolbar,
+  .problem-card-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .patient-problem-search {
+    width: auto;
+  }
+
+  .problem-filter-group {
+    width: 100%;
+  }
+
+  .problem-filter {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .problem-card-footer {
+    padding-left: 18px;
+  }
+}
+
+@media (max-width: 520px) {
+  .problem-summary-grid,
+  .problem-details-grid {
+    grid-template-columns: 1fr;
+  }
+}

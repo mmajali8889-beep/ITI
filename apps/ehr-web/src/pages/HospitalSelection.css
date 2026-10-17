@@ -1,0 +1,83 @@
+* { box-sizing:border-box; }
+body { margin:0; min-width:320px; font-family:Inter,"Segoe UI",Arial,sans-serif; color:var(--brand-ink); background:#eff6ff; }
+button,input,select { font:inherit; }
+.login-page { min-height:100vh; display:grid; grid-template-columns:59% 41%; background:#eef7ff; }
+.login-hero { position:relative; min-height:100vh; overflow:hidden; isolation:isolate; color:#fff; background:#031d4b; }
+.login-slideshow,.login-slide { position:absolute; inset:0; }
+.login-slideshow { z-index:-4; overflow:hidden; }
+.login-slide { opacity:0; background-position:center; background-size:cover; transform:scale(1.08); filter:saturate(.9) contrast(1.04); transition:opacity 1.6s cubic-bezier(.22,1,.36,1); }
+.login-slide.is-active { opacity:1; animation:login-cinematic-pan 8s ease-out both; }
+.login-hero-overlay { position:absolute; z-index:-3; inset:0; background:linear-gradient(90deg,rgba(1,24,64,.99) 0%,rgba(2,39,91,.91) 43%,rgba(3,70,140,.42) 100%),linear-gradient(0deg,rgba(1,25,67,.9),transparent 61%); }
+.login-hero-glow { position:absolute; z-index:-2; width:52vw; height:52vw; right:-26vw; top:-18vw; border-radius:50%; background:radial-gradient(circle,rgba(32,205,255,.24),transparent 68%); filter:blur(10px); animation:login-glow-drift 9s ease-in-out infinite alternate; }
+.login-hero-grid { position:absolute; z-index:-1; inset:0; opacity:.13; background-image:linear-gradient(rgba(81,205,255,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(81,205,255,.18) 1px,transparent 1px); background-size:64px 64px; mask-image:linear-gradient(90deg,#000,transparent 72%); }
+.login-hero-ribbon,.login-form-ribbon { position:absolute; pointer-events:none; border-radius:50%; will-change:transform; }
+.login-ribbon-one { z-index:-1; width:92%; height:24%; left:-28%; bottom:-10%; transform:rotate(20deg); background:linear-gradient(90deg,rgba(0,105,225,.48),rgba(0,159,244,.13)); animation:wave-float-one 13s ease-in-out infinite alternate; }
+.login-ribbon-two { z-index:-1; width:78%; height:13%; left:-20%; bottom:3%; transform:rotate(17deg); border-top:2px solid rgba(36,218,255,.58); background:linear-gradient(90deg,rgba(0,53,148,.66),rgba(11,133,230,.18)); animation:wave-float-two 16s ease-in-out infinite alternate; }
+.login-ribbon-three { z-index:-1; width:64%; height:118%; right:-39%; top:-58%; transform:rotate(18deg); border:36px solid rgba(221,246,255,.47); background:rgba(69,180,255,.17); animation:wave-float-three 18s ease-in-out infinite alternate; }
+.login-ribbon-four { z-index:-1; width:38%; height:104%; right:-27%; top:-45%; transform:rotate(16deg); border:18px solid rgba(255,255,255,.58); background:rgba(129,214,255,.13); }
+.login-hero-content { position:relative; z-index:2; min-height:100vh; display:flex; flex-direction:column; padding:7.2vh 6.2vw 4.5vh; }
+.login-main-logo,.login-message,.login-benefits { animation:login-content-reveal .9s cubic-bezier(.16,1,.3,1) both; }
+.login-message { animation-delay:.08s; }
+.login-benefits { animation-delay:.16s; }
+.login-main-logo .unitech-mark { width:92px; height:92px; }
+.login-main-logo .unitech-wordmark strong { font-size:38px; }
+.login-main-logo .unitech-wordmark small { font-size:17px; }
+.login-message { margin-top:clamp(40px,7vh,95px); }
+.login-message h1 { margin:0; font-size:clamp(38px,3.25vw,57px); line-height:1.12; letter-spacing:-.035em; }
+.login-message h1::after { content:""; display:block; width:45px; height:3px; margin-top:23px; border-radius:2px; background:var(--brand-cyan); }
+.login-message p { max-width:430px; margin:29px 0 0; color:#eff7ff; font-size:clamp(15px,1.25vw,20px); line-height:1.55; }
+.login-benefits { display:grid; gap:14px; margin-top:clamp(34px,5vh,68px); }
+.login-benefit { display:flex; align-items:center; gap:17px; }
+.login-benefit>span { width:54px; height:54px; display:grid; place-items:center; flex:0 0 auto; border-radius:50%; color:#fff; background:linear-gradient(145deg,rgba(19,133,238,.46),rgba(10,75,151,.68)); border:1px solid rgba(118,202,255,.12); }
+.login-benefit div { display:flex; flex-direction:column; gap:3px; }
+.login-benefit strong { font-size:14px; }
+.login-benefit small { color:#d8e8fb; font-size:11px; }
+.login-tagline { display:flex; align-items:center; gap:22px; margin-top:auto; padding-top:28px; }
+.login-tagline p { margin:0; color:#d7e8fb; font-size:9px; font-weight:700; letter-spacing:.32em; text-transform:uppercase; white-space:nowrap; }
+.pulse-line { width:205px; height:34px; opacity:.9; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 40'%3E%3Cpath d='M0 25h52l8-14 7 25 10-34 11 33 8-14 7 4h117' fill='none' stroke='%2308d8ef' stroke-width='2'/%3E%3C/svg%3E") center/contain no-repeat; }
+.login-slide-controls { position:absolute; right:4.2vw; bottom:4.8vh; display:flex; align-items:center; gap:9px; }
+.login-slide-controls button { width:30px; height:18px; display:grid; place-items:center; padding:0; border:0; background:transparent; cursor:pointer; }
+.login-slide-controls button span { width:7px; height:7px; border-radius:999px; background:rgba(255,255,255,.52); box-shadow:0 0 0 1px rgba(255,255,255,.16); transition:width .4s ease,background .4s ease,box-shadow .4s ease; }
+.login-slide-controls button.is-active span { width:28px; background:var(--brand-cyan); box-shadow:0 0 18px rgba(8,216,239,.75); }
+.login-form-side { position:relative; min-height:100vh; display:grid; place-items:center; overflow:hidden; padding:40px clamp(30px,4.2vw,72px); background:radial-gradient(circle at 86% 8%,rgba(255,255,255,.98),transparent 30%),linear-gradient(145deg,#e3f2ff,#fbfdff 48%,#e7f3ff); }
+.login-form-ribbon-one { width:84%; height:58%; right:-47%; top:-20%; transform:rotate(-20deg); border:34px solid rgba(255,255,255,.82); background:rgba(199,228,252,.22); animation:form-wave-float 17s ease-in-out infinite alternate; }
+.login-form-ribbon-two { width:95%; height:33%; right:-52%; bottom:-10%; transform:rotate(28deg); border:26px solid rgba(255,255,255,.63); background:rgba(196,226,250,.22); }
+.login-form-ribbon-three { width:56%; height:125%; left:-43%; top:-17%; transform:rotate(-12deg); border:24px solid rgba(113,190,246,.13); background:linear-gradient(90deg,rgba(45,152,231,.13),rgba(255,255,255,.2)); }
+.login-card { position:relative; z-index:1; width:min(560px,100%); padding:42px 40px 30px; border:1px solid rgba(255,255,255,.9); border-radius:32px; background:rgba(255,255,255,.94); box-shadow:0 25px 60px rgba(14,72,144,.17); backdrop-filter:blur(18px); }
+.login-card-logo { justify-content:center; margin-bottom:17px; }
+.login-card-logo .unitech-mark { width:63px; height:63px; }
+.login-card-logo .unitech-wordmark strong { font-size:24px; }
+.login-card header { margin-bottom:27px; text-align:center; }
+.login-card h2 { margin:0; color:var(--brand-navy); font-size:28px; letter-spacing:-.03em; }
+.login-card header p { margin:7px 0 0; color:#516994; font-size:13px; }
+.login-field { display:block; margin-bottom:17px; }
+.login-field>span:first-child { display:block; margin-bottom:7px; color:#102450; font-size:12px; font-weight:750; }
+.login-control { min-height:53px; display:flex; align-items:center; gap:12px; padding:0 16px; border:1px solid #cbdcf0; border-radius:12px; color:#3e5a91; background:#fff; transition:.2s ease; }
+.login-control:focus-within { border-color:var(--brand-blue); box-shadow:0 0 0 4px rgba(8,120,245,.1); }
+.login-control input,.login-control select { min-width:0; flex:1; height:51px; border:0; outline:0; color:#183365; background:transparent; font-size:12px; }
+.login-control input::placeholder { color:#8394b5; }
+.login-control select { cursor:pointer; }
+.password-toggle { display:grid; place-items:center; padding:4px; border:0; color:#526b9c; background:transparent; cursor:pointer; }
+.login-options { display:flex; align-items:center; justify-content:space-between; margin:2px 0 25px; }
+.login-options label { display:flex; align-items:center; gap:8px; color:#152a59; font-size:11px; cursor:pointer; }
+.login-options input { width:18px; height:18px; accent-color:var(--brand-blue); }
+.login-options button { border:0; color:#0066ed; background:transparent; font-size:11px; cursor:pointer; }
+.login-error { margin:-10px 0 14px; color:#b42318; font-size:10px; text-align:center; }
+.login-submit { width:100%; min-height:58px; display:flex; align-items:center; justify-content:center; gap:11px; border:0; border-radius:12px; color:#fff; background:var(--brand-gradient); font-size:18px; font-weight:750; cursor:pointer; box-shadow:0 14px 26px rgba(2,88,205,.24); transition:.2s ease; }
+.login-submit:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 18px 32px rgba(2,88,205,.31); }
+.login-submit:disabled { opacity:.55; cursor:not-allowed; }
+.login-security { margin-top:31px; padding-top:20px; border-top:1px solid #d9e6f2; text-align:center; }
+.login-security div { display:flex; align-items:center; justify-content:center; gap:8px; color:#102858; }
+.login-security strong { font-size:10px; }
+.login-security p { margin:10px 0 4px; color:#7387ab; font-size:10px; }
+.login-security small { color:#a0aec2; font-size:8px; }
+@keyframes login-cinematic-pan { from{transform:scale(1.08) translate3d(0,0,0)} to{transform:scale(1.16) translate3d(-1.5%,.6%,0)} }
+@keyframes login-glow-drift { from{transform:translate3d(0,0,0) scale(.92);opacity:.55} to{transform:translate3d(-5vw,4vh,0) scale(1.08);opacity:1} }
+@keyframes login-content-reveal { from{opacity:0;transform:translateY(20px);filter:blur(5px)} to{opacity:1;transform:none;filter:none} }
+@keyframes wave-float-one { from{transform:rotate(20deg) translate3d(-2%,0,0)} to{transform:rotate(17deg) translate3d(4%,-7%,0)} }
+@keyframes wave-float-two { from{transform:rotate(17deg) translate3d(0,0,0)} to{transform:rotate(21deg) translate3d(5%,-5%,0)} }
+@keyframes wave-float-three { from{transform:rotate(18deg) translate3d(0,0,0)} to{transform:rotate(13deg) translate3d(-7%,5%,0)} }
+@keyframes form-wave-float { from{transform:rotate(-20deg) translate3d(0,0,0)} to{transform:rotate(-15deg) translate3d(-6%,5%,0)} }
+@media (max-width:1050px) { .login-page{grid-template-columns:1fr}.login-hero{min-height:auto}.login-hero-content{min-height:auto;padding:38px 42px 52px}.login-main-logo .unitech-mark{width:70px;height:70px}.login-main-logo .unitech-wordmark strong{font-size:30px}.login-message{margin-top:52px}.login-benefits{grid-template-columns:repeat(2,1fr)}.login-tagline{margin-top:45px}.login-slide-controls{right:38px;bottom:28px}.login-form-side{min-height:auto;padding:60px 24px} }
+@media (max-width:600px) { .login-hero-content{padding:28px 20px 40px}.login-main-logo .unitech-mark{width:54px;height:54px}.login-main-logo .unitech-wordmark strong{font-size:22px}.login-main-logo .unitech-wordmark small{font-size:11px}.login-message h1{font-size:38px}.login-benefits{grid-template-columns:1fr}.login-tagline{display:none}.login-form-side{padding:34px 14px}.login-card{padding:30px 20px 24px;border-radius:23px}.login-card-logo .unitech-mark{width:50px;height:50px}.login-card-logo .unitech-wordmark strong{font-size:19px}.login-options{align-items:flex-start;gap:12px}.login-security small{display:block;line-height:1.4} }
+@media (prefers-reduced-motion:reduce) { .login-submit,.login-control,.login-slide,.login-slide-controls button span{transition:none}.login-slide.is-active,.login-hero-glow,.login-main-logo,.login-message,.login-benefits,.login-hero-ribbon,.login-form-ribbon{animation:none} }

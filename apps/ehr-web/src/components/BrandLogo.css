@@ -1,0 +1,11 @@
+.unitech-brand { display:flex; align-items:center; gap:12px; color:var(--brand-navy,#061d55); }
+.unitech-mark { width:64px; height:64px; flex:0 0 auto; filter:drop-shadow(0 8px 14px rgba(0,94,214,.18)); }
+.unitech-wordmark { display:flex; flex-direction:column; gap:2px; }
+.unitech-wordmark strong { white-space:nowrap; font-size:25px; line-height:1; letter-spacing:-.035em; font-weight:900; }
+.unitech-wordmark b { color:var(--brand-cyan,#08c9e5); }
+.unitech-wordmark small { color:#3f5a8d; font-size:12px; letter-spacing:.01em; }
+.unitech-brand.inverse { color:#fff; }
+.unitech-brand.inverse .unitech-wordmark small { color:#d4e7fb; }
+.unitech-brand.compact { gap:9px; }
+.unitech-brand.compact .unitech-mark { width:38px; height:38px; }
+.unitech-brand.compact .unitech-wordmark strong { font-size:16px; }

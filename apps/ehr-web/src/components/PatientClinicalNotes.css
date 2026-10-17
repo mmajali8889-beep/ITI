@@ -1,0 +1,68 @@
+.patient-clinical-notes { display:flex; flex-direction:column; gap:14px; }
+.patient-clinical-notes-header { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.patient-clinical-notes-heading { display:flex; align-items:center; gap:11px; }
+.patient-clinical-notes-heading-icon { width:42px; height:42px; display:flex; align-items:center; justify-content:center; border-radius:10px; background:#eef4ff; color:#175cd3; }
+.patient-clinical-notes-heading h2 { margin:0; color:#344054; font-size:15px; }
+.patient-clinical-notes-heading p { margin:3px 0 0; color:#98a2b3; font-size:9px; }
+.patient-clinical-notes-refresh { min-height:36px; display:inline-flex; align-items:center; gap:6px; padding:0 12px; border:1px solid #d0d5dd; border-radius:8px; background:#fff; color:#475467; font-family:inherit; font-size:9px; font-weight:700; cursor:pointer; }
+.patient-clinical-notes-refresh:disabled { opacity:.6; cursor:not-allowed; }
+.patient-clinical-notes-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; }
+.patient-clinical-note-summary-card { display:flex; align-items:center; gap:9px; min-height:63px; padding:10px 11px; border:1px solid #eaecf0; border-radius:10px; background:#fff; }
+.patient-clinical-note-summary-icon { width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:8px; background:#f2f4f7; color:#667085; }
+.patient-clinical-note-summary-card.signed .patient-clinical-note-summary-icon { background:#ecfdf3; color:#039855; }
+.patient-clinical-note-summary-card.draft .patient-clinical-note-summary-icon { background:#fffaeb; color:#dc6803; }
+.patient-clinical-note-summary-card.addendum .patient-clinical-note-summary-icon { background:#f4f3ff; color:#6938ef; }
+.patient-clinical-note-summary-card>div:last-child { display:flex; flex-direction:column; }
+.patient-clinical-note-summary-card strong { color:#101828; font-size:16px; line-height:1; }
+.patient-clinical-note-summary-card span { margin-top:4px; color:#667085; font-size:8px; }
+.patient-clinical-notes-error { display:flex; align-items:center; gap:7px; padding:10px 12px; border:1px solid #fecdca; border-radius:8px; background:#fef3f2; color:#b42318; font-size:9px; }
+.patient-clinical-notes-toolbar { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.patient-clinical-notes-search { min-width:280px; flex:1; display:flex; align-items:center; gap:7px; padding:0 10px; border:1px solid #d0d5dd; border-radius:8px; background:#fff; color:#98a2b3; }
+.patient-clinical-notes-search:focus-within { border-color:#84adff; box-shadow:0 0 0 3px rgba(47,128,237,.08); }
+.patient-clinical-notes-search input { width:100%; height:36px; border:0; outline:0; background:transparent; color:#344054; font-family:inherit; font-size:9px; }
+.patient-clinical-notes-filters { display:flex; align-items:center; flex-wrap:wrap; gap:5px; }
+.patient-clinical-note-filter { min-height:34px; padding:0 10px; border:1px solid #eaecf0; border-radius:7px; background:#fff; color:#667085; font-family:inherit; font-size:8px; font-weight:700; cursor:pointer; }
+.patient-clinical-note-filter.active { border-color:#b2ccff; background:#eff4ff; color:#175cd3; }
+.patient-clinical-note-list { display:flex; flex-direction:column; gap:9px; }
+.patient-clinical-note-card { position:relative; overflow:hidden; padding:13px 14px; border:1px solid #e4e7ec; border-radius:10px; background:#fff; transition:border-color .15s ease,box-shadow .15s ease; }
+.patient-clinical-note-card:hover { border-color:#d0d5dd; box-shadow:0 3px 10px rgba(16,24,40,.04); }
+.patient-clinical-note-card.draft { border-left:4px solid #f79009; }
+.patient-clinical-note-card.signed { border-left:4px solid #12b76a; }
+.patient-clinical-note-card.entered-in-error { border-left:4px solid #f04438; background:#fffafa; }
+.patient-clinical-note-card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.patient-clinical-note-title-area { min-width:0; display:flex; align-items:flex-start; gap:9px; }
+.patient-clinical-note-type-icon { width:35px; height:35px; flex:0 0 35px; display:flex; align-items:center; justify-content:center; border-radius:8px; background:#eef4ff; color:#175cd3; }
+.patient-clinical-note-type-icon.addendum { background:#f4f3ff; color:#6938ef; }
+.patient-clinical-note-type-icon.discharge { background:#ecfdf3; color:#027a48; }
+.patient-clinical-note-title-row { display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+.patient-clinical-note-title-row h3 { margin:0; color:#101828; font-size:11px; }
+.patient-clinical-note-status { display:inline-flex; align-items:center; padding:3px 6px; border-radius:999px; font-size:6px; font-weight:800; }
+.patient-clinical-note-status.signed { background:#ecfdf3; color:#027a48; }
+.patient-clinical-note-status.draft { background:#fffaeb; color:#b54708; }
+.patient-clinical-note-status.entered-in-error { background:#fef3f2; color:#b42318; }
+.patient-clinical-note-meta { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-top:4px; }
+.patient-clinical-note-meta span { display:inline-flex; align-items:center; gap:4px; color:#98a2b3; font-size:7px; }
+.patient-clinical-note-top-actions { display:flex; align-items:center; gap:5px; }
+.patient-clinical-note-encounter,.patient-clinical-note-expand { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:30px; border:1px solid #dbe7f7; border-radius:7px; background:#f8fbff; color:#175cd3; font-family:inherit; font-size:7px; font-weight:750; cursor:pointer; }
+.patient-clinical-note-encounter { padding:0 9px; }
+.patient-clinical-note-expand { width:30px; padding:0; }
+.patient-clinical-note-preview { margin:11px 0 0; color:#667085; font-size:8px; line-height:1.6; }
+.patient-clinical-note-content { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin-top:12px; }
+.patient-clinical-field { padding:10px; border:1px solid #eaecf0; border-radius:8px; background:#fcfcfd; }
+.patient-clinical-field.emphasis { border-color:#d9d6fe; background:#f9f5ff; }
+.patient-clinical-field span { display:block; margin-bottom:4px; color:#667085; font-size:7px; font-weight:800; text-transform:uppercase; letter-spacing:.25px; }
+.patient-clinical-field p { margin:0; white-space:pre-wrap; color:#344054; font-size:8px; line-height:1.6; }
+.patient-clinical-note-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:11px; padding-top:9px; border-top:1px solid #f2f4f7; }
+.patient-clinical-note-dates { display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
+.patient-clinical-note-dates span { color:#98a2b3; font-size:7px; }
+.patient-clinical-note-dates strong { margin-left:4px; color:#667085; }
+.patient-clinical-note-sign { display:inline-flex; align-items:center; gap:5px; min-height:29px; padding:0 9px; border:1px solid #abefc6; border-radius:6px; background:#ecfdf3; color:#027a48; font-family:inherit; font-size:7px; font-weight:800; cursor:pointer; }
+.patient-clinical-note-sign:disabled { opacity:.55; cursor:not-allowed; }
+.patient-clinical-notes-empty,.patient-clinical-notes-state { min-height:220px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:30px; border:1px solid #eaecf0; border-radius:11px; background:#fff; color:#98a2b3; text-align:center; }
+.patient-clinical-notes-empty strong,.patient-clinical-notes-state strong { color:#475467; font-size:11px; }
+.patient-clinical-notes-empty span,.patient-clinical-notes-state span { max-width:430px; font-size:8px; }
+.patient-clinical-notes-spinner { width:25px; height:25px; border:3px solid #eaecf0; border-top-color:#175cd3; border-radius:50%; animation:clinical-note-spin .8s linear infinite; }
+.clinical-note-spin { animation:clinical-note-spin .8s linear infinite; }
+@keyframes clinical-note-spin { to { transform:rotate(360deg); } }
+@media (max-width:1000px) { .patient-clinical-notes-summary { grid-template-columns:repeat(2,1fr); } .patient-clinical-note-content { grid-template-columns:1fr; } }
+@media (max-width:750px) { .patient-clinical-notes-header,.patient-clinical-notes-toolbar,.patient-clinical-note-card-header,.patient-clinical-note-footer { align-items:stretch; flex-direction:column; } .patient-clinical-notes-search { min-width:0; } .patient-clinical-note-top-actions { justify-content:flex-end; } }

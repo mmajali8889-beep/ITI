@@ -1,0 +1,264 @@
+.patient-encounters {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.patient-encounters-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.patient-encounters-title {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.patient-encounters-title-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: #edf5ff;
+  color: #1769e0;
+}
+
+.patient-encounters-header h2 {
+  margin: 0;
+  color: #344054;
+  font-size: 15px;
+}
+
+.patient-encounters-header p {
+  margin: 3px 0 0;
+  color: #98a2b3;
+  font-size: 9px;
+}
+
+.patient-encounters-refresh {
+  min-height: 37px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid #dce3ec;
+  border-radius: 8px;
+  background: #fff;
+  color: #475467;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.encounter-spin {
+  animation: encounter-spin .8s linear infinite;
+}
+
+@keyframes encounter-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.patient-encounter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.patient-encounter-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 14px;
+  border: 1px solid #e4e9f0;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.patient-encounter-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.patient-encounter-icon {
+  width: 39px;
+  height: 39px;
+  flex: 0 0 39px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+}
+
+.patient-encounter-icon.active {
+  background: #edf5ff;
+  color: #1769e0;
+}
+
+.patient-encounter-icon.finished {
+  background: #ecfdf3;
+  color: #039855;
+}
+
+.patient-encounter-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.patient-encounter-type-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.patient-encounter-type-row h3 {
+  margin: 0;
+  color: #344054;
+  font-size: 11px;
+}
+
+.patient-encounter-status {
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 7px;
+  font-weight: 800;
+}
+
+.patient-encounter-status.active {
+  background: #edf5ff;
+  color: #175cd3;
+}
+
+.patient-encounter-status.finished {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.patient-encounter-department {
+  display: block;
+  margin-top: 4px;
+  color: #667085;
+  font-size: 8px;
+}
+
+.patient-encounter-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 11px;
+}
+
+.patient-encounter-detail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.patient-encounter-detail > div:first-child {
+  color: #98a2b3;
+}
+
+.patient-encounter-detail > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.patient-encounter-detail span {
+  color: #98a2b3;
+  font-size: 7px;
+}
+
+.patient-encounter-detail strong {
+  color: #475467;
+  font-size: 8px;
+}
+
+.patient-encounter-actions button {
+  min-height: 33px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: 1px solid #dbe7f7;
+  border-radius: 7px;
+  background: #f8fbff;
+  color: #1769e0;
+  font-size: 8px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.patient-encounter-actions button:hover {
+  border-color: #1769e0;
+  background: #edf5ff;
+}
+
+.patient-encounters-empty,
+.patient-encounters-state {
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 25px;
+  border: 1px solid #e4e9f0;
+  border-radius: 12px;
+  background: #fff;
+  color: #98a2b3;
+  text-align: center;
+}
+
+.patient-encounters-empty strong,
+.patient-encounters-state strong {
+  color: #475467;
+  font-size: 11px;
+}
+
+.patient-encounters-empty span,
+.patient-encounters-state span {
+  font-size: 8px;
+}
+
+.patient-encounters-error {
+  padding: 10px 12px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: #b42318;
+  font-size: 9px;
+}
+
+.patient-encounters-spinner {
+  width: 25px;
+  height: 25px;
+  border: 3px solid #e4e7ec;
+  border-top-color: #1769e0;
+  border-radius: 50%;
+  animation: encounter-spin .8s linear infinite;
+}
+
+@media (max-width: 700px) {
+  .patient-encounters-header,
+  .patient-encounter-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .patient-encounter-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}

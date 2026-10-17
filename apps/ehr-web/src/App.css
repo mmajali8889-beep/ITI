@@ -1,0 +1,7 @@
+/* Global app stylesheet intentionally kept minimal.
+   Feature-specific styling lives in each page/layout CSS file. */
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}

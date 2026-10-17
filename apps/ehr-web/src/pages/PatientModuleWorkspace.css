@@ -1,0 +1,239 @@
+.patient-module-workspace {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 22px 28px 44px;
+  color: #20324a;
+}
+
+.patient-module-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 15px;
+  padding: 19px 20px;
+  border: 1px solid #dfe8f1;
+  border-radius: 17px;
+  background: linear-gradient(135deg, #fff, #f8fbfe);
+  box-shadow: 0 8px 26px rgba(33, 60, 89, .04);
+}
+
+.patient-module-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 13px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #60758b;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.patient-module-title {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.patient-module-icon {
+  width: 43px;
+  height: 43px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+}
+
+.patient-module-icon.violet {
+  background: #f3efff;
+  color: #7c3aed;
+}
+
+.patient-module-icon.rose {
+  background: #fff0f2;
+  color: #dc4760;
+}
+
+.patient-module-title span {
+  color: #8696a8;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.patient-module-title h1 {
+  margin: 3px 0 0;
+  color: #2b425a;
+  font-size: 18px;
+}
+
+.patient-module-chart {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 1px solid #c7d9ea;
+  border-radius: 10px;
+  background: #f7fbff;
+  color: #1769e0;
+  font-size: 8px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.patient-module-body {
+  border: 1px solid #dfe8f1;
+  border-radius: 17px;
+  background: #fff;
+  padding: 18px;
+  box-shadow: 0 8px 26px rgba(33, 60, 89, .04);
+}
+
+.patient-module-state {
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #71849a;
+  text-align: center;
+  font-size: 10px;
+}
+
+.patient-module-state.error {
+  color: #b42318;
+}
+
+.medication-workspace-tools {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.medication-workspace-tools label {
+  min-height: 40px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px;
+  border: 1px solid #d7e1eb;
+  border-radius: 10px;
+  color: #8293a5;
+}
+
+.medication-workspace-tools input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  font-size: 10px;
+}
+
+.medication-workspace-tools button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 1px solid #d7e1eb;
+  border-radius: 10px;
+  background: #fff;
+  color: #506d89;
+  font-size: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.medication-workspace-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.medication-workspace-card {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 11px;
+  padding: 13px;
+  border: 1px solid #e2e9f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.medication-pill-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #fff0f2;
+  color: #dc4760;
+}
+
+.medication-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.medication-card-title h2 {
+  margin: 0;
+  color: #334a62;
+  font-size: 11px;
+}
+
+.medication-card-title span {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1769e0;
+  font-size: 7px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.medication-card-copy p {
+  margin: 6px 0 0;
+  color: #647990;
+  font-size: 9px;
+}
+
+.medication-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  margin-top: 8px;
+  color: #91a0b0;
+  font-size: 8px;
+}
+
+.spin {
+  animation: patient-module-spin .9s linear infinite;
+}
+
+@keyframes patient-module-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 760px) {
+  .patient-module-workspace {
+    padding: 15px 13px 30px;
+  }
+
+  .patient-module-header,
+  .medication-workspace-tools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .patient-module-chart {
+    justify-content: center;
+  }
+}

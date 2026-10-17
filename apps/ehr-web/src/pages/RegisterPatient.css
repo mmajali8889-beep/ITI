@@ -1,0 +1,223 @@
+.register-patient-page {
+  max-width: 1250px;
+  margin: 0 auto;
+}
+
+.registration-heading {
+  margin-bottom: 24px;
+}
+
+.registration-heading h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.registration-heading p {
+  margin: 7px 0 0;
+  color: #788397;
+}
+
+
+.patient-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+
+.form-section {
+  background: white;
+
+  border: 1px solid #e7ebf1;
+  border-radius: 14px;
+
+  padding: 24px;
+
+  box-shadow:
+    0 5px 18px
+    rgba(30, 45, 70, 0.04);
+}
+
+
+.form-section-heading {
+  margin-bottom: 22px;
+
+  padding-bottom: 15px;
+
+  border-bottom:
+    1px solid #edf0f4;
+}
+
+
+.form-section-heading h2 {
+  margin: 0;
+
+  font-size: 17px;
+}
+
+
+.form-section-heading p {
+  margin: 5px 0 0;
+
+  color: #8a94a6;
+
+  font-size: 13px;
+}
+
+
+.form-grid {
+  display: grid;
+
+  gap: 18px;
+}
+
+
+.form-field {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 8px;
+}
+
+
+.form-field > span {
+  color: #465269;
+
+  font-size: 13px;
+
+  font-weight: 600;
+}
+
+
+.form-field b {
+  margin-left: 4px;
+
+  color: #d92d20;
+}
+
+
+.form-field input,
+.form-field select {
+  width: 100%;
+
+  height: 44px;
+
+  border:
+    1px solid #dce2ea;
+
+  border-radius: 9px;
+
+  padding:
+    0 12px;
+
+  background: white;
+
+  color: #172033;
+
+  outline: none;
+
+  font-size: 14px;
+}
+
+
+.form-field input:focus,
+.form-field select:focus {
+  border-color:
+    #1769e0;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(23, 105, 224, 0.1);
+}
+
+
+.form-error {
+  margin-bottom: 20px;
+
+  padding: 13px 16px;
+
+  border-radius: 9px;
+
+  background:
+    #fef3f2;
+
+  border:
+    1px solid #fecdca;
+
+  color:
+    #b42318;
+
+  font-size: 14px;
+}
+
+
+.form-actions {
+  display: flex;
+
+  justify-content:
+    flex-end;
+
+  gap: 12px;
+
+  padding-bottom:
+    30px;
+}
+
+
+.cancel-button,
+.save-patient-button {
+  min-width: 140px;
+
+  height: 44px;
+
+  border-radius: 9px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+
+.cancel-button {
+  border:
+    1px solid #dce2ea;
+
+  background:
+    white;
+
+  color:
+    #536176;
+}
+
+
+.save-patient-button {
+  border: 0;
+
+  background:
+    #1769e0;
+
+  color:
+    white;
+}
+
+
+.save-patient-button:hover {
+  background:
+    #125cc6;
+}
+
+
+.save-patient-button:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+}
+
+
+@media (max-width: 900px) {
+  .form-grid {
+    grid-template-columns:
+      1fr !important;
+  }
+}

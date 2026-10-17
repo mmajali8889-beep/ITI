@@ -1,0 +1,8 @@
+import { api } from './configureAxios';import type{DispenseRecord,PharmacyInventory,PharmacyRequest}from'../types/pharmacy';
+export const getInventory=async(hospitalId:string)=>(await api.get<PharmacyInventory>('/pharmacy/inventory',{params:{hospitalId}})).data;
+export const getPharmacyQueue=async(hospitalId:string)=>(await api.get<{total:number;requests:PharmacyRequest[]}>('/pharmacy/queue',{params:{hospitalId}})).data;
+export const getDispenses=async(hospitalId:string)=>(await api.get<{total:number;dispenses:DispenseRecord[]}>('/pharmacy/dispenses',{params:{hospitalId}})).data;
+export const receiveStock=async(payload:{hospitalId:string;medicationCode:string;medicationName:string;form:string;strength?:string;unit:string;lotNumber:string;expirationDate:string;quantity:number;reorderLevel:number})=>(await api.post('/pharmacy/inventory/receive',payload)).data;
+export const verifyPrescription=async(id:string,payload:{hospitalId:string;pharmacistName:string;allergyChecked:boolean;interactionChecked:boolean;doseChecked:boolean;stockChecked:boolean;decision:'approved';issues?:string})=>(await api.post(`/pharmacy/prescriptions/${id}/verify`,payload)).data;
+export const dispensePrescription=async(payload:{hospitalId:string;medicationRequestId:string;quantity:number;pharmacistName:string;counselingProvided:boolean;counselingNotes?:string;notes?:string})=>(await api.post('/pharmacy/dispense',payload)).data;
+export const returnDispense=async(id:string,payload:{hospitalId:string;quantity:number;reason:string;pharmacistName:string})=>(await api.post(`/pharmacy/dispenses/${id}/return`,payload)).data;

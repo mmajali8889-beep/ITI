@@ -1,0 +1,848 @@
+.diagnosis-panel {
+  display: flex;
+  flex-direction: column;
+
+  gap: 16px;
+}
+
+
+/* =========================================================
+   SUMMARY
+========================================================= */
+
+.diagnosis-summary-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
+
+  gap: 11px;
+}
+
+
+.diagnosis-summary-card {
+  min-height: 82px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 11px;
+
+  padding: 14px;
+
+  border: 1px solid #e1e7ef;
+  border-radius: 11px;
+
+  background: white;
+
+  box-shadow:
+    0 3px 12px
+    rgba(
+      31,
+      48,
+      74,
+      0.025
+    );
+}
+
+
+.diagnosis-summary-icon {
+  width: 41px;
+  height: 41px;
+
+  min-width: 41px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  background: #edf5ff;
+
+  color: #1769e0;
+}
+
+
+.diagnosis-summary-card > div:last-child {
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+
+.diagnosis-summary-card span {
+  color: #98a2b3;
+
+  font-size: 9px;
+}
+
+
+.diagnosis-summary-card strong {
+  color: #344054;
+
+  font-size: 20px;
+}
+
+
+.diagnosis-summary-card strong.text-value {
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   CARDS
+========================================================= */
+
+.diagnosis-entry-card,
+.condition-list-card {
+  overflow: hidden;
+
+  border: 1px solid #e1e7ef;
+  border-radius: 12px;
+
+  background: white;
+
+  box-shadow:
+    0 4px 14px
+    rgba(
+      31,
+      48,
+      74,
+      0.025
+    );
+}
+
+
+.diagnosis-card-heading {
+  min-height: 63px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 15px;
+
+  padding: 13px 17px;
+
+  border-bottom: 1px solid #edf0f4;
+}
+
+
+.diagnosis-card-heading h2 {
+  margin: 0;
+
+  color: #344054;
+
+  font-size: 12px;
+  font-weight: 750;
+}
+
+
+.diagnosis-card-heading p {
+  margin: 3px 0 0;
+
+  color: #98a2b3;
+
+  font-size: 9px;
+}
+
+
+.diagnosis-card-heading > svg {
+  color: #1769e0;
+}
+
+
+.condition-count {
+  min-width: 28px;
+  height: 25px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 999px;
+
+  background: #edf5ff;
+
+  color: #1769e0;
+
+  font-size: 9px;
+  font-weight: 750;
+}
+
+
+/* =========================================================
+   FORM
+========================================================= */
+
+.diagnosis-form-body {
+  padding: 16px;
+}
+
+
+.diagnosis-form-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0, 1fr)
+    );
+
+  gap: 12px;
+
+  margin-bottom: 14px;
+}
+
+
+.diagnosis-main-fields {
+  grid-template-columns:
+    0.6fr
+    1.6fr
+    0.7fr
+    0.8fr;
+}
+
+
+.diagnosis-field {
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+}
+
+
+.diagnosis-field > span,
+.icd-search-block > label {
+  color: #536176;
+
+  font-size: 9px;
+  font-weight: 700;
+}
+
+
+.diagnosis-field input,
+.diagnosis-field select,
+.diagnosis-field textarea {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  border: 1px solid #dce3ec;
+  border-radius: 8px;
+
+  background: white;
+
+  color: #344054;
+
+  outline: none;
+
+  font-family: inherit;
+  font-size: 10px;
+}
+
+
+.diagnosis-field input,
+.diagnosis-field select {
+  height: 40px;
+
+  padding: 0 10px;
+}
+
+
+.diagnosis-field textarea {
+  resize: vertical;
+
+  min-height: 75px;
+
+  padding: 10px;
+
+  line-height: 1.5;
+}
+
+
+.diagnosis-field input:focus,
+.diagnosis-field select:focus,
+.diagnosis-field textarea:focus {
+  border-color: #1769e0;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(
+      23,
+      105,
+      224,
+      0.08
+    );
+}
+
+
+/* =========================================================
+   ICD SEARCH
+========================================================= */
+
+.icd-search-block {
+  position: relative;
+
+  margin-bottom: 14px;
+}
+
+
+.icd-search-block > label {
+  display: block;
+
+  margin-bottom: 6px;
+}
+
+
+.icd-search-input {
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  padding: 0 11px;
+
+  border: 1px solid #dce3ec;
+  border-radius: 8px;
+
+  background: white;
+}
+
+
+.icd-search-input:focus-within {
+  border-color: #1769e0;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(
+      23,
+      105,
+      224,
+      0.08
+    );
+}
+
+
+.icd-search-input svg {
+  color: #98a2b3;
+}
+
+
+.icd-search-input input {
+  flex: 1;
+
+  height: 100%;
+
+  border: 0;
+
+  outline: none;
+
+  background: transparent;
+
+  color: #344054;
+
+  font-size: 10px;
+}
+
+
+.icd-search-results {
+  position: absolute;
+
+  top: calc(
+    100% + 5px
+  );
+
+  right: 0;
+  left: 0;
+
+  z-index: 50;
+
+  max-height: 320px;
+
+  overflow-y: auto;
+
+  border: 1px solid #dce3ec;
+  border-radius: 9px;
+
+  background: white;
+
+  box-shadow:
+    0 15px 35px
+    rgba(
+      31,
+      48,
+      74,
+      0.13
+    );
+}
+
+
+.icd-search-results button {
+  width: 100%;
+
+  min-height: 45px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 14px;
+
+  padding: 8px 12px;
+
+  border: 0;
+  border-bottom: 1px solid #edf0f4;
+
+  background: white;
+
+  text-align: left;
+
+  cursor: pointer;
+}
+
+
+.icd-search-results button:last-child {
+  border-bottom: 0;
+}
+
+
+.icd-search-results button:hover {
+  background: #f6f9fd;
+}
+
+
+.icd-search-results strong {
+  min-width: 50px;
+
+  color: #1769e0;
+
+  font-size: 10px;
+}
+
+
+.icd-search-results span {
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+
+  color: #536176;
+
+  font-size: 9px;
+}
+
+.icd-search-results span small {
+  color: #7b879a;
+
+  font-size: 9px;
+  text-align: right;
+}
+
+
+/* =========================================================
+   MESSAGES
+========================================================= */
+
+.diagnosis-message {
+  margin-top: 13px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+
+  padding: 9px 11px;
+
+  border-radius: 8px;
+
+  font-size: 9px;
+}
+
+
+.diagnosis-message.error {
+  border: 1px solid #fecdca;
+
+  background: #fef3f2;
+
+  color: #b42318;
+}
+
+
+.diagnosis-message.success {
+  border: 1px solid #abefc6;
+
+  background: #ecfdf3;
+
+  color: #027a48;
+}
+
+
+/* =========================================================
+   ACTION
+========================================================= */
+
+.diagnosis-form-actions {
+  display: flex;
+  justify-content: flex-end;
+
+  margin-top: 14px;
+}
+
+
+.add-diagnosis-button {
+  height: 39px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  padding: 0 14px;
+
+  border: 0;
+  border-radius: 8px;
+
+  background: #1769e0;
+
+  color: white;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+
+.add-diagnosis-button:hover {
+  background: #125ac5;
+}
+
+
+.add-diagnosis-button:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   CONDITION TABLE
+========================================================= */
+
+.condition-table-wrapper {
+  overflow-x: auto;
+}
+
+
+.condition-table {
+  width: 100%;
+
+  border-collapse: collapse;
+}
+
+
+.condition-table th {
+  padding: 10px 13px;
+
+  border-bottom: 1px solid #e7ebf1;
+
+  background: #f8fafc;
+
+  color: #7e8b9d;
+
+  text-align: left;
+
+  font-size: 8px;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.4px;
+
+  white-space: nowrap;
+}
+
+
+.condition-table td {
+  padding: 12px 13px;
+
+  border-bottom: 1px solid #edf1f5;
+
+  color: #59677a;
+
+  font-size: 9px;
+
+  vertical-align: middle;
+}
+
+
+.condition-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+
+.condition-table tbody tr:hover {
+  background: #fbfdff;
+}
+
+
+.icd-code {
+  color: #1769e0;
+
+  font-size: 10px;
+}
+
+
+.condition-description {
+  min-width: 180px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+
+.condition-description strong {
+  color: #344054;
+
+  font-size: 10px;
+}
+
+
+.condition-description span {
+  max-width: 350px;
+
+  overflow: hidden;
+
+  color: #98a2b3;
+
+  font-size: 8px;
+
+  white-space: nowrap;
+
+  text-overflow: ellipsis;
+}
+
+
+/* =========================================================
+   RANK
+========================================================= */
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 4px 7px;
+
+  border-radius: 999px;
+
+  font-size: 8px;
+  font-weight: 700;
+}
+
+
+.rank-badge.primary {
+  background: #edf5ff;
+
+  color: #1769e0;
+}
+
+
+.rank-badge.secondary {
+  background: #f2f4f7;
+
+  color: #667085;
+}
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+.condition-status {
+  display: inline-flex;
+  align-items: center;
+
+  gap: 5px;
+
+  padding: 4px 7px;
+
+  border-radius: 999px;
+
+  background: #f2f4f7;
+
+  color: #667085;
+
+  font-size: 8px;
+  font-weight: 700;
+}
+
+
+.condition-status > span {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: #98a2b3;
+}
+
+
+.condition-status.active {
+  background: #ecfdf3;
+
+  color: #027a48;
+}
+
+
+.condition-status.active > span {
+  background: #12b76a;
+}
+
+
+.condition-status.resolved {
+  background: #f2f4f7;
+
+  color: #667085;
+}
+
+
+.condition-status.resolved > span {
+  background: #98a2b3;
+}
+
+
+.condition-status.inactive {
+  background: #fff6ed;
+
+  color: #b54708;
+}
+
+
+.condition-status.inactive > span {
+  background: #f79009;
+}
+
+
+/* =========================================================
+   ROW ACTION
+========================================================= */
+
+.condition-action-cell {
+  text-align: right;
+
+  white-space: nowrap;
+}
+
+
+.condition-resolve,
+.condition-reactivate {
+  min-height: 31px;
+
+  display: inline-flex;
+  align-items: center;
+
+  gap: 5px;
+
+  padding: 0 8px;
+
+  border-radius: 7px;
+
+  background: white;
+
+  font-size: 8px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+
+.condition-resolve {
+  border: 1px solid #abefc6;
+
+  color: #027a48;
+}
+
+
+.condition-reactivate {
+  border: 1px solid #bfd4f3;
+
+  color: #1769e0;
+}
+
+
+/* =========================================================
+   EMPTY
+========================================================= */
+
+.condition-empty {
+  min-height: 130px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 5px;
+
+  padding: 20px;
+
+  color: #98a2b3;
+
+  text-align: center;
+
+  font-size: 9px;
+}
+
+
+.condition-empty svg {
+  margin-bottom: 3px;
+
+  color: #a7b4c5;
+}
+
+
+.condition-empty strong {
+  color: #667085;
+
+  font-size: 10px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (
+  max-width: 1100px
+) {
+  .diagnosis-form-grid,
+  .diagnosis-main-fields {
+    grid-template-columns:
+      repeat(
+        2,
+        1fr
+      );
+  }
+}
+
+
+@media (
+  max-width: 750px
+) {
+  .diagnosis-summary-grid,
+  .diagnosis-form-grid,
+  .diagnosis-main-fields {
+    grid-template-columns:
+      1fr;
+  }
+}

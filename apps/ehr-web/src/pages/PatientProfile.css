@@ -1,0 +1,1126 @@
+/* =========================================================
+   PATIENT PROFILE / PATIENT CHART
+   ========================================================= */
+
+.patient-profile {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding-bottom: 40px;
+
+  color: #1f2937;
+}
+
+.patient-banner-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* =========================================================
+   BACK BUTTON
+   ========================================================= */
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  margin-bottom: 18px;
+
+  padding: 9px 13px;
+
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+
+  background: #ffffff;
+
+  color: #536176;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+
+.back-button:hover {
+  border-color: #b7c8de;
+
+  background: #f5f8fc;
+
+  color: #1769e0;
+}
+
+
+/* =========================================================
+   PATIENT BANNER
+   ========================================================= */
+
+.patient-banner {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+
+  gap: 22px;
+
+  min-height: 125px;
+
+  padding: 24px 26px;
+
+  border: 1px solid #e1e8f0;
+  border-radius: 16px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #ffffff 0%,
+      #f7faff 100%
+    );
+
+  box-shadow:
+    0 8px 28px
+    rgba(31, 48, 74, 0.06);
+}
+
+
+/* =========================================================
+   PATIENT AVATAR
+   ========================================================= */
+
+.patient-avatar {
+  width: 76px;
+  height: 76px;
+
+  min-width: 76px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #1769e0,
+      #0f4fae
+    );
+
+  color: #ffffff;
+
+  font-size: 29px;
+  font-weight: 800;
+
+  box-shadow:
+    0 8px 20px
+    rgba(23, 105, 224, 0.20);
+}
+
+
+/* =========================================================
+   PATIENT MAIN INFORMATION
+   ========================================================= */
+
+.patient-main-info {
+  flex: 1;
+  min-width: 0;
+}
+
+
+.patient-main-info h1 {
+  margin: 0 0 5px;
+
+  color: #162033;
+
+  font-size: 26px;
+  font-weight: 750;
+
+  letter-spacing: -0.4px;
+}
+
+
+.arabic-name {
+  width: fit-content;
+
+  margin-bottom: 12px;
+
+  color: #4f5d73;
+
+  font-size: 17px;
+  font-weight: 500;
+}
+
+
+.patient-demographics {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 8px 10px;
+}
+
+
+.patient-demographics span {
+  display: inline-flex;
+  align-items: center;
+
+  min-height: 30px;
+
+  padding: 5px 10px;
+
+  border: 1px solid #e4eaf2;
+  border-radius: 7px;
+
+  background: #f8fafc;
+
+  color: #667085;
+
+  font-size: 12px;
+}
+
+
+.patient-demographics strong {
+  margin-left: 4px;
+
+  color: #29374d;
+
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   PATIENT ACTION BUTTONS
+   ========================================================= */
+
+.patient-banner-actions {
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+}
+
+
+.patient-banner-actions button {
+  min-height: 42px;
+
+  padding: 0 17px;
+
+  border-radius: 9px;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+
+.primary-action {
+  border: 0;
+
+  background:
+    linear-gradient(
+      135deg,
+      #1769e0,
+      #125ac4
+    );
+
+  color: #ffffff;
+
+  box-shadow:
+    0 5px 15px
+    rgba(23, 105, 224, 0.18);
+}
+
+
+.primary-action:hover {
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 8px 20px
+    rgba(23, 105, 224, 0.25);
+}
+
+
+.secondary-action {
+  border: 1px solid #d8e0ea;
+
+  background: #ffffff;
+
+  color: #596579;
+}
+
+
+.secondary-action:hover {
+  border-color: #b9c8db;
+
+  background: #f7f9fc;
+}
+
+
+/* =========================================================
+   PATIENT TABS
+   ========================================================= */
+
+.patient-tabs {
+  display: flex;
+  align-items: center;
+
+  gap: 4px;
+
+  margin-top: 22px;
+
+  padding: 0 5px;
+
+  overflow-x: auto;
+
+  border-bottom: 1px solid #dfe6ef;
+
+  background: transparent;
+
+  scrollbar-width: thin;
+}
+
+
+.patient-tab {
+  position: relative;
+
+  min-height: 46px;
+
+  padding: 0 14px;
+
+  border: 0;
+
+  border-bottom: 3px solid transparent;
+
+  background: transparent;
+
+  color: #68758a;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+
+.patient-tab:hover {
+  color: #1769e0;
+
+  background: #f5f8fd;
+}
+
+
+.patient-tab.active {
+  color: #1769e0;
+
+  border-bottom-color: #1769e0;
+
+  background: transparent;
+
+  font-weight: 750;
+}
+
+
+/* =========================================================
+   PATIENT WORKSPACE
+   ========================================================= */
+
+.patient-workspace {
+  padding-top: 24px;
+}
+
+
+/* =========================================================
+   SUMMARY GRID
+   ========================================================= */
+
+.summary-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+
+  gap: 18px;
+}
+
+
+/* =========================================================
+   SUMMARY CARDS
+   ========================================================= */
+
+.summary-card {
+  overflow: hidden;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 5px 18px
+    rgba(31, 48, 74, 0.04);
+}
+
+
+.summary-card h2 {
+  margin: 0;
+
+  padding: 16px 19px;
+
+  border-bottom: 1px solid #e9eef4;
+
+  background: #f8fafc;
+
+  color: #334155;
+
+  font-size: 14px;
+  font-weight: 750;
+}
+
+
+.summary-card-content {
+  padding: 7px 19px 14px;
+}
+
+
+/* =========================================================
+   INFORMATION ROWS
+   ========================================================= */
+
+.info-row {
+  display: grid;
+
+  grid-template-columns:
+    minmax(130px, 0.7fr)
+    minmax(0, 1.3fr);
+
+  align-items: center;
+
+  gap: 20px;
+
+  min-height: 47px;
+
+  border-bottom: 1px solid #edf1f5;
+}
+
+
+.info-row:last-child {
+  border-bottom: 0;
+}
+
+
+.info-row span {
+  color: #7a8699;
+
+  font-size: 12px;
+  font-weight: 500;
+}
+
+
+.info-row strong {
+  overflow-wrap: anywhere;
+
+  color: #27364d;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  text-align: right;
+}
+
+
+/* =========================================================
+   CLINICAL ALERTS
+   ========================================================= */
+
+.clinical-alert {
+  margin-top: 10px;
+
+  padding: 12px 14px;
+
+  border-radius: 9px;
+
+  font-size: 13px;
+}
+
+
+.clinical-alert.empty {
+  border: 1px solid #e5eaf0;
+
+  background: #f8fafc;
+
+  color: #748096;
+}
+
+
+/* =========================================================
+   EMPTY MODULES
+   ========================================================= */
+
+.empty-clinical-module {
+  min-height: 330px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 40px;
+
+  border: 1px dashed #ccd6e3;
+  border-radius: 14px;
+
+  background: #ffffff;
+
+  text-align: center;
+}
+
+
+.empty-clinical-module::before {
+  content: "+";
+
+  width: 52px;
+  height: 52px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-bottom: 15px;
+
+  border-radius: 14px;
+
+  background: #eaf2ff;
+
+  color: #1769e0;
+
+  font-size: 26px;
+  font-weight: 500;
+}
+
+
+.empty-clinical-module h2 {
+  margin: 0 0 8px;
+
+  color: #2b3950;
+
+  font-size: 18px;
+}
+
+
+.empty-clinical-module p {
+  max-width: 500px;
+
+  margin: 0;
+
+  color: #7b8799;
+
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+
+/* =========================================================
+   LOADING
+   ========================================================= */
+
+.patient-loading {
+  min-height: 350px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #6f7c90;
+
+  font-size: 15px;
+}
+
+
+/* =========================================================
+   ERROR
+   ========================================================= */
+
+.patient-error {
+  min-height: 320px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 15px;
+
+  padding: 30px;
+
+  border: 1px solid #fecdca;
+  border-radius: 14px;
+
+  background: #fffafa;
+
+  color: #b42318;
+}
+
+
+.patient-error button {
+  padding: 9px 15px;
+
+  border: 1px solid #d8e0ea;
+  border-radius: 8px;
+
+  background: white;
+
+  color: #48566d;
+
+  cursor: pointer;
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (
+  max-width: 1100px
+) {
+
+  .patient-banner {
+    align-items: flex-start;
+
+    flex-wrap: wrap;
+  }
+
+
+  .patient-banner-actions {
+    width: 100%;
+
+    justify-content: flex-end;
+  }
+
+
+  .summary-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (
+  max-width: 700px
+) {
+
+  .patient-banner {
+    padding: 18px;
+
+    gap: 15px;
+  }
+
+
+  .patient-avatar {
+    width: 58px;
+    height: 58px;
+
+    min-width: 58px;
+
+    border-radius: 15px;
+
+    font-size: 22px;
+  }
+
+
+  .patient-main-info h1 {
+    font-size: 20px;
+  }
+
+
+  .arabic-name {
+    font-size: 15px;
+  }
+
+
+  .patient-demographics {
+    gap: 6px;
+  }
+
+
+  .patient-demographics span {
+    font-size: 11px;
+  }
+
+
+  .patient-banner-actions {
+    flex-direction: column;
+  }
+
+
+  .patient-banner-actions button {
+    width: 100%;
+  }
+
+
+  .patient-tabs {
+    padding: 0;
+  }
+
+
+  .patient-tab {
+    padding: 0 10px;
+  }
+
+
+  .info-row {
+    grid-template-columns:
+      1fr;
+
+    gap: 4px;
+
+    padding: 11px 0;
+  }
+
+
+  .info-row strong {
+    text-align: left;
+  }
+.patient-banner-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+}
+/* =========================================================
+   PATIENT BANNER - MAIN ROW
+========================================================= */
+
+.patient-banner-main-row {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+
+  gap: 16px;
+}
+
+
+/* =========================================================
+   PATIENT BANNER WITH CRITICAL ALLERGY
+========================================================= */
+
+.patient-banner.has-critical-allergy {
+  border-color: #fda29b;
+
+  box-shadow:
+    0 3px 12px
+    rgba(217, 45, 32, 0.05);
+}
+
+
+/* =========================================================
+   ALLERGY SAFETY STRIP
+========================================================= */
+
+.patient-banner-allergy-strip {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  margin-top: 12px;
+
+  padding: 9px 11px;
+
+  border: 1px solid #e4e7ec;
+
+  border-radius: 8px;
+
+  font-family: inherit;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+
+/* =========================================================
+   NKDA / NO ACTIVE ALLERGY
+========================================================= */
+
+.patient-banner-allergy-strip.nkda {
+  border-color: #abefc6;
+
+  background: #ecfdf3;
+
+  color: #027a48;
+}
+
+
+.patient-banner-allergy-strip.nkda:hover {
+  background: #dcfae6;
+}
+
+
+/* =========================================================
+   NON-CRITICAL ACTIVE ALLERGY
+========================================================= */
+
+.patient-banner-allergy-strip.warning {
+  border-color: #fec84b;
+
+  background: #fffaeb;
+
+  color: #b54708;
+}
+
+
+.patient-banner-allergy-strip.warning:hover {
+  background: #fef0c7;
+}
+
+
+/* =========================================================
+   CRITICAL ALLERGY
+========================================================= */
+
+.patient-banner-allergy-strip.critical {
+  border: 2px solid #d92d20;
+
+  background:
+    linear-gradient(
+      90deg,
+      #fef3f2 0%,
+      #fff8f7 55%,
+      #ffffff 100%
+    );
+
+  color: #b42318;
+
+  box-shadow:
+    0 2px 8px
+    rgba(217, 45, 32, 0.08);
+}
+
+
+.patient-banner-allergy-strip.critical:hover {
+  background:
+    linear-gradient(
+      90deg,
+      #fee4e2,
+      #fef3f2
+    );
+}
+
+
+/* =========================================================
+   ICON
+========================================================= */
+
+.patient-banner-allergy-icon {
+  width: 31px;
+  height: 31px;
+
+  min-width: 31px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 7px;
+}
+
+
+.patient-banner-allergy-strip.nkda
+.patient-banner-allergy-icon {
+  background: #d1fadf;
+
+  color: #027a48;
+}
+
+
+.patient-banner-allergy-strip.warning
+.patient-banner-allergy-icon {
+  background: #fef0c7;
+
+  color: #dc6803;
+}
+
+
+.patient-banner-allergy-strip.critical
+.patient-banner-allergy-icon {
+  background: #d92d20;
+
+  color: #ffffff;
+}
+
+
+/* =========================================================
+   COPY
+========================================================= */
+
+.patient-banner-allergy-copy {
+  min-width: 0;
+
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+
+.patient-banner-allergy-copy > strong {
+  font-size: 9px;
+  font-weight: 800;
+}
+
+
+.patient-banner-allergy-copy > span {
+  opacity: 0.78;
+
+  font-size: 7px;
+}
+
+
+/* =========================================================
+   TITLE
+========================================================= */
+
+.patient-banner-allergy-title {
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+}
+
+
+.patient-banner-allergy-title strong {
+  color: #b42318;
+
+  font-size: 9px;
+  font-weight: 900;
+
+  letter-spacing: 0.35px;
+}
+
+
+.patient-banner-allergy-title > span {
+  padding: 2px 6px;
+
+  border-radius: 999px;
+
+  background: #d92d20;
+
+  color: #ffffff;
+
+  font-size: 6px;
+  font-weight: 900;
+}
+
+
+/* =========================================================
+   ALLERGY ITEMS
+========================================================= */
+
+.patient-banner-allergy-items {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+
+  gap: 5px;
+}
+
+
+.patient-banner-allergy-chip {
+  display: inline-flex;
+  align-items: center;
+
+  gap: 4px;
+
+  padding: 3px 7px;
+
+  border: 1px solid #fec84b;
+
+  border-radius: 999px;
+
+  background: #ffffff;
+
+  color: #b54708;
+
+  font-size: 7px;
+  font-weight: 750;
+}
+
+
+.patient-banner-allergy-chip.critical {
+  border-color: #fda29b;
+
+  color: #b42318;
+}
+
+
+.patient-banner-allergy-chip strong {
+  font-size: 7px;
+}
+
+
+.patient-banner-allergy-chip em {
+  opacity: 0.8;
+
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 600;
+}
+
+
+/* =========================================================
+   OPEN ALLERGIES
+========================================================= */
+
+.patient-banner-allergy-open {
+  margin-left: auto;
+
+  white-space: nowrap;
+
+  font-size: 7px;
+  font-weight: 800;
+}
+
+
+/* =========================================================
+   SUMMARY CLINICAL ALERTS
+========================================================= */
+
+.clinical-alert {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  padding: 9px 10px;
+
+  border: 1px solid transparent;
+
+  border-radius: 7px;
+
+  font-family: inherit;
+
+  text-align: left;
+}
+
+
+button.clinical-alert {
+  cursor: pointer;
+}
+
+
+.clinical-alert > div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 2px;
+}
+
+
+.clinical-alert > div strong {
+  font-size: 8px;
+}
+
+
+.clinical-alert > div span {
+  font-size: 7px;
+}
+
+
+.clinical-alert.allergy-warning {
+  border-color: #fec84b;
+
+  background: #fffaeb;
+
+  color: #b54708;
+}
+
+
+.clinical-alert.allergy-critical {
+  border-color: #fda29b;
+
+  background: #fef3f2;
+
+  color: #b42318;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 800px) {
+
+  .patient-banner-main-row {
+    align-items: flex-start;
+
+    flex-wrap: wrap;
+  }
+
+
+  .patient-banner-allergy-strip {
+    align-items: flex-start;
+  }
+
+
+  .patient-banner-allergy-open {
+    display: none;
+  }
+
+}

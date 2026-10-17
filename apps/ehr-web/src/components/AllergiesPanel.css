@@ -1,0 +1,575 @@
+.allergies-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* SUMMARY */
+
+.allergy-summary-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.allergy-summary-card {
+  min-height: 86px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #e4e9f0;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow:
+    0 4px 15px
+    rgba(15, 23, 42, 0.035);
+}
+
+.allergy-summary-icon {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+}
+
+.allergy-summary-card > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.allergy-summary-card span {
+  color: #8793a5;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.allergy-summary-card strong {
+  color: #24324a;
+  font-size: 22px;
+}
+
+.allergy-summary-card.blue
+.allergy-summary-icon {
+  background: #edf5ff;
+  color: #1769e0;
+}
+
+.allergy-summary-card.success
+.allergy-summary-icon {
+  background: #ecfdf3;
+  color: #039855;
+}
+
+.allergy-summary-card.warning
+.allergy-summary-icon {
+  background: #fffaeb;
+  color: #dc6803;
+}
+
+.allergy-summary-card.danger
+.allergy-summary-icon {
+  background: #fef3f2;
+  color: #d92d20;
+}
+
+.allergy-summary-card.neutral
+.allergy-summary-icon {
+  background: #f2f4f7;
+  color: #667085;
+}
+
+/* CRITICAL ALERT */
+
+.allergy-critical-alert {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 15px;
+  border: 1px solid #fda29b;
+  border-radius: 10px;
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.allergy-critical-alert > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.allergy-critical-alert strong {
+  font-size: 11px;
+}
+
+.allergy-critical-alert span {
+  font-size: 9px;
+}
+
+/* CARDS */
+
+.allergy-form-card,
+.allergy-list-card {
+  overflow: hidden;
+  border: 1px solid #e1e7ef;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow:
+    0 4px 16px
+    rgba(31, 48, 74, 0.03);
+}
+
+.allergy-card-header,
+.allergy-list-header {
+  min-height: 65px;
+  display: flex;
+  align-items: center;
+  padding: 14px 17px;
+  border-bottom: 1px solid #edf0f4;
+}
+
+.allergy-card-header {
+  gap: 10px;
+}
+
+.allergy-list-header {
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.allergy-card-header h2,
+.allergy-list-header h2 {
+  margin: 0;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.allergy-card-header p,
+.allergy-list-header p {
+  margin: 3px 0 0;
+  color: #98a2b3;
+  font-size: 9px;
+}
+
+.allergy-title-icon {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #edf5ff;
+  color: #1769e0;
+}
+
+/* FORM */
+
+.allergy-form-body {
+  padding: 17px;
+}
+
+.allergy-form-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.allergy-substance-grid {
+  display: grid;
+  grid-template-columns:
+    2fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.allergy-reaction-grid {
+  grid-template-columns:
+    2fr 1fr 1fr;
+}
+
+.allergy-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.allergy-field > span {
+  color: #536176;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.allergy-field input,
+.allergy-field select,
+.allergy-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #dce3ec;
+  border-radius: 8px;
+  background: #fff;
+  color: #344054;
+  outline: none;
+  font-family: inherit;
+  font-size: 10px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.allergy-field input,
+.allergy-field select {
+  height: 40px;
+  padding: 0 10px;
+}
+
+.allergy-field textarea {
+  min-height: 76px;
+  padding: 10px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.allergy-field input:focus,
+.allergy-field select:focus,
+.allergy-field textarea:focus {
+  border-color: #1769e0;
+  box-shadow:
+    0 0 0 3px
+    rgba(23, 105, 224, 0.08);
+}
+
+/* MESSAGES */
+
+.allergy-message {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 13px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  font-size: 9px;
+}
+
+.allergy-error {
+  border: 1px solid #fecdca;
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.allergy-success {
+  border: 1px solid #abefc6;
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+/* FORM ACTION */
+
+.allergy-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 15px;
+}
+
+.allergy-save-button {
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 8px;
+  background: #1769e0;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.allergy-save-button:hover {
+  background: #125ac5;
+}
+
+.allergy-save-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* LIST */
+
+.allergy-refresh {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid #dce3ec;
+  border-radius: 7px;
+  background: #fff;
+  color: #536176;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.allergy-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.allergy-record {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-bottom: 1px solid #edf1f5;
+  border-left: 3px solid transparent;
+}
+
+.allergy-record:last-child {
+  border-bottom: 0;
+}
+
+.allergy-record.high-risk {
+  border-left-color: #d92d20;
+  background:
+    linear-gradient(
+      90deg,
+      #fff8f7 0%,
+      #ffffff 28%
+    );
+}
+
+.allergy-record.resolved {
+  opacity: 0.65;
+}
+
+.allergy-record-main {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+}
+
+.allergy-record-icon {
+  width: 39px;
+  height: 39px;
+  flex: 0 0 39px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #edf5ff;
+  color: #1769e0;
+}
+
+.allergy-record-icon.danger {
+  background: #fef3f2;
+  color: #d92d20;
+}
+
+.allergy-record-content {
+  flex: 1;
+}
+
+.allergy-record-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.allergy-record-title h3 {
+  margin: 0;
+  color: #26364d;
+  font-size: 12px;
+}
+
+.allergy-high-badge {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #d92d20;
+  color: #fff;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.allergy-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.allergy-tag {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #667085;
+  font-size: 8px;
+  font-weight: 650;
+}
+
+.allergy-status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #667085;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.allergy-status-tag > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #98a2b3;
+}
+
+.allergy-status-tag.active {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.allergy-status-tag.active > span {
+  background: #12b76a;
+}
+
+.allergy-detail-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(110px, 1fr));
+  gap: 10px;
+  margin-top: 13px;
+}
+
+.allergy-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.allergy-detail span {
+  color: #98a2b3;
+  font-size: 8px;
+}
+
+.allergy-detail strong {
+  color: #536176;
+  font-size: 9px;
+}
+
+.allergy-note {
+  margin-top: 12px;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #667085;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.allergy-record-actions {
+  display: flex;
+  align-items: center;
+}
+
+.allergy-resolve-button,
+.allergy-reactivate-button {
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.allergy-resolve-button {
+  border: 1px solid #abefc6;
+  color: #027a48;
+}
+
+.allergy-reactivate-button {
+  border: 1px solid #bfd4f3;
+  color: #1769e0;
+}
+
+/* EMPTY */
+
+.allergy-empty-state {
+  min-height: 155px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 22px;
+  color: #98a2b3;
+  text-align: center;
+  font-size: 9px;
+}
+
+.allergy-empty-state strong {
+  color: #667085;
+  font-size: 11px;
+}
+
+.allergy-empty-icon {
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 3px;
+  border-radius: 50%;
+  background: #f2f4f7;
+  color: #98a2b3;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 1100px) {
+  .allergy-form-grid,
+  .allergy-reaction-grid {
+    grid-template-columns:
+      repeat(2, 1fr);
+  }
+
+  .allergy-detail-grid {
+    grid-template-columns:
+      repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 750px) {
+  .allergy-summary-grid,
+  .allergy-form-grid,
+  .allergy-substance-grid,
+  .allergy-reaction-grid,
+  .allergy-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .allergy-record {
+    flex-direction: column;
+  }
+
+  .allergy-record-actions {
+    justify-content: flex-end;
+  }
+}
