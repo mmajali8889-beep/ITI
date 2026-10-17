@@ -75,7 +75,9 @@ npm --prefix services/hospital-api run start
 npm --prefix apps/ehr-web run dev
 ```
 
-Open http://localhost:5173. Sign-in is limited to the hospital in `ACTIVE_HOSPITAL_CODE` (default `HOSP-A`). In development a local admin login exists (`DEV_ADMIN_USERNAME` / `DEV_ADMIN_PASSWORD`, defaulting to `admin` / `admin`); it is disabled when `NODE_ENV=production`.
+Open http://localhost:5173. Sign-in is limited to the hospital in `ACTIVE_HOSPITAL_CODE` (default `HOSP-A`). For local development you can opt in to an admin login: set `AUTH_DEV_ADMIN_ENABLED=true` with your own `DEV_ADMIN_USERNAME` and `DEV_ADMIN_PASSWORD`. There are no built-in credentials, and the API refuses to start if this is enabled with `NODE_ENV=production`.
+
+Logging out revokes the session durably. A hash of the token is stored in Medplum, so the logout survives restarts and reaches other API instances within `AUTH_REVOCATION_REFRESH_SECONDS`.
 
 In the Claude desktop app, `.claude/launch.json` starts both servers.
 

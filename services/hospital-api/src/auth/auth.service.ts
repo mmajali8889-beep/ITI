@@ -3,22 +3,102 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { isMedplumRateLimitError } from '../medplum/medplum-rate-limit.filter';
+import { MedplumService } from '../medplum/medplum.service';
 import { MedplumClient, getDisplayString } from '@medplum/core';
 import type { ProfileResource } from '@medplum/core';
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import type { Basic } from '@medplum/fhirtypes';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import type { AuthSession } from './auth.types';
 import { PERMISSIONS_EXTENSION, permissionsForRoles } from './permissions';
 
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const REMEMBERED_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const REVOCATION_CODE_SYSTEM = 'https://hospital-ehr.local/CodeSystem/auth';
+const REVOCATION_HASH_SYSTEM = 'https://hospital-ehr.local/revoked-session-sha256';
+const REVOCATION_EXPIRES_URL = 'https://hospital-ehr.local/fhir/StructureDefinition/revoked-session-expires';
+
+/** Fails closed: a production process must never offer the development admin login. */
+export function assertDevAdminConfiguration(env: NodeJS.ProcessEnv = process.env): void {
+  if (env.NODE_ENV === 'production' && env.AUTH_DEV_ADMIN_ENABLED === 'true') {
+    throw new Error('AUTH_DEV_ADMIN_ENABLED must not be set when NODE_ENV=production');
+  }
+}
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(AuthService.name);
   private readonly sessions = new Map<string, AuthSession>();
-  private readonly revokedSessions = new Set<string>();
+  // SHA-256 of revoked session tokens. Persisted in Medplum (Basic resources)
+  // so a logout survives restarts and reaches other API instances on refresh.
+  private readonly revokedTokenHashes = new Set<string>();
+  private revocationRefresh?: NodeJS.Timeout;
+  private readonly revocationRefreshMs = Number(process.env.AUTH_REVOCATION_REFRESH_SECONDS ?? 60) * 1000;
+
+  constructor(@Optional() private readonly medplumService?: MedplumService) {
+    assertDevAdminConfiguration();
+    if (this.devAdminEnabled()) {
+      this.logger.warn('Development admin login is ENABLED (AUTH_DEV_ADMIN_ENABLED=true); never use this outside local development');
+    }
+  }
+
+  async onModuleInit(): Promise<void> {
+    if (!this.medplumService) return;
+    await this.loadRevocations();
+    this.revocationRefresh = setInterval(() => {
+      this.loadRevocations().catch((error: unknown) => this.logger.warn(`Refreshing revoked sessions failed: ${String(error)}`));
+    }, this.revocationRefreshMs);
+    this.revocationRefresh.unref?.();
+  }
+
+  onModuleDestroy(): void {
+    if (this.revocationRefresh) clearInterval(this.revocationRefresh);
+  }
+
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  /** Loads still-valid revocations into memory and deletes expired ones. */
+  async loadRevocations(): Promise<void> {
+    const client = this.medplumService?.getClient();
+    if (!client) return;
+    const now = Date.now();
+    const active = new Set<string>();
+    for await (const page of client.searchResourcePages('Basic', { code: `${REVOCATION_CODE_SYSTEM}|revoked-session`, _count: '1000' })) {
+      for (const item of page) {
+        const hash = item.identifier?.find((id) => id.system === REVOCATION_HASH_SYSTEM)?.value;
+        const expires = Date.parse(item.extension?.find((ext) => ext.url === REVOCATION_EXPIRES_URL)?.valueDateTime ?? '');
+        if (!hash) continue;
+        if (Number.isFinite(expires) && expires <= now) {
+          await client.deleteResource('Basic', item.id).catch(() => undefined);
+          continue;
+        }
+        active.add(hash);
+      }
+    }
+    for (const hash of active) this.revokedTokenHashes.add(hash);
+  }
+
+  private async persistRevocation(hash: string, expiresAt: number): Promise<void> {
+    const client = this.medplumService?.getClient();
+    if (!client) return;
+    const revocation: Basic = {
+      resourceType: 'Basic',
+      code: { coding: [{ system: REVOCATION_CODE_SYSTEM, code: 'revoked-session', display: 'Revoked session' }] },
+      identifier: [{ system: REVOCATION_HASH_SYSTEM, value: hash }],
+      // Basic.created is a FHIR `date`.
+      created: new Date().toISOString().slice(0, 10),
+      extension: [{ url: REVOCATION_EXPIRES_URL, valueDateTime: new Date(expiresAt).toISOString() }],
+    };
+    await client.createResourceIfNoneExist<Basic>(revocation, `identifier=${encodeURIComponent(REVOCATION_HASH_SYSTEM)}|${hash}`);
+  }
   // Per-account brute-force protection, keyed by hospital and username. Medplum
   // only throttles per client address, which behind a hospital NAT blocks
   // everyone at once. In-memory: one API instance; use a shared store to scale out.
@@ -142,11 +222,18 @@ export class AuthService {
     }
   }
 
-  private matchesDevelopmentAdmin(username: string, password: string): boolean {
-    if (process.env.NODE_ENV === 'production') return false;
+  /** Opt-in only, never in production, and only with credentials set explicitly. */
+  private devAdminEnabled(): boolean {
+    return process.env.AUTH_DEV_ADMIN_ENABLED === 'true' && process.env.NODE_ENV !== 'production';
+  }
 
-    const expectedUsername = process.env.DEV_ADMIN_USERNAME ?? 'admin';
-    const expectedPassword = process.env.DEV_ADMIN_PASSWORD ?? 'admin';
+  private matchesDevelopmentAdmin(username: string, password: string): boolean {
+    if (!this.devAdminEnabled()) return false;
+
+    // No built-in fallback: an unset username or password disables the login.
+    const expectedUsername = process.env.DEV_ADMIN_USERNAME;
+    const expectedPassword = process.env.DEV_ADMIN_PASSWORD;
+    if (!expectedUsername || !expectedPassword) return false;
     const usernameBuffer = Buffer.from(username);
     const passwordBuffer = Buffer.from(password);
     const expectedUsernameBuffer = Buffer.from(expectedUsername);
@@ -271,7 +358,7 @@ export class AuthService {
 
   getSession(id: string | undefined): AuthSession | undefined {
     if (!id) return undefined;
-    if (this.revokedSessions.has(id)) return undefined;
+    if (this.revokedTokenHashes.has(this.hashToken(id))) return undefined;
     const session = this.sessions.get(id) ?? this.restoreSession(id);
     if (!session) return undefined;
     if (session.expiresAt <= Date.now()) {
@@ -286,7 +373,15 @@ export class AuthService {
     const session = this.getSession(id);
     if (!session) return;
     this.sessions.delete(session.id);
-    this.revokedSessions.add(session.id);
+    const hash = this.hashToken(session.id);
+    this.revokedTokenHashes.add(hash);
+    try {
+      await this.persistRevocation(hash, session.expiresAt);
+    } catch (error) {
+      // The token is already refused by this instance; persistence makes it
+      // stick across restarts and instances, so report the failure loudly.
+      this.logger.error(`Could not persist session revocation; it will not survive a restart: ${String(error)}`);
+    }
     await session.medplum.signOut().catch(() => undefined);
   }
 

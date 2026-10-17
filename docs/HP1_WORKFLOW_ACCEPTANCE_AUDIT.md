@@ -84,7 +84,7 @@ All test patients are synthetic, named `UAT-…`/`Run<runId>`, and were created 
 - **Medplum rate limit (about 50,000 points per minute):** the API now returns 503 rather than 500; the UAT scripts pace themselves (`HP1_STEP_DELAY_MS`).
 - **Single active hospital per API instance** (`ACTIVE_HOSPITAL_CODE`), so cross-hospital tests use one signed-in hospital and a foreign record set.
 - **The patient-portal login path** (a Patient profile session) was not exercised live; it is covered by the controller rule and the frontend route guard.
-- **The development admin login** (`admin`/`admin` unless `DEV_ADMIN_*` is set) is disabled only by `NODE_ENV=production`. Make sure production sets it.
+- **The development admin login** *(resolved 2026-10-17)*: it is now off unless `AUTH_DEV_ADMIN_ENABLED=true` and explicit `DEV_ADMIN_*` credentials are set, with no `admin`/`admin` fallback. The API refuses to start if it is enabled with `NODE_ENV=production`. Logouts are also persisted in Medplum, so they survive restarts.
 - **Penetration testing was scripted (OWASP-style probes)**, not a third-party manual test.
 
 ### Sign-off
