@@ -29,4 +29,24 @@ describe('AuditAnalyticsService', () => {
       _count: '1000',
     });
   });
+
+  it('records the patient and encounter as searchable AuditEvent entities (27.1)', async () => {
+    await service.record({ hospitalId: 'hospital-a', userId: 'nurse-1', method: 'POST', route: '/api/vitals', statusCode: 201, durationMs: 9, patientId: 'patient-1', encounterId: 'encounter-1' });
+    const event = medplum.createResource.mock.calls[0][0];
+    expect(event.entity).toEqual(expect.arrayContaining([
+      expect.objectContaining({ what: { reference: 'Patient/patient-1' }, role: expect.objectContaining({ code: '1', display: 'Patient' }) }),
+      expect.objectContaining({ what: { reference: 'Encounter/encounter-1' } }),
+    ]));
+  });
+
+  it('writes no patient or encounter entity when the request had none', async () => {
+    await service.record({ hospitalId: 'hospital-a', method: 'POST', route: '/api/inventory/items', statusCode: 201, durationMs: 3 });
+    expect(medplum.createResource.mock.calls[0][0].entity).toHaveLength(1);
+  });
+
+  it('filters events by patient and encounter on the server and returns them', async () => {
+    medplum.searchResources.mockResolvedValueOnce([{ resourceType: 'AuditEvent', id: 'a', recorded: '2026-01-01T00:00:00Z', agent: [{ requestor: true }], entity: [{ name: '/api/vitals' }, { what: { reference: 'Patient/patient-1' } }, { what: { reference: 'Encounter/encounter-1' } }], extension: [hospitalExtension] }]);
+    await expect(service.events('hospital-a', 50, { patientId: 'patient-1', encounterId: 'encounter-1' })).resolves.toMatchObject({ events: [{ id: 'a', patientId: 'patient-1', encounterId: 'encounter-1' }] });
+    expect(medplum.searchResources).toHaveBeenCalledWith('AuditEvent', expect.objectContaining({ source: 'Organization/hospital-a', patient: 'Patient/patient-1', entity: 'Encounter/encounter-1' }));
+  });
 });
