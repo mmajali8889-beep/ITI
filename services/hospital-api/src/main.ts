@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AuthService } from './auth/auth.service';
 import { PACS_VIEWER_PATHS, pacsViewerProxy } from './radiology/pacs-viewer.proxy';
+import { PacsStudyAccessService } from './radiology/pacs-study-access.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -20,7 +21,7 @@ async function bootstrap() {
 
   // OHIF viewer and DICOMweb, served through the API with the EHR session so
   // browsers never hold Orthanc credentials (see pacs-viewer.proxy.ts).
-  app.use(PACS_VIEWER_PATHS, pacsViewerProxy(app.get(AuthService)));
+  app.use(PACS_VIEWER_PATHS, pacsViewerProxy(app.get(AuthService), app.get(PacsStudyAccessService)));
 
   const port = process.env.PORT ?? 4000;
   await app.listen(port);

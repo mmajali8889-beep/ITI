@@ -2,6 +2,7 @@ import {
   Module,
 } from '@nestjs/common';
 
+import { PacsStudyAccessService } from './pacs-study-access.service';
 import {
   MedplumModule,
 } from '../medplum/medplum.module';
@@ -100,6 +101,7 @@ import {
     RadiologyStationsService,
     OrthancModalityRegistryService,
     RadiologistsService,
+    PacsStudyAccessService,
   ],
 
   exports: [
@@ -112,6 +114,7 @@ import {
     RadiologyStationsService,
     OrthancModalityRegistryService,
     RadiologistsService,
+    PacsStudyAccessService,
   ],
 })
 export class RadiologyModule {}

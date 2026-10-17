@@ -58,7 +58,7 @@ docker run -d --name hospital-ehr-orthanc --restart unless-stopped \
   orthancteam/orthanc:24.10.3
 ```
 
-**Browsers never receive Orthanc credentials.** Orthanc has no per-user roles: anyone holding the account could also delete studies. Instead, the API serves the viewer and DICOMweb on its own origin (`http://localhost:4000/ohif/…`, `/dicom-web/…`) through a read-only proxy. The proxy requires a signed-in EHR session with the `radiology` or `clinical` permission, and the API adds the service credentials on the server side (`services/hospital-api/src/radiology/pacs-viewer.proxy.ts`). Set `OHIF_VIEWER_URL` and `VITE_OHIF_URL` to `http://localhost:4000/ohif`.
+**Browsers never receive Orthanc credentials.** Orthanc has no per-user roles: anyone holding the account could also delete studies. Instead, the API serves the viewer and DICOMweb on its own origin (`http://localhost:4000/ohif/…`, `/dicom-web/…`) through a read-only proxy. The proxy requires a signed-in EHR session with the `radiology` or `clinical` permission, and the API adds the service credentials on the server side (`services/hospital-api/src/radiology/pacs-viewer.proxy.ts`). Users see only their own hospital's studies: a study is visible once the PACS sync links it to an order for one of that hospital's patients, so studies not yet linked stay hidden. Set `OHIF_VIEWER_URL` and `VITE_OHIF_URL` to `http://localhost:4000/ohif`.
 
 Studies are linked to radiology orders by **accession number**. The API syncs Orthanc every 15 s, or on demand via `POST /api/radiology/pacs/sync/accession/:accessionNumber`. Modalities send images over DICOM on port 4242, which uses AE titles rather than the HTTP account.
 
