@@ -1,8 +1,8 @@
 # Hospital One — Complete Workflow Acceptance Audit
 
-Audit date: 2026-09-26  
+Audit date: 2026-09-26 (live acceptance added 2026-10-17)  
 Scenario: `HP1-UAT-2026-001`  
-Decision: **FUNCTIONALLY ACCEPTED IN AUTOMATED TESTS; LIVE ENVIRONMENT ACCEPTANCE STILL REQUIRED**
+Decision: **ACCEPTED ON THE DEDICATED UAT TENANT (HOSP-01) — live workflow, security, concurrency, performance and backup/restore gates passed; approved by the project owner on 2026-10-17.** See [Live environment acceptance](#live-environment-acceptance-2026-10-17).
 
 This audit checks the requested patient journey from arrival through reporting. It distinguishes an implemented workflow from a screen or a stored FHIR resource. A stage passes only when the repository contains an actionable API workflow and its required transition controls.
 
@@ -45,3 +45,50 @@ Raw gate score: **12 PASS + 0 PARTIAL + 0 FAIL**. Automated contract coverage is
 - Clinical completion, financial completion, and medical-record completion are separate states.
 - A claim or invoice must never be inferred merely because an encounter is finished.
 - Audit history must be append-only from the application perspective and include actor, action, patient/encounter, hospital, timestamp, and outcome.
+
+## Live environment acceptance (2026-10-17)
+
+Environment: local Medplum 5.1.30 (`localhost:8103`) and hospital-api, with `ACTIVE_HOSPITAL_CODE=HOSP-01`.
+Dedicated UAT hospitals **HOSP-01, HOSP-02 and HOSP-03** were created by `scripts/create-test-hospitals.mjs` under the EHR Healthcare Group. Each has 8 departments and a main building, and every resource is tagged `environment=uat`.
+All test patients are synthetic, named `UAT-…`/`Run<runId>`, and were created only in HOSP-01.
+
+| Gate | Tool (in `services/hospital-api/test/live/`) | Result |
+|---|---|---|
+| 1. Complete synthetic scenario: insured outpatient path plus cash, corporate, government, emergency (unknown patient), inpatient with bed transfer and discharge, transfer-out and death branches | `hp1-live-uat.mjs` | **99 / 99 PASS** on HOSP-01 (isolation checked against HOSP-02) |
+| 2a. Authorization and penetration: authentication, forged/expired/replayed tokens, cookie flags, cross-hospital isolation (26 probes), role-based access (21), input handling, CORS and headers, brute-force throttling | `security-uat.mjs` | **78 / 78 PASS** |
+| 2b. Concurrency: parallel registration (unique MRNs), parallel visit opening, double payment, two admissions to one bed, double claim adjudication | `load-concurrency-uat.mjs` | **6 / 6 PASS** |
+| 2c. Performance: 120 reads, 6 in parallel, across 8 key endpoints | `load-concurrency-uat.mjs` | **PASS**: 0 errors, every p95 ≤ 232 ms (target < 1 s) |
+| 2d. Backup / restore | `pg_dump` → restore into a scratch database | **PASS**: 11 MB dump in 2 s and restore in 16 s; record counts for 13 resource types and full-content checksums for 8 clinical/financial tables are identical; scratch database dropped afterwards |
+| 3. Owner sign-off | — | **Approved** (see below) |
+
+### Defects found by the live gates and fixed
+
+| Severity | Defect | Fix |
+|---|---|---|
+| Critical | Patient registration always failed: `Basic.created` (MRN counter) was written as a dateTime | Write a FHIR `date` |
+| Critical | Every payment failed: `PaymentReconciliation.paymentDate` was written as a dateTime | Write a FHIR `date` |
+| Critical | Parallel registrations got the **same MRN** (6 patients shared one): the counter update had no optimistic lock | `MedplumService.updateIfUnchanged` (If-Match) with retry |
+| Critical | Cross-hospital reads: radiology, medications and vitals by patient or encounter, and the portal, returned another hospital's records | Global `HospitalScopeGuard`: every `patientId`/`encounterId` must belong to the session hospital (404 otherwise) |
+| Critical | Double payment, double bed admission and double claim adjudication under parallel requests | Guarded (If-Match) updates on invoice, bed and claim; bed and claim are claimed before any other write |
+| High | Several parallel visits could be opened for one patient | Short per-patient visit lock (guarded) and a status-filtered active-visit search |
+| High | Any staff role could open any patient's portal; a receptionist could read hospital-wide analytics | Portal limited to the patient (and system administrators); `/analytics` requires `administration` |
+| High | Bed transfer always failed and left beds inconsistent | Pass `patientId`; occupy the target bed before moving the encounter |
+| High | Audit retrieval missed a hospital's recent events once other hospitals had older ones | Search `AuditEvent` by `source` and `-date` on the server |
+| Medium | Hospital list dropped hospitals beyond the first 20 Organizations | Filter by type on the server, `_count=200` |
+| Medium | Medplum sign-in throttling was reported as "invalid username or password" | Return 429 `SIGN_IN_THROTTLED` |
+| Low | `X-Powered-By: Express` disclosed; no `X-Content-Type-Options` | Header removed; `nosniff` set |
+
+### Known limits and residual risks
+
+- **Sign-in throttling is per client address (Medplum).** Behind a shared hospital NAT, one user's repeated failures can briefly block sign-in for others on that network. Consider per-account lockout, or allow-listing internal addresses at the Medplum layer, before go-live. The exact threshold was not measured: earlier test runs had already used up the budget for this address.
+- **Medplum rate limit (about 50,000 points per minute):** the API now returns 503 rather than 500; the UAT scripts pace themselves (`HP1_STEP_DELAY_MS`).
+- **Single active hospital per API instance** (`ACTIVE_HOSPITAL_CODE`), so cross-hospital tests use one signed-in hospital and a foreign record set.
+- **The patient-portal login path** (a Patient profile session) was not exercised live; it is covered by the controller rule and the frontend route guard.
+- **The development admin login** (`admin`/`admin` unless `DEV_ADMIN_*` is set) is disabled only by `NODE_ENV=production`. Make sure production sets it.
+- **Penetration testing was scripted (OWASP-style probes)**, not a third-party manual test.
+
+### Sign-off
+
+| Role | Decision | Date |
+|---|---|---|
+| Project owner (Mohammad Almajali), on behalf of clinical, HIM, revenue-cycle, pharmacy, laboratory, radiology and security owners | **Approved** | 2026-10-17 |
