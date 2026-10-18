@@ -34,7 +34,7 @@ export class CreatePurchaseOrderDto {
   supplierId!: string;
   supplierName!: string;
   unitCost!: number;
-  currency?: 'SAR' | 'USD' | 'EUR';
+  currency?: 'JOD' | 'SAR' | 'USD' | 'EUR';
   buyerId!: string;
   buyerName!: string;
 }

@@ -21,6 +21,7 @@ import {
   ReceiveGoodsDto,
   StockMovementDto,
 } from './dto/inventory.dto';
+import { hospitalCurrency } from '../config/currency';
 const BASE = 'https://hospital-ehr.local/fhir/StructureDefinition',
   HOSPITAL = `${BASE}/inventory-hospital`,
   SKU = `${BASE}/inventory-sku`,
@@ -301,7 +302,7 @@ export class InventoryService {
           url: UNIT_COST,
           valueMoney: {
             value: Number(d.unitCost),
-            currency: d.currency || 'SAR',
+            currency: d.currency || hospitalCurrency(),
           },
         },
         { url: RECEIVED, valueDecimal: 0 },

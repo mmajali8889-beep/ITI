@@ -1,3 +1,4 @@
+import { HOSPITAL_CURRENCY } from '../utils/currency';
 import type {
   ReactNode,
 } from 'react';
@@ -373,7 +374,7 @@ export default function Dashboard() {
         <CommandMetric icon={<CalendarDays/>} label="Appointments" value={operations?.analytics?.appointments} loading={operationsLoading}/>
         <CommandMetric icon={<BedDouble/>} label="Inpatients / Ward" value={operations?.nursing?.summary.patients} loading={operationsLoading} tone="teal"/>
         <CommandMetric icon={<HeartPulse/>} label="ICU Patients" value={operations?.icu?.summary.patients} loading={operationsLoading} tone="rose"/>
-        <CommandMetric icon={<WalletCards/>} label="Outstanding SAR" value={operations?.analytics?.finance.outstanding} loading={operationsLoading} tone="amber" money/>
+        <CommandMetric icon={<WalletCards/>} label={`Outstanding ${HOSPITAL_CURRENCY}`} value={operations?.analytics?.finance.outstanding} loading={operationsLoading} tone="amber" money/>
       </section>
 
       <section className="command-strip">
