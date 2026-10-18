@@ -908,21 +908,31 @@ export class BillingService {
     if (!patientId || !hospitalId)
       throw new BadRequestException('Patient and hospital are required');
     const client = this.medplumService.getClient();
-    const [charges, invoices, claims, payments] = await Promise.all([
-      client.searchResources('ChargeItem', {
-        subject: `Patient/${patientId}`,
-        _count: '1000',
-      }),
-      client.searchResources('Invoice', {
-        subject: `Patient/${patientId}`,
-        _count: '500',
-      }),
-      client.searchResources('Claim', {
-        patient: `Patient/${patientId}`,
-        _count: '500',
-      }),
-      client.searchResources('PaymentReconciliation', { _count: '500' }),
-    ]);
+    const [charges, invoices, claims, payments, encounters] = await Promise.all(
+      [
+        client.searchResources('ChargeItem', {
+          subject: `Patient/${patientId}`,
+          _count: '1000',
+        }),
+        client.searchResources('Invoice', {
+          subject: `Patient/${patientId}`,
+          _count: '500',
+        }),
+        client.searchResources('Claim', {
+          patient: `Patient/${patientId}`,
+          _count: '500',
+        }),
+        client.searchResources('PaymentReconciliation', { _count: '500' }),
+        // The patient's visits at this hospital, so billing staff (who do not
+        // have the clinical permission) can pick one to charge and invoice.
+        client.searchResources('Encounter', {
+          subject: `Patient/${patientId}`,
+          'service-provider': `Organization/${hospitalId}`,
+          _sort: '-date',
+          _count: '100',
+        }),
+      ],
+    );
     const scopedCharges = charges.filter(
         (i) => this.hospitalId(i) === hospitalId,
       ),
@@ -957,6 +967,18 @@ export class BillingService {
         balance: scopedInvoices.reduce((n, i) => n + this.money(i, BALANCE), 0),
         activeClaims: scopedClaims.filter((c) => c.status === 'active').length,
       },
+      encounters: encounters
+        .filter(
+          (e) => e.serviceProvider?.reference === `Organization/${hospitalId}`,
+        )
+        .map((e) => ({
+          id: e.id,
+          visitNumber: e.identifier?.[0]?.value,
+          type: e.type?.[0]?.text ?? e.class?.display ?? e.class?.code,
+          status: e.status,
+          start: e.period?.start,
+          end: e.period?.end,
+        })),
       charges: scopedCharges.map((i) => this.mapCharge(i)),
       invoices: scopedInvoices.map((i) => this.mapInvoice(i)),
       claims: scopedClaims.map((i) => this.mapClaim(i)),
