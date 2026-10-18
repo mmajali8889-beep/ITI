@@ -124,7 +124,9 @@ secrets:
 networks:
   ehr:
     # Joined by the EHR API (../docker-compose.yml) to reach medplum-server:8103.
-    name: unitech-medplum
+    # Set MEDPLUM_NETWORK (here and in ../.env) to run a second copy of both
+    # stacks on one machine, e.g. a training environment beside staging.
+    name: ${MEDPLUM_NETWORK:-unitech-medplum}
 
 volumes:
   postgres-data:
