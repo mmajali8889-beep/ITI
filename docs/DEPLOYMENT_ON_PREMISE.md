@@ -268,6 +268,15 @@ production server's disk space for one backup set plus the restored data.
 4. Install the health check on staging too (section 6), with
    `PRODUCTION_HOSTNAME` set in `/etc/unitech-ehr/backup.env`.
 
+**Staging on Windows or macOS (Docker Desktop).** Docker Desktop has no
+journald, so add the desktop override to every `docker compose` command in
+both stacks: `docker compose -f docker-compose.yml -f docker-compose.desktop.yml up -d`.
+Run the scripts from Git Bash with `MSYS_NO_PATHCONV=1` set, so Docker volume
+paths such as `/data` are not rewritten into Windows paths. Use free ports
+(`HTTP_PORT`, `HTTPS_PORT`, `ORTHANC_DICOM_BIND`, `MEDPLUM_ADMIN_BIND`) if
+other projects run on the machine. A desktop machine is fine for rehearsals,
+but repeat the drill on the Linux production server before go-live.
+
 **After a drill, staging holds real patient data.** Protect it exactly like
 production: same firewall rules (section below), only IT and named pilot users
 get accounts, and backups of staging follow the same rules. Don't use it for
