@@ -2,6 +2,7 @@ import { ArgumentsHost, Catch, HttpStatus } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
 import { OperationOutcomeError } from '@medplum/core';
 import type { Response } from 'express';
+import { requestMetrics } from '../observability/request-metrics';
 
 const RETRY_AFTER_SECONDS = 5;
 
@@ -29,6 +30,7 @@ export class MedplumRateLimitFilter extends BaseExceptionFilter {
       return super.catch(exception, host);
     }
 
+    requestMetrics.recordMedplumThrottle();
     const response = host.switchToHttp().getResponse<Response>();
     response.setHeader('Retry-After', String(RETRY_AFTER_SECONDS));
     response.status(HttpStatus.SERVICE_UNAVAILABLE).json({

@@ -12,8 +12,17 @@
 
 name: unitech-ehr
 
+# Container logs go to the host's systemd journal, tagged per container
+# (journalctl -t unitech-ehr/<container>), from where the hospital's log
+# server collects them (28.2; see DEPLOYMENT_ON_PREMISE.md, section 6).
+x-logging: &logging
+  driver: journald
+  options:
+    tag: "unitech-ehr/{{.Name}}"
+
 services:
   proxy:
+    logging: *logging
     build:
       context: ../../apps/ehr-web
     restart: unless-stopped
@@ -38,6 +47,7 @@ services:
       retries: 3
 
   api:
+    logging: *logging
     build:
       context: ../../services/hospital-api
     restart: unless-stopped
@@ -58,11 +68,14 @@ services:
       MEDPLUM_CLIENT_SECRET_FILE: /run/secrets/medplum_client_secret
       MEDPLUM_PROVISIONING_PASSWORD_FILE: /run/secrets/medplum_provisioning_password
       ORTHANC_PASSWORD_FILE: /run/secrets/orthanc_password
+      # Bearer token for /api/health/metrics (check-health.sh, Prometheus).
+      METRICS_TOKEN_FILE: /run/secrets/metrics_token
     secrets:
       - auth_session_secret
       - medplum_client_secret
       - medplum_provisioning_password
       - orthanc_password
+      - metrics_token
     networks:
       - default
       - medplum
@@ -71,6 +84,7 @@ services:
         condition: service_healthy
 
   orthanc:
+    logging: *logging
     image: orthancteam/orthanc:24.10.3
     restart: unless-stopped
     environment:
@@ -105,6 +119,8 @@ secrets:
     file: ./secrets/medplum_provisioning_password
   orthanc_password:
     file: ./secrets/orthanc_password
+  metrics_token:
+    file: ./secrets/metrics_token
 
 volumes:
   caddy-data:

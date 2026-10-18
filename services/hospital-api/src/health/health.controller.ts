@@ -1,5 +1,16 @@
-import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Header,
+  Headers,
+  HttpStatus,
+  NotFoundException,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { Response } from 'express';
+import { createHash, timingSafeEqual } from 'node:crypto';
+import { requestMetrics } from '../observability/request-metrics';
 import { Public } from '../auth/public.decorator';
 import {
   orthancAuthHeaders,
@@ -40,6 +51,26 @@ export class HealthController {
       checks: { medplum, orthanc },
       checkedAt: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Request counters in Prometheus format: 5xx, 429 and Medplum throttling.
+   * Needs "Authorization: Bearer <METRICS_TOKEN>"; without a configured token
+   * the endpoint does not exist.
+   */
+  @Public()
+  @Get('metrics')
+  @Header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')
+  @Header('Cache-Control', 'no-store')
+  metrics(@Headers('authorization') authorization?: string) {
+    const token = process.env.METRICS_TOKEN?.trim();
+    if (!token) throw new NotFoundException();
+    const given = /^Bearer\s+(.+)$/i.exec(authorization ?? '')?.[1]?.trim();
+    const digest = (value: string) =>
+      createHash('sha256').update(value).digest();
+    if (!given || !timingSafeEqual(digest(given), digest(token)))
+      throw new UnauthorizedException();
+    return requestMetrics.render();
   }
 
   private async probe(
