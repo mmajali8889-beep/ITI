@@ -3,9 +3,11 @@ import { api } from './configureAxios';
 export interface JourneyNode {
   key: string;
   label: string;
-  state: 'completed' | 'current' | 'pending' | 'not-applicable';
+  // 'optional': not done, but not mandatory on this encounter's care pathway.
+  state: 'completed' | 'current' | 'pending' | 'optional' | 'not-applicable';
   evidence: number;
   detail?: string;
+  required?: boolean;
 }
 
 export interface PatientJourney {
@@ -13,6 +15,7 @@ export interface PatientJourney {
   encounterId: string;
   encounterStatus: string;
   encounterClass?: string;
+  pathway?: { code: string; label: string; source: 'default' | 'hospital' };
   completion: number;
   currentStage: string;
   branches: { entry: string; disposition: string };

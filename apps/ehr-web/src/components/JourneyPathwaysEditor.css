@@ -1,0 +1,135 @@
+.pathways-editor {
+  display: grid;
+  gap: 14px;
+  color: #1f2937;
+}
+
+.pathways-muted {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #536176;
+  font-size: 13px;
+}
+
+.pathways-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #dbe3ee;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.pathways-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.pathways-table th,
+.pathways-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #eef2f7;
+  text-align: center;
+}
+
+.pathways-table tbody th {
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pathways-table tbody th small {
+  font-weight: 400;
+  color: #8290a1;
+}
+
+.pathways-table thead th {
+  vertical-align: bottom;
+  background: #f7fbfe;
+  min-width: 110px;
+}
+
+.pathways-table thead th span,
+.pathways-table thead th em {
+  display: block;
+}
+
+.pathways-table thead th em {
+  margin: 2px 0;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #b45309;
+}
+
+.pathways-table thead th button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 3px 7px;
+  border: 1px solid #dbe3ee;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #536176;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.pathways-table input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.pathways-table input[type='checkbox']:disabled {
+  cursor: default;
+}
+
+.pathways-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.pathways-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 9px;
+  background: #0d69d7;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pathways-actions button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pathways-saved {
+  color: #087b55;
+  font-size: 13px;
+}
+
+.pathways-error {
+  margin: 0;
+  color: #b62334;
+  font-size: 13px;
+}
+
+.pathways-editor .spin {
+  animation: pathways-spin 0.8s linear infinite;
+}
+
+@keyframes pathways-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

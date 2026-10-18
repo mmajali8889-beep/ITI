@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { PatientJourneyService } from './patient-journey.service';
+import { JourneyPathwaysService } from './journey-pathways.service';
 describe('PatientJourneyService', () => {
   const medplum = { readResource: jest.fn(), searchResources: jest.fn() };
   let service: PatientJourneyService;
@@ -25,7 +26,11 @@ describe('PatientJourneyService', () => {
     jest.resetAllMocks();
     medplum.readResource.mockResolvedValue(encounter);
     medplum.searchResources.mockResolvedValue([]);
-    service = new PatientJourneyService({ getClient: () => medplum } as never);
+    const medplumService = { getClient: () => medplum } as never;
+    service = new PatientJourneyService(
+      medplumService,
+      new JourneyPathwaysService(medplumService),
+    );
   });
   it('isolates the journey by patient and hospital', async () => {
     await expect(service.get('other', 'e1', 'h1')).rejects.toThrow(
@@ -264,5 +269,149 @@ describe('PatientJourneyService', () => {
       'current',
     );
     expect(result.completion).toBeLessThan(100);
+  });
+
+  describe('care pathways (27.3)', () => {
+    const typed = (code: string, cls = 'AMB') => ({
+      ...encounter,
+      class: { code: cls },
+      type: [
+        {
+          coding: [
+            {
+              system: 'https://hospital-ehr.local/CodeSystem/encounter-type',
+              code,
+            },
+          ],
+        },
+      ],
+    });
+    const node = (
+      r: { nodes: Array<{ key: string; state: string; required?: boolean }> },
+      key: string,
+    ) => r.nodes.find((n) => n.key === key);
+
+    it('follows the encounter type, and the inpatient pathway once admitted', async () => {
+      medplum.readResource.mockResolvedValue(typed('emergency', 'EMER'));
+      expect((await service.get('p1', 'e1', 'h1')).pathway).toEqual({
+        code: 'emergency',
+        label: 'Emergency department',
+        source: 'default',
+      });
+      medplum.readResource.mockResolvedValue(typed('laboratory-only'));
+      expect((await service.get('p1', 'e1', 'h1')).pathway.code).toBe(
+        'diagnostic',
+      );
+      medplum.readResource.mockResolvedValue(typed('emergency', 'IMP'));
+      expect((await service.get('p1', 'e1', 'h1')).pathway.code).toBe(
+        'inpatient',
+      );
+      medplum.readResource.mockResolvedValue(encounter);
+      expect((await service.get('p1', 'e1', 'h1')).pathway.code).toBe(
+        'outpatient',
+      );
+    });
+
+    it('does not let an optional milestone block the journey', async () => {
+      // Emergency: payer is optional, triage is mandatory.
+      medplum.readResource.mockResolvedValue({
+        ...typed('emergency', 'EMER'),
+        extension: [],
+        status: 'arrived',
+      });
+      const r = await service.get('p1', 'e1', 'h1');
+      expect(node(r, 'payer')).toMatchObject({
+        state: 'optional',
+        required: false,
+      });
+      expect(node(r, 'triage')).toMatchObject({
+        state: 'current',
+        required: true,
+      });
+      expect(r.currentStage).toBe('triage');
+      expect(node(r, 'follow-up')?.state).toBe('optional');
+    });
+
+    it('counts only mandatory milestones in completion', async () => {
+      // Diagnostic visit: assessment and triage are optional, so a finished
+      // visit whose mandatory milestones are done is complete without them.
+      medplum.readResource.mockResolvedValue({
+        ...typed('diagnostic'),
+        status: 'finished',
+        extension: [
+          {
+            url: 'https://hospital-ehr.local/fhir/StructureDefinition/encounter-financial-class',
+            valueCode: 'cash',
+          },
+        ],
+      });
+      const hospital = {
+        url: 'https://hospital-ehr.local/fhir/StructureDefinition/test-hospital',
+        valueReference: { reference: 'Organization/h1' },
+      };
+      medplum.searchResources.mockImplementation(async (type: string) =>
+        type === 'Invoice'
+          ? [
+              {
+                resourceType: 'Invoice',
+                status: 'balanced',
+                extension: [hospital, { url: 'encounter', valueString: 'e1' }],
+              },
+            ]
+          : type === 'Composition'
+            ? [
+                {
+                  resourceType: 'Composition',
+                  status: 'final',
+                  type: { coding: [{ code: '34133-9' }] },
+                  extension: [
+                    hospital,
+                    {
+                      url: 'https://hospital-ehr.local/fhir/StructureDefinition/record-status',
+                      valueCode: 'archived',
+                    },
+                  ],
+                },
+              ]
+            : [],
+      );
+      const r = await service.get('p1', 'e1', 'h1');
+      expect(node(r, 'assessment')?.state).toBe('optional');
+      expect(r.completion).toBe(100);
+      expect(r.currentStage).toBe('complete');
+    });
+
+    it('applies the hospital pathway when one is configured', async () => {
+      medplum.searchResources.mockImplementation(async (type: string) =>
+        type === 'Basic'
+          ? [
+              {
+                resourceType: 'Basic',
+                extension: [
+                  {
+                    url: 'https://hospital-ehr.local/fhir/StructureDefinition/journey-pathways',
+                    valueString: JSON.stringify({
+                      outpatient: ['mpi', 'entry', 'encounter', 'follow-up'],
+                    }),
+                  },
+                ],
+              },
+            ]
+          : [],
+      );
+      const r = await service.get('p1', 'e1', 'h1');
+      expect(r.pathway.source).toBe('hospital');
+      expect(node(r, 'assessment')?.state).toBe('optional');
+      expect(node(r, 'follow-up')?.state).toBe('current');
+    });
+
+    it('falls back to the defaults when the configuration cannot be read', async () => {
+      medplum.searchResources.mockImplementation(async (type: string) => {
+        if (type === 'Basic') throw new Error('Medplum unavailable');
+        return [];
+      });
+      const r = await service.get('p1', 'e1', 'h1');
+      expect(r.pathway.source).toBe('default');
+    });
   });
 });
