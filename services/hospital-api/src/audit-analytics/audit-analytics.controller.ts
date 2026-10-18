@@ -11,10 +11,12 @@ export class AuditAnalyticsController {
     @Query('limit') limit?: string,
     @Query('patientId') patientId?: string,
     @Query('encounterId') encounterId?: string,
+    @Query('since') since?: string,
   ) {
     return this.service.events(hospitalId, Number(limit), {
       patientId,
       encounterId,
+      since,
     });
   }
   @Get('analytics/overview') overview(@Query('hospitalId') hospitalId: string) {
