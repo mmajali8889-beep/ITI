@@ -75,6 +75,12 @@ import PatientLaboratory from '../components/PatientLaboratory';
 
 import PatientRadiology from '../components/PatientRadiology';
 
+import PatientPortalAccess from '../components/PatientPortalAccess';
+
+import { useAuth } from '../context/useAuth';
+
+import { canAccess } from '../auth/permissions';
+
 /* =========================================================
    CSS
 ========================================================= */
@@ -116,6 +122,16 @@ export default function PatientProfile() {
     patientId,
   } =
     useParams();
+
+
+  const { session } = useAuth();
+
+  // Portal logins are managed by medical records (HIM) staff and administrators.
+  const canManagePortal =
+    canAccess(
+      session?.user.permissions,
+      'medical-records',
+    );
 
 
   /* =======================================================
@@ -529,6 +545,30 @@ export default function PatientProfile() {
             />
 
           )}
+
+
+          {/* PORTAL ACCESS */}
+
+          {activeTab ===
+            'Summary' &&
+            canManagePortal &&
+            patientId &&
+            hospitalId && (
+
+              <PatientPortalAccess
+                hospitalId={
+                  hospitalId
+                }
+                patientId={
+                  patientId
+                }
+                suggestedUsername={
+                  patient.email ??
+                  patient.hospitalMrn?.toLowerCase()
+                }
+              />
+
+            )}
 
 
           {/* ENCOUNTERS */}

@@ -11,3 +11,9 @@ export const signRecord=async(encounterId:string,p:Record<string,unknown>)=>(awa
 export const resolveDeficiency=async(taskId:string,p:Record<string,unknown>)=>(await api.patch(`/medical-records/deficiencies/${taskId}/resolve`,p)).data;
 export const lockRecord=async(recordId:string,p:Record<string,unknown>)=>(await api.post(`/medical-records/${recordId}/lock`,p)).data;
 export const archiveRecord=async(recordId:string,p:Record<string,unknown>)=>(await api.post(`/medical-records/${recordId}/archive`,p)).data;
+export interface PortalLogin{id:string;username?:string;active:boolean;createdAt?:string}
+export interface PortalAccess{patientId:string;hospitalId:string;status:'none'|'active'|'disabled';logins:PortalLogin[]}
+export type PortalAccessCreated=PortalAccess&{username:string;temporaryPassword?:string}
+export const getPortalAccess=async(patientId:string,hospitalId:string)=>(await api.get<PortalAccess>(`/medical-records/portal-access/${patientId}`,{params:{hospitalId}})).data;
+export const createPortalAccess=async(patientId:string,p:{hospitalId:string;username:string;password?:string})=>(await api.post<PortalAccessCreated>(`/medical-records/portal-access/${patientId}`,p)).data;
+export const disablePortalAccess=async(patientId:string,hospitalId:string)=>(await api.post<PortalAccess>(`/medical-records/portal-access/${patientId}/disable`,{hospitalId})).data;
