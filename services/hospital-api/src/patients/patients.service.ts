@@ -851,6 +851,12 @@ export class PatientsService {
   // =====================================================
 
   async findAll(options: PatientSearchOptions) {
+    // Filter by hospital in the query itself: filtering a project-wide page
+    // afterwards dropped most of a hospital's patients once others existed.
+    const scope = options.hospitalId
+      ? { organization: `Organization/${options.hospitalId}` }
+      : {};
+
     if (!options.hospitalId?.trim()) {
       throw new BadRequestException('hospitalId is required');
     }
@@ -864,6 +870,7 @@ export class PatientsService {
 
     if (options.nationalId) {
       patients = await medplum.searchResources('Patient', {
+        ...scope,
         identifier: `https://hospital-ehr.local/identifier/jordan-national-id|${options.nationalId}`,
       });
 
@@ -872,6 +879,7 @@ export class PatientsService {
 
     if (options.passportNumber) {
       patients = await medplum.searchResources('Patient', {
+        ...scope,
         identifier: `${PASSPORT_SYSTEM}|${options.passportNumber.trim().toUpperCase()}`,
       });
       return this.filterAndMapPatients(patients, options);
@@ -883,6 +891,7 @@ export class PatientsService {
 
     if (options.mrn) {
       patients = await medplum.searchResources('Patient', {
+        ...scope,
         identifier: options.mrn,
       });
 
@@ -895,6 +904,7 @@ export class PatientsService {
 
     if (options.phone) {
       patients = await medplum.searchResources('Patient', {
+        ...scope,
         telecom: options.phone,
       });
 
@@ -910,6 +920,8 @@ export class PatientsService {
 
       if (!searchText) {
         patients = await medplum.searchResources('Patient', {
+          ...scope,
+          _sort: '-_lastUpdated',
           _count: '50',
         });
 
@@ -921,6 +933,7 @@ export class PatientsService {
       // -----------------------------------------------
 
       const identifierResults = await medplum.searchResources('Patient', {
+        ...scope,
         identifier: searchText,
       });
 
@@ -933,6 +946,7 @@ export class PatientsService {
       // -----------------------------------------------
 
       const phoneResults = await medplum.searchResources('Patient', {
+        ...scope,
         telecom: searchText,
       });
 
@@ -945,6 +959,7 @@ export class PatientsService {
       // -----------------------------------------------
 
       patients = await medplum.searchResources('Patient', {
+        ...scope,
         name: searchText,
 
         _count: '50',
@@ -958,6 +973,8 @@ export class PatientsService {
     // ===================================================
 
     patients = await medplum.searchResources('Patient', {
+      ...scope,
+      _sort: '-_lastUpdated',
       _count: '50',
     });
 

@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useMemo,
   useState,
 } from 'react';
 
@@ -171,9 +170,12 @@ export default function PatientAccessPage() {
     useState(false);
   const [error, setError] = useState('');
 
+  // The server searches (name, MRN, national ID, passport, phone) within the
+  // hospital; a short pause while typing avoids a request per keystroke.
   useEffect(() => {
-    void loadPatients();
-  }, [hospitalId]);
+    const timer = window.setTimeout(() => void loadPatients(), query.trim() ? 350 : 0);
+    return () => window.clearTimeout(timer);
+  }, [hospitalId, query]);
 
   async function loadPatients(manual = false) {
     if (!hospitalId) {
@@ -195,6 +197,7 @@ export default function PatientAccessPage() {
         {
           params: {
             hospitalId,
+            ...(query.trim() && { search: query.trim() }),
           },
         },
       );
@@ -219,34 +222,8 @@ export default function PatientAccessPage() {
     }
   }
 
-  const visiblePatients = useMemo(() => {
-    const needle = query
-      .trim()
-      .toLowerCase();
-
-    if (!needle) {
-      return patients;
-    }
-
-    return patients.filter((patient) => {
-      const haystack = [
-        patient.nameEn,
-        patient.nameAr,
-        patient.hospitalMrn,
-        patient.enterpriseMrn,
-        patient.nationalId,
-        patient.passportNumber,
-        patient.phone,
-        patient.gender,
-        patient.birthDate,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-
-      return haystack.includes(needle);
-    });
-  }, [patients, query]);
+  // Already searched and scoped by the server.
+  const visiblePatients = patients;
 
   function selectModule(next: ModuleKey) {
     const params = new URLSearchParams(
