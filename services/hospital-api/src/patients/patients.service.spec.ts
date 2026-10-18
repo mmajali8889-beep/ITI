@@ -189,7 +189,26 @@ describe('PatientsService registration workflow', () => {
     });
     expect(medplum.searchResources).toHaveBeenCalledWith('Patient', {
       identifier: 'https://hospital-ehr.local/identifier/passport|P12345',
+      organization: 'Organization/hospital-a-id',
     });
+  });
+
+  it('lists and searches only the hospital patients, newest first', async () => {
+    medplum.searchResources.mockResolvedValue([]);
+    await service.findAll({ hospitalId: 'hospital-a-id' });
+    expect(medplum.searchResources).toHaveBeenLastCalledWith('Patient', {
+      organization: 'Organization/hospital-a-id',
+      _sort: '-_lastUpdated',
+      _count: '50',
+    });
+    await service.findAll({ hospitalId: 'hospital-a-id', search: 'Sameeh' });
+    expect(medplum.searchResources).toHaveBeenLastCalledWith(
+      'Patient',
+      expect.objectContaining({
+        organization: 'Organization/hospital-a-id',
+        name: 'Sameeh',
+      }),
+    );
   });
 
   it('blocks an existing authoritative identifier', async () => {
