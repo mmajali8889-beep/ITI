@@ -11,6 +11,7 @@ import {
   loadSecretFiles,
   productionConfigProblems,
 } from './config/runtime-config';
+import { requestObserver } from './observability/request-metrics';
 
 async function bootstrap() {
   // Secrets may come from files (Docker secrets); then fail fast in production
@@ -24,6 +25,9 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // First, so every response is counted and logged, the PACS proxy's too (28.2).
+  app.use(requestObserver());
 
   // Behind the TLS reverse proxy, take the client address from X-Forwarded-For
   // (audit events record it). Set to the proxy's network, e.g. "uniquelocal".

@@ -13,8 +13,17 @@
 
 name: unitech-medplum
 
+# Container logs go to the host's systemd journal, tagged per container
+# (journalctl -t unitech-ehr/<container>), from where the hospital's log
+# server collects them (28.2; see DEPLOYMENT_ON_PREMISE.md, section 6).
+x-logging: &logging
+  driver: journald
+  options:
+    tag: "unitech-ehr/{{.Name}}"
+
 services:
   postgres:
+    logging: *logging
     image: postgres:16.15
     restart: unless-stopped
     environment:
@@ -38,6 +47,7 @@ services:
       retries: 5
 
   redis:
+    logging: *logging
     image: redis:7.4.11
     restart: unless-stopped
     # requirepass lives in a generated config file, not on the command line.
@@ -60,6 +70,7 @@ services:
       - binary-data:/binary
 
   medplum-server:
+    logging: *logging
     image: medplum/medplum-server:5.1.30
     restart: unless-stopped
     command: ["file:/run/secrets/medplum.config.json"]

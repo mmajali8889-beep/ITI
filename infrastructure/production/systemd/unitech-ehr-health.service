@@ -1,7 +1,9 @@
 [Unit]
-Description=UNITECH-EHR health check (application, backup age, backup disk)
+Description=UNITECH-EHR health check (application, errors and rate limits, backup age, backup disk)
 
 [Service]
 Type=oneshot
+# Keeps the last metrics reading, to alert on what changed since then.
+StateDirectory=unitech-ehr
 EnvironmentFile=/etc/unitech-ehr/backup.env
 ExecStart=/opt/unitech-ehr/infrastructure/production/monitoring/check-health.sh

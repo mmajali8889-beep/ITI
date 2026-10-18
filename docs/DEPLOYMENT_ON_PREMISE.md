@@ -173,6 +173,39 @@ sudo systemctl start unitech-ehr-backup.service && journalctl -u unitech-ehr-bac
   Nagios can run it directly instead.
 - Failed backup or verify runs show as failed units: `systemctl --failed`.
 
+### Errors and rate limits
+
+- `GET /api/health/metrics` returns the API's request counters in Prometheus
+  format: requests by status class, 5xx errors, 429 responses and Medplum
+  throttling ("Too Many Requests", answered as 503). It needs
+  `Authorization: Bearer <secrets/metrics_token>`; without a configured token
+  the endpoint does not exist. Prometheus can scrape it with that bearer token.
+- `check-health.sh` reads it when `METRICS_TOKEN_FILE` is set (see
+  `systemd/backup.env.example`) and alerts when, since the previous check,
+  there were more than `MAX_5XX_PER_CHECK` (5) server errors or more than
+  `MAX_429_PER_CHECK` (20) rate-limited responses and Medplum throttles
+  together. The counters are per API process; the script keeps the last
+  reading in `/var/lib/unitech-ehr` and starts again from zero after an
+  API restart.
+
+### Central logs
+
+- Every container (proxy, API, Orthanc, and the Medplum stack) logs to the
+  host's systemd journal, tagged `unitech-ehr/<container>`:
+  `journalctl -t unitech-ehr/unitech-ehr-api-1 -f`. `docker compose logs`
+  keeps working.
+- The API writes one JSON line per request: time, level, method, path with
+  record ids masked (`/api/patients/:id`), status, duration and client
+  address. No query strings, bodies or headers, so no patient names or tokens.
+  Set `REQUEST_LOG=off` to turn it off (it is on whenever `NODE_ENV=production`).
+- The proxy writes its own JSON access log.
+- To collect everything centrally, forward the journal to the hospital's log
+  server: for example `systemd-journal-upload` to a `systemd-journal-remote`
+  host, rsyslog (`imjournal` → `omfwd`) to a SIEM, or a Promtail / Grafana
+  Alloy / Fluent Bit agent reading the journal for Loki or Graylog. Filter on
+  `SYSLOG_IDENTIFIER=unitech-ehr/*`. The health-check alerts are in the same
+  journal (`-t unitech-ehr`).
+
 ## 7. Disaster recovery (28.4)
 
 1. Install Docker, check out this repository, and copy back `.env` files and
@@ -213,8 +246,7 @@ data you can lose: at most one day, unless backups run more often.
 
 ## Not covered here
 
-- **Central log collection** (for example Loki or Graylog) and metrics such as
-  5xx and 429 rates: the health check covers availability; collecting
-  `docker compose logs` centrally is the next step.
+- **The central log server itself** (Loki, Graylog, a SIEM): the stack writes
+  to the host journal and the hospital forwards it (section 6).
 - **An external secrets vault:** files with tight permissions are the baseline;
   a vault (for example HashiCorp Vault) can later write the same files.

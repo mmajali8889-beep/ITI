@@ -2,7 +2,7 @@
 # Creates ./secrets for the on-premise stack (roadmap 24.7). Safe to re-run:
 # existing secrets are kept. Nothing here is ever committed (see .gitignore).
 #
-# Generated:  auth_session_secret, orthanc_password, orthanc_users.json
+# Generated:  auth_session_secret, orthanc_password, orthanc_users.json, metrics_token
 # Asked for:  medplum_client_secret            (from the Medplum ClientApplication)
 #             medplum_provisioning_password     (optional; enables creating staff logins)
 # Non-interactive: set MEDPLUM_CLIENT_SECRET / MEDPLUM_PROVISIONING_PASSWORD in the environment.
@@ -41,6 +41,8 @@ ask() { # name prompt env-value
 
 keep_or auth_session_secret "$(random)"
 keep_or orthanc_password "$(random)"
+# Read by the API and by monitoring/check-health.sh (METRICS_TOKEN_FILE).
+keep_or metrics_token "$(random)"
 # Orthanc reads its service account from this file; it must match orthanc_password.
 printf '{ "RegisteredUsers": { "hospital-api": "%s" } }\n' "$(cat secrets/orthanc_password)" > secrets/orthanc_users.json
 chmod 644 secrets/orthanc_users.json

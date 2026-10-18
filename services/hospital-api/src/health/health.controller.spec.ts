@@ -1,3 +1,4 @@
+import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { HealthController } from './health.controller';
 
 describe('HealthController (28.2)', () => {
@@ -22,6 +23,27 @@ describe('HealthController (28.2)', () => {
     const status = jest.fn();
     return { status, response: { status } as never };
   };
+
+  describe('metrics', () => {
+    it('does not exist without a configured token', () => {
+      delete process.env.METRICS_TOKEN;
+      expect(() => new HealthController().metrics('Bearer x')).toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('needs the token, and then returns Prometheus text', () => {
+      process.env.METRICS_TOKEN = 'metrics-token-for-tests';
+      const controller = new HealthController();
+      expect(() => controller.metrics()).toThrow(UnauthorizedException);
+      expect(() => controller.metrics('Bearer wrong')).toThrow(
+        UnauthorizedException,
+      );
+      expect(controller.metrics('Bearer metrics-token-for-tests')).toContain(
+        'ehr_http_errors_total',
+      );
+    });
+  });
 
   it('reports liveness without touching dependencies', () => {
     expect(new HealthController().live()).toEqual({ status: 'ok' });
