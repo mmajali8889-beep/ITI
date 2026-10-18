@@ -27,6 +27,8 @@ type Node = {
   required?: boolean;
 };
 const FINAL_REPORT = ['final', 'amended', 'corrected', 'appended'];
+// Radiology orders carry SNOMED 363679005 ("Imaging"); reports carry v2-0074 RAD.
+const RADIOLOGY = /imag|radio|363679005|\brad\b/;
 @Injectable()
 export class PatientJourneyService {
   constructor(
@@ -115,7 +117,7 @@ export class PatientJourneyService {
           encounter.status,
         ),
       labOrders = orders.filter((o) => this.category(o).includes('lab')),
-      radOrders = orders.filter((o) => /imag|radio/.test(this.category(o))),
+      radOrders = orders.filter((o) => RADIOLOGY.test(this.category(o))),
       labReports = reports.filter(
         (r) =>
           FINAL_REPORT.includes(r.status) &&
@@ -124,7 +126,7 @@ export class PatientJourneyService {
       radReports = reports.filter(
         (r) =>
           FINAL_REPORT.includes(r.status) &&
-          /imag|radio/.test(this.reportCategory(r)),
+          RADIOLOGY.test(this.reportCategory(r)),
       ),
       reviewed = tasks.filter(
         (t) =>
@@ -443,7 +445,15 @@ export class PatientJourneyService {
     );
   }
   private category(o: ServiceRequest) {
-    return `${o.category?.flatMap((x) => x.coding?.map((v) => v.code) ?? []).join(' ') ?? ''}`.toLowerCase();
+    return (
+      o.category
+        ?.flatMap((x) => [
+          ...(x.coding?.flatMap((v) => [v.code, v.display]) ?? []),
+          x.text,
+        ])
+        .filter(Boolean)
+        .join(' ') ?? ''
+    ).toLowerCase();
   }
   private reportCategory(r: DiagnosticReport) {
     return `${r.category?.flatMap((x) => x.coding?.map((v) => `${v.code} ${v.display}`) ?? []).join(' ') ?? ''} ${r.code?.text ?? ''}`.toLowerCase();

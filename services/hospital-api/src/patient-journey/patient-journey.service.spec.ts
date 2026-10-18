@@ -271,6 +271,51 @@ describe('PatientJourneyService', () => {
     expect(result.completion).toBeLessThan(100);
   });
 
+  it('recognises radiology orders by their SNOMED imaging category', async () => {
+    medplum.searchResources.mockImplementation(async (type: string) =>
+      type === 'ServiceRequest'
+        ? [
+            {
+              resourceType: 'ServiceRequest',
+              id: 'rad-1',
+              category: [
+                {
+                  coding: [
+                    {
+                      system: 'http://snomed.info/sct',
+                      code: '363679005',
+                      display: 'Imaging',
+                    },
+                  ],
+                },
+              ],
+            },
+          ]
+        : type === 'DiagnosticReport'
+          ? [
+              {
+                resourceType: 'DiagnosticReport',
+                id: 'rad-report-1',
+                status: 'final',
+                category: [
+                  {
+                    coding: [
+                      {
+                        system: 'http://terminology.hl7.org/CodeSystem/v2-0074',
+                        code: 'RAD',
+                      },
+                    ],
+                  },
+                ],
+                basedOn: [{ reference: 'ServiceRequest/rad-1' }],
+              },
+            ]
+          : [],
+    );
+    const r = await service.get('p1', 'e1', 'h1');
+    expect(r.nodes.find((n) => n.key === 'radiology')?.state).toBe('completed');
+  });
+
   describe('care pathways (27.3)', () => {
     const typed = (code: string, cls = 'AMB') => ({
       ...encounter,
