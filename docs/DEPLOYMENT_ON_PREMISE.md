@@ -224,6 +224,56 @@ Rehearse this on a spare machine at least twice a year, and record how long it
 took (that time is the recovery time objective). The nightly backup sets the
 data you can lose: at most one day, unless backups run more often.
 
+### The drill (28.4)
+
+On the spare machine (normally the staging server, section 8), with both
+stacks installed and running:
+
+```bash
+sudo EHR_URL=https://ehr-staging.hospital.local \
+     PRODUCTION_HOSTNAME=<production server's hostname> \
+     ORTHANC_PASSWORD_FILE=/opt/unitech-ehr/infrastructure/production/secrets/orthanc_password \
+     backup/restore-drill.sh /var/backups/unitech-ehr/<set> --on-spare-machine
+```
+
+It runs `restore.sh verify`, then `restore.sh restore` over the spare
+machine's data, waits for `/api/health` to answer 200, then checks that the
+live patient and study counts match the backup. Each step is timed. The
+report goes to `/var/lib/unitech-ehr/drills/drill-<time>.md` (and `.json`):
+
+- **RTO:** restore plus time until healthy.
+- **RPO:** the age of the backup set when the drill started.
+
+The script refuses to run without `--on-spare-machine`, and on the host named
+in `PRODUCTION_HOSTNAME`. It exits non-zero unless every step passed. Finish
+the manual checks listed in the report (staff sign-in, a patient with notes and
+results, a study in the viewer, a portal sign-in), then sign it and keep it
+with the go-live records.
+
+## 8. Staging (30.1)
+
+A second server with the same stacks, used for the restore drill, the
+real-modality tests (26.2) and the pilot (30.4). It needs at least the
+production server's disk space for one backup set plus the restored data.
+
+1. Install it exactly like production (sections 0–4), with its own
+   `EHR_HOSTNAME` (for example `ehr-staging.hospital.local`) and its own
+   certificate. Keep `ENABLED_HOSPITAL_CODES` to the launch hospital.
+2. Copy production's `medplum_client_secret` to staging's `secrets/`
+   (secure copy, never by email). A restored database holds production's
+   ClientApplication, so staging's API must use the same secret. Generate
+   the other secrets fresh.
+3. Get a backup set onto staging, either from the off-site copy (`OFFSITE_CMD`)
+   or with `rsync` from production, then run the drill (section 7).
+4. Install the health check on staging too (section 6), with
+   `PRODUCTION_HOSTNAME` set in `/etc/unitech-ehr/backup.env`.
+
+**After a drill, staging holds real patient data.** Protect it exactly like
+production: same firewall rules (section below), only IT and named pilot users
+get accounts, and backups of staging follow the same rules. Don't use it for
+classroom training (30.3). Train on a separate instance with made-up patients,
+or on staging before the first restore.
+
 ## Firewall
 
 | Port | Allow from |
