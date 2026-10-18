@@ -156,7 +156,7 @@ if (existingAdmin) {
   });
   await provisioning.processCode(login.code);
   const membership = await provisioning.invite(projectId, {
-    resourceType: 'Practitioner', firstName: 'Training', lastName: 'Administrator',
+    resourceType: 'Practitioner', firstName: 'Training', lastName: 'System Administrator',
     email: ADMIN_EMAIL, password, sendEmail: false, membership: { admin: true },
   });
   const practitionerId = membership.profile.reference.split('/')[1];
@@ -165,7 +165,7 @@ if (existingAdmin) {
     ...practitioner,
     active: true,
     identifier: [{ system: `https://hospital-ehr.local/practitioner/${H}`, value: 'TRN-ADMIN' }],
-    name: [{ text: 'Training Administrator', family: 'Administrator', given: ['Training'] }],
+    name: [{ text: 'Training System Administrator', family: 'System Administrator', given: ['Training'] }],
     telecom: [{ system: 'email', value: ADMIN_EMAIL, use: 'work' }],
     extension: [
       { url: HOSPITAL_EXT, valueReference: { reference: `Organization/${H}` } },
@@ -175,7 +175,7 @@ if (existingAdmin) {
   await service.createResource({
     resourceType: 'PractitionerRole',
     active: true,
-    practitioner: { reference: `Practitioner/${practitionerId}`, display: 'Training Administrator' },
+    practitioner: { reference: `Practitioner/${practitionerId}`, display: 'Training System Administrator' },
     organization: { reference: `Organization/${H}` },
     code: [{ coding: [{ system: ROLE_SYSTEM, code: 'system-administrator', display: 'System Administrator' }] }],
     extension: [
