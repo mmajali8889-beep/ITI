@@ -9,3 +9,6 @@ export const getAdminUsers=async(hospitalId:string)=>(await api.get('/administra
 export const createAdminUser=async(payload:Record<string,unknown>)=>(await api.post('/administration/users',payload)).data;
 export const assignAdminRole=async(payload:Record<string,unknown>)=>(await api.post('/administration/role-assignments',payload)).data;
 export const getAuditEvents=async(hospitalId:string)=>(await api.get('/audit/events',{params:{hospitalId,limit:200}})).data as{events:Array<any>};
+export interface JourneyPathwaySettings{hospitalId:string;milestones:Array<{key:string;label:string;locked:boolean}>;pathways:Array<{code:string;label:string;required:string[];defaults:string[];customized:boolean}>}
+export const getJourneyPathways=async(hospitalId:string)=>(await api.get<JourneyPathwaySettings>('/administration/journey-pathways',{params:{hospitalId}})).data;
+export const saveJourneyPathways=async(hospitalId:string,pathways:Record<string,string[]|null>)=>(await api.put<JourneyPathwaySettings>('/administration/journey-pathways',{hospitalId,pathways})).data;

@@ -12,4 +12,21 @@ Controls:
 - Billing completion, medical-record completion and follow-up remain distinct milestones.
 - Every journey read is audited.
 
-The completion percentage is an operational completeness indicator, not a clinical-quality score. A production deployment should configure pathway-specific mandatory milestones by service line rather than using one universal pathway for every case.
+The completion percentage is an operational completeness indicator, not a clinical-quality score. Since 27.3 the percentage counts only the milestones that are mandatory on the encounter's care pathway.
+
+## Care pathways (27.3)
+
+Each encounter follows the pathway of its service line, taken from the encounter type chosen at registration (an admitted encounter, class `IMP`, follows the inpatient pathway):
+
+| Pathway | Encounter types |
+|---|---|
+| Outpatient clinic | outpatient |
+| Emergency department | emergency |
+| Inpatient admission | inpatient, or any admitted encounter |
+| Day case / short stay | day-case |
+| Diagnostic only | diagnostic, laboratory-only, radiology-only |
+| Procedure visit | procedure |
+
+A milestone that is mandatory on the pathway blocks the journey until it is done. One that is not is shown as **optional**: it is never the current stage and does not count towards completion. Patient/MPI, arrival and encounter are always mandatory. Ordered branches (laboratory, radiology, pharmacy, review, admission) stay not-applicable until something is ordered.
+
+The defaults live in `services/hospital-api/src/patient-journey/journey-pathways.ts` (for example, payer is optional in the emergency department and doctor assessment is optional for a diagnostic-only visit). Each hospital can override them in Administration → Care Pathways (`GET/PUT /api/administration/journey-pathways`, administration permission); the override is a `Basic` resource per hospital. If it cannot be read, the journey uses the defaults. The defaults are a proposal for the clinical team to review.

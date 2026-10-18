@@ -12,7 +12,11 @@ import type {
   ServiceRequest,
 } from '@medplum/fhirtypes';
 import { MedplumService } from '../medplum/medplum.service';
-type State = 'completed' | 'current' | 'pending' | 'not-applicable';
+import { milestoneOf, pathwayFor } from './journey-pathways';
+import { JourneyPathwaysService } from './journey-pathways.service';
+// 'optional': not done, but not mandatory on this encounter's pathway.
+type State =
+  'completed' | 'current' | 'pending' | 'optional' | 'not-applicable';
 type Node = {
   key: string;
   label: string;
@@ -20,11 +24,15 @@ type Node = {
   evidence: number;
   detail?: string;
   branch?: string;
+  required?: boolean;
 };
 const FINAL_REPORT = ['final', 'amended', 'corrected', 'appended'];
 @Injectable()
 export class PatientJourneyService {
-  constructor(private readonly medplumService: MedplumService) {}
+  constructor(
+    private readonly medplumService: MedplumService,
+    private readonly pathways: JourneyPathwaysService,
+  ) {}
   async get(patientId: string, encounterId: string, hospitalId: string) {
     if (!patientId || !encounterId || !hospitalId)
       throw new BadRequestException(
@@ -346,27 +354,42 @@ export class PatientJourneyService {
         followups.length,
       ),
     ];
+    // 27.3: only the milestones mandatory on this service line's pathway block
+    // the journey and count towards completion.
+    const pathway = await this.pathways.resolve(
+      hospitalId,
+      pathwayFor(encounter),
+    );
+    const required = new Set(pathway.required);
     let blocked = false;
     nodes = nodes.map((n) => {
-      if (n.state === 'not-applicable' || n.state === 'completed') return n;
+      const node = { ...n, required: required.has(milestoneOf(n.key)) };
+      if (node.state === 'not-applicable' || node.state === 'completed')
+        return node;
+      if (!node.required) return { ...node, state: 'optional' };
       if (!blocked) {
         blocked = true;
-        return { ...n, state: 'current' };
+        return { ...node, state: 'current' };
       }
-      return { ...n, state: 'pending' };
+      return { ...node, state: 'pending' };
     });
+    const counted = nodes.filter(
+      (n) => n.required && n.state !== 'not-applicable',
+    );
     return {
       hospitalId,
       patientId,
       encounterId,
       encounterStatus: encounter.status,
       encounterClass: encounter.class?.code,
+      pathway: {
+        code: pathway.code,
+        label: pathway.label,
+        source: pathway.source,
+      },
       completion: Math.round(
-        (nodes.filter((n) => n.state === 'completed').length /
-          Math.max(
-            1,
-            nodes.filter((n) => n.state !== 'not-applicable').length,
-          )) *
+        (counted.filter((n) => n.state === 'completed').length /
+          Math.max(1, counted.length)) *
           100,
       ),
       currentStage:
