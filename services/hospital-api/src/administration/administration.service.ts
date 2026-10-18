@@ -26,7 +26,20 @@ const BASE = 'https://hospital-ehr.local/fhir/StructureDefinition',
   HOSPITAL = `${BASE}/admin-hospital`,
   KIND = `${BASE}/admin-kind`,
   PERMISSIONS = `${BASE}/rbac-permissions`,
-  ROLE_SYSTEM = 'https://hospital-ehr.local/CodeSystem/security-role';
+  ROLE_SYSTEM = 'https://hospital-ehr.local/CodeSystem/security-role',
+  // Price lists are billing tariffs too (see BillingService): one list.
+  BILLING_HOSPITAL = `${BASE}/billing-hospital`,
+  TARIFF_CATEGORY = `${BASE}/tariff-category`;
+const BILLABLE_CATEGORIES = [
+  'consultation',
+  'laboratory',
+  'radiology',
+  'medication',
+  'room-bed',
+  'surgery',
+  'consumable',
+  'procedure',
+];
 const KINDS = [
   'facilities',
   'departments',
@@ -178,6 +191,16 @@ export class AdministrationService {
           throw new BadRequestException(
             'A valid non-negative price is required',
           );
+        if (!d.category || !BILLABLE_CATEGORIES.includes(d.category))
+          throw new BadRequestException(
+            `A billing category is required: ${BILLABLE_CATEGORIES.join(', ')}`,
+          );
+        if (
+          (await this.catalog(d.hospitalId, 'price-lists')).items.some(
+            (item) => item.code === d.code.trim() && item.status === 'active',
+          )
+        )
+          throw new ConflictException('Active price code already exists');
         r = {
           resourceType: 'ChargeItemDefinition',
           url: `https://hospital-ehr.local/price/${d.hospitalId}/${encodeURIComponent(d.code)}`,
@@ -197,7 +220,14 @@ export class AdministrationService {
               ],
             },
           ],
-          extension: ext,
+          extension: [
+            ...ext,
+            {
+              url: BILLING_HOSPITAL,
+              valueReference: { reference: `Organization/${d.hospitalId}` },
+            },
+            { url: TARIFF_CATEGORY, valueString: d.category },
+          ],
         } as ChargeItemDefinition;
         break;
       case 'insurance-contracts':
@@ -679,6 +709,13 @@ export class AdministrationService {
       ) &&
         (!x.extension?.some((e) => e.url === KIND) ||
           x.extension.some((e) => e.url === KIND && e.valueCode === kind))) ||
+      // Tariffs created in Billing before the lists were shared.
+      (kind === 'price-lists' &&
+        x.extension?.some(
+          (e) =>
+            e.url === BILLING_HOSPITAL &&
+            e.valueReference?.reference === `Organization/${hospitalId}`,
+        )) ||
       x.organization?.reference === `Organization/${hospitalId}` ||
       x.providedBy?.reference === `Organization/${hospitalId}` ||
       x.subject?.some((s) => s.reference === `Organization/${hospitalId}`) ||
@@ -705,6 +742,13 @@ export class AdministrationService {
       status: x.status ?? (x.active === false ? 'inactive' : 'active'),
       price: amount?.value,
       currency: amount?.currency,
+      ...(kind === 'price-lists' && {
+        category: (
+          r as Resource & {
+            extension?: Array<{ url: string; valueString?: string }>;
+          }
+        ).extension?.find((e) => e.url === TARIFF_CATEGORY)?.valueString,
+      }),
     };
   }
   private json<T>(r: Group, url: string): T | undefined {

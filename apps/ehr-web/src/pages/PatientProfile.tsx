@@ -18,6 +18,7 @@ import {
   ArrowLeft,
   Plus,
   Printer,
+  Receipt,
   ShieldCheck,
 } from 'lucide-react';
 
@@ -477,6 +478,14 @@ export default function PatientProfile() {
               true,
             )
           }
+          onOpenBilling={
+            canAccess(session?.user.permissions, 'billing')
+              ? () =>
+                  navigate(
+                    `/hospital/${hospitalId}/billing?patientId=${patientId}`,
+                  )
+              : undefined
+          }
         />
 
 
@@ -764,6 +773,7 @@ function PatientBanner({
   allergies,
   onNewEncounter,
   onOpenAllergies,
+  onOpenBilling,
 }: {
   patient:
     PatientProfileType;
@@ -775,6 +785,10 @@ function PatientBanner({
     () => void;
 
   onOpenAllergies:
+    () => void;
+
+  // Only passed to users with the billing permission.
+  onOpenBilling?:
     () => void;
 }) {
 
@@ -999,6 +1013,27 @@ function PatientBanner({
             Print
 
           </button>
+
+
+          {onOpenBilling && (
+
+            <button
+              type="button"
+              className="secondary-action"
+              onClick={
+                onOpenBilling
+              }
+            >
+
+              <Receipt
+                size={16}
+              />
+
+              Billing
+
+            </button>
+
+          )}
 
         </div>
 

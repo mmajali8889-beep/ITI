@@ -38,6 +38,10 @@ const HOSPITAL = `${BASE}/billing-hospital`,
   SOURCE = `${BASE}/charge-source`,
   CLAIM_INVOICE = `${BASE}/claim-invoice`;
 const TARIFF_CATEGORY = `${BASE}/tariff-category`;
+// Administration → Price Lists tags its ChargeItemDefinitions with these; one
+// price list serves both screens.
+const ADMIN_HOSPITAL = `${BASE}/admin-hospital`,
+  ADMIN_KIND = `${BASE}/admin-kind`;
 const CLAIM_OUTCOME = `${BASE}/claim-outcome`,
   CLAIM_PENDING = `${BASE}/claim-adjudication-pending`,
   RECEIPT = `${BASE}/receipt-number`;
@@ -697,6 +701,12 @@ export class BillingService {
           valueReference: { reference: `Organization/${dto.hospitalId}` },
         },
         { url: TARIFF_CATEGORY, valueString: dto.category },
+        // Also listed under Administration → Price Lists.
+        {
+          url: ADMIN_HOSPITAL,
+          valueReference: { reference: `Organization/${dto.hospitalId}` },
+        },
+        { url: ADMIN_KIND, valueCode: 'price-lists' },
       ],
     };
     return this.mapTariff(
@@ -1051,9 +1061,10 @@ export class BillingService {
   private hospitalId(item: {
     extension?: Array<{ url: string; valueReference?: { reference?: string } }>;
   }) {
-    return item.extension
-      ?.find((ext) => ext.url === HOSPITAL)
-      ?.valueReference?.reference?.replace('Organization/', '');
+    return (
+      item.extension?.find((ext) => ext.url === HOSPITAL) ??
+      item.extension?.find((ext) => ext.url === ADMIN_HOSPITAL)
+    )?.valueReference?.reference?.replace('Organization/', '');
   }
   private ext(
     item: { extension?: Array<{ url: string; valueString?: string }> },
