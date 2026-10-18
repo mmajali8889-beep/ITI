@@ -25,13 +25,12 @@ import {
   getTariffs,
   recordPayment,
   submitClaim,
+  type BillingVisit,
   type Coverage,
   type PatientAccount,
   type Tariff,
 } from '../api/billingApi';
 import { getPatient, searchPatients, type PatientSearchResult } from '../api/patientApi';
-import { getPatientEncounters } from '../api/encounterApi';
-import type { EncounterResponse } from '../types/encounter';
 import { HOSPITAL_CURRENCY } from '../utils/currency';
 import './BillingPage.css';
 
@@ -54,9 +53,9 @@ function errorMessage(error: unknown, fallback: string): string {
 
 const patientName = (p: SelectedPatient) => p.nameEn || p.nameAr || p.id;
 
-function encounterLabel(e: EncounterResponse): string {
-  const date = e.startDateTime ? new Date(e.startDateTime).toLocaleDateString() : '';
-  return [e.visitNumber, e.encounterTypeDisplay ?? e.encounterType, date, e.status].filter(Boolean).join(' · ');
+function encounterLabel(e: BillingVisit): string {
+  const date = e.start ? new Date(e.start).toLocaleDateString() : '';
+  return [e.visitNumber, e.type, date, e.status].filter(Boolean).join(' · ');
 }
 
 export default function BillingPage() {
@@ -66,7 +65,6 @@ export default function BillingPage() {
   const [results, setResults] = useState<PatientSearchResult[]>();
   const [patient, setPatient] = useState<SelectedPatient>();
   const [account, setAccount] = useState<PatientAccount>();
-  const [encounters, setEncounters] = useState<EncounterResponse[]>([]);
   const [coverages, setCoverages] = useState<Coverage[]>([]);
   const [tariffs, setTariffs] = useState<Tariff[]>();
   const [action, setAction] = useState<Action>();
@@ -79,13 +77,12 @@ export default function BillingPage() {
     setResults(undefined);
     setBusy(true);
     try {
-      const [acc, enc, cov] = await Promise.all([
+      // Visits come with the account: billing staff have no clinical permission.
+      const [acc, cov] = await Promise.all([
         getPatientAccount(selected.id, hospitalId),
-        getPatientEncounters(selected.id, hospitalId).catch(() => ({ total: 0, encounters: [] })),
         getPatientCoverages(selected.id, hospitalId).catch(() => ({ total: 0, coverages: [] })),
       ]);
       setAccount(acc);
-      setEncounters(enc.encounters ?? []);
       setCoverages(cov.coverages ?? []);
       setError('');
     } catch (err) {
@@ -127,7 +124,6 @@ export default function BillingPage() {
   function clearPatient() {
     setPatient(undefined);
     setAccount(undefined);
-    setEncounters([]);
     setCoverages([]);
     setSearchParams({});
   }
@@ -264,7 +260,7 @@ export default function BillingPage() {
           hospitalId={hospitalId}
           patientId={patient?.id ?? ''}
           account={account}
-          encounters={encounters}
+          encounters={account?.encounters ?? []}
           coverages={coverages}
           close={() => setAction(undefined)}
           saved={async () => {
@@ -292,7 +288,7 @@ function BillingDialog({
   hospitalId: string;
   patientId: string;
   account?: PatientAccount;
-  encounters: EncounterResponse[];
+  encounters: BillingVisit[];
   coverages: Coverage[];
   close: () => void;
   saved: () => Promise<void>;
