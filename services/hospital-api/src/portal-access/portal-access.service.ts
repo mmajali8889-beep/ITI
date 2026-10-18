@@ -8,6 +8,7 @@ import { randomInt } from 'node:crypto';
 import type { MedplumClient } from '@medplum/core';
 import type { Patient, ProjectMembership, User } from '@medplum/fhirtypes';
 import { MedplumService } from '../medplum/medplum.service';
+import { AuthService } from '../auth/auth.service';
 import { CreatePortalAccessDto } from './dto/portal-access.dto';
 
 export interface PortalLogin {
@@ -37,7 +38,10 @@ const USERNAME = /^[a-z0-9][a-z0-9._+-]{1,62}(@[a-z0-9.-]+\.[a-z]{2,})?$/;
  */
 @Injectable()
 export class PortalAccessService {
-  constructor(private readonly medplumService: MedplumService) {}
+  constructor(
+    private readonly medplumService: MedplumService,
+    private readonly authService: AuthService,
+  ) {}
 
   async status(
     patientId: string,
@@ -137,6 +141,8 @@ export class PortalAccessService {
         provisioning.updateResource<ProjectMembership>({ ...m, active: false }),
       ),
     );
+    // Medplum now refuses new sign-ins; also end portal sessions already open.
+    await this.authService.revokeProfileSessions(`Patient/${patientId}`);
     const byId = new Map(updated.map((m) => [m.id, m]));
     const result = await this.describe(
       provisioning,

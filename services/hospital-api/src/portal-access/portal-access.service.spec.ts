@@ -30,6 +30,7 @@ describe('PortalAccessService', () => {
     updateResource: jest.fn(),
     invite: jest.fn(),
   };
+  const auth = { revokeProfileSessions: jest.fn() };
   let portal: PortalAccessService;
   beforeEach(() => {
     jest.resetAllMocks();
@@ -43,10 +44,13 @@ describe('PortalAccessService', () => {
     }));
     provisioning.updateResource.mockImplementation(async (r) => r);
     provisioning.invite.mockImplementation(async () => membership('m-new'));
-    portal = new PortalAccessService({
-      getClient: () => service,
-      getProvisioningClient: async () => provisioning,
-    } as never);
+    portal = new PortalAccessService(
+      {
+        getClient: () => service,
+        getProvisioningClient: async () => provisioning,
+      } as never,
+      auth as never,
+    );
   });
 
   it('reports no login for a patient without one', async () => {
@@ -163,11 +167,13 @@ describe('PortalAccessService', () => {
       expect.objectContaining({ id: 'm1', active: false }),
     );
     expect(result).toMatchObject({ status: 'disabled', disabled: 1 });
+    expect(auth.revokeProfileSessions).toHaveBeenCalledWith('Patient/p1');
   });
 
   it('reports when there is nothing to disable', async () => {
     await expect(portal.disable('p1', 'h1')).rejects.toBeInstanceOf(
       NotFoundException,
     );
+    expect(auth.revokeProfileSessions).not.toHaveBeenCalled();
   });
 });
