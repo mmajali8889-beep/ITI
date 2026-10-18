@@ -1,0 +1,15 @@
+# Only for running this stack on Docker Desktop (Windows or macOS), e.g. a
+# staging or demo machine. Docker Desktop has no journald, so containers use
+# Docker's "local" log driver instead; "docker compose logs" still works.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.desktop.yml up -d
+services:
+  proxy:
+    logging: !override
+      driver: local
+  api:
+    logging: !override
+      driver: local
+  orthanc:
+    logging: !override
+      driver: local
