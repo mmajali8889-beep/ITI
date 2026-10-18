@@ -13,7 +13,7 @@ import { isMedplumRateLimitError } from '../medplum/medplum-rate-limit.filter';
 import { MedplumService } from '../medplum/medplum.service';
 import { MedplumClient, getDisplayString } from '@medplum/core';
 import type { ProfileResource } from '@medplum/core';
-import type { Basic, PractitionerRole } from '@medplum/fhirtypes';
+import type { Basic, Organization, PractitionerRole } from '@medplum/fhirtypes';
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import type { AuthSession } from './auth.types';
 import { PERMISSIONS_EXTENSION, permissionsForRoles } from './permissions';
@@ -404,9 +404,14 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
         profile = await client.processCode(response.code);
       }
 
-      // This read is intentionally performed with the user's token. It prevents a
-      // user from creating a session for a hospital they cannot access in Medplum.
-      const hospital = await client.readResource('Organization', hospitalId);
+      // For staff this read is intentionally performed with the user's token. It
+      // prevents a user from creating a session for a hospital they cannot access
+      // in Medplum. Patients' access policies (correctly) hide Organization
+      // resources, so a patient is instead checked against their own record.
+      const hospital =
+        profile.resourceType === 'Patient'
+          ? await this.patientHospital(client, profile.id, hospitalId)
+          : await client.readResource('Organization', hospitalId);
       const hospitalCode = hospital.identifier?.find(
         (identifier) =>
           identifier.system === 'https://hospital-ehr.local/organization-code',
@@ -501,6 +506,28 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
         'Invalid username or password, or hospital access is not permitted',
       );
     }
+  }
+
+  /**
+   * Patient (portal) sign-in, 27.2: the patient's own record, read with their
+   * token, must be managed by the chosen hospital. Only then is the hospital
+   * read with the API's service client. A mismatch fails like a wrong password,
+   * so the sign-in form does not reveal where someone is a patient.
+   */
+  private async patientHospital(
+    userClient: MedplumClient,
+    patientId: string | undefined,
+    hospitalId: string,
+  ): Promise<Organization> {
+    const service = this.medplumService?.getClient();
+    if (!service || !patientId)
+      throw new Error('Patient sign-in is not available');
+    const patient = await userClient.readResource('Patient', patientId);
+    if (
+      patient.managingOrganization?.reference !== `Organization/${hospitalId}`
+    )
+      throw new Error('Patient is not registered at this hospital');
+    return service.readResource('Organization', hospitalId);
   }
 
   getSession(id: string | undefined): AuthSession | undefined {
