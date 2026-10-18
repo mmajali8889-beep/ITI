@@ -32,6 +32,7 @@ import {
 import { getPatient, searchPatients, type PatientSearchResult } from '../api/patientApi';
 import { getPatientEncounters } from '../api/encounterApi';
 import type { EncounterResponse } from '../types/encounter';
+import { HOSPITAL_CURRENCY } from '../utils/currency';
 import './BillingPage.css';
 
 type Action = 'capture' | 'tariff' | 'invoice' | 'payment' | 'claim' | 'adjudicate';
@@ -332,7 +333,7 @@ function BillingDialog({
         }
       }
       if (action === 'tariff')
-        await createTariff({ hospitalId, category: f.category, code: f.code.trim(), description: f.description.trim(), unitPrice: Number(f.unitPrice), currency: 'SAR' });
+        await createTariff({ hospitalId, category: f.category, code: f.code.trim(), description: f.description.trim(), unitPrice: Number(f.unitPrice), currency: HOSPITAL_CURRENCY });
       if (action === 'invoice') await createInvoice({ hospitalId, patientId, encounterId: f.encounterId });
       if (action === 'payment')
         await recordPayment(f.invoiceId, { hospitalId, amount: Number(f.amount), method: f.method, reference: f.reference.trim() });
@@ -396,7 +397,7 @@ function BillingDialog({
             {select('category', 'Billable category', CATEGORIES.map(c => [c, c]), '')}
             {input('code', 'Tariff code')}
             {input('description', 'Description')}
-            {input('unitPrice', 'Unit price (SAR)', 'number')}
+            {input('unitPrice', `Unit price (${HOSPITAL_CURRENCY})`, 'number')}
           </>
         )}
         {action === 'payment' && (
@@ -432,7 +433,7 @@ function BillingDialog({
   );
 }
 
-function Stat({ icon, label, value, unit = 'SAR' }: { icon: ReactNode; label: string; value: number; unit?: string }) {
+function Stat({ icon, label, value, unit = HOSPITAL_CURRENCY }: { icon: ReactNode; label: string; value: number; unit?: string }) {
   return (
     <article>
       <span>{icon}</span>

@@ -22,6 +22,7 @@ import {
   CreateUserProfileDto,
 } from './dto/administration.dto';
 import { ROLE_PERMISSIONS, permissionsForRoles } from '../auth/permissions';
+import { hospitalCurrency } from '../config/currency';
 const BASE = 'https://hospital-ehr.local/fhir/StructureDefinition',
   HOSPITAL = `${BASE}/admin-hospital`,
   KIND = `${BASE}/admin-kind`,
@@ -214,7 +215,7 @@ export class AdministrationService {
                   type: 'base',
                   amount: {
                     value: Number(d.price),
-                    currency: d.currency || 'SAR',
+                    currency: d.currency || hospitalCurrency(),
                   },
                 },
               ],

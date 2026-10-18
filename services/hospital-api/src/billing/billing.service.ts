@@ -28,6 +28,7 @@ import {
   RecordPaymentDto,
   SubmitClaimDto,
 } from './dto/billing.dto';
+import { hospitalCurrency } from '../config/currency';
 
 const BASE = 'https://hospital-ehr.local/fhir/StructureDefinition';
 const HOSPITAL = `${BASE}/billing-hospital`,
@@ -68,7 +69,7 @@ export class BillingService {
         'Quantity and unit price must be valid positive values',
       );
     await this.encounter(dto.encounterId, dto.patientId, dto.hospitalId);
-    const currency = dto.currency ?? 'SAR';
+    const currency = dto.currency ?? hospitalCurrency();
     const item: ChargeItem = {
       resourceType: 'ChargeItem',
       status: 'billable',
@@ -148,10 +149,11 @@ export class BillingService {
       throw new ConflictException(
         'No billable charges exist for this encounter',
       );
-    const currency = charges[0].priceOverride?.currency ?? 'SAR';
+    const currency = charges[0].priceOverride?.currency ?? hospitalCurrency();
     if (
       charges.some(
-        (item) => (item.priceOverride?.currency ?? 'SAR') !== currency,
+        (item) =>
+          (item.priceOverride?.currency ?? hospitalCurrency()) !== currency,
       )
     )
       throw new ConflictException('Invoice charges must use one currency');
@@ -205,7 +207,7 @@ export class BillingService {
       invoice.status === 'balanced'
     )
       throw new ConflictException('Invoice cannot accept a payment');
-    const currency = invoice.totalGross?.currency ?? 'SAR';
+    const currency = invoice.totalGross?.currency ?? hospitalCurrency();
     if ((dto.currency ?? currency) !== currency)
       throw new BadRequestException(
         'Payment currency must match invoice currency',
@@ -304,7 +306,7 @@ export class BillingService {
     amount: number,
   ) {
     const invoice = await this.invoice(invoiceId, hospitalId);
-    const currency = invoice.totalGross?.currency ?? 'SAR',
+    const currency = invoice.totalGross?.currency ?? hospitalCurrency(),
       total = invoice.totalGross?.value ?? 0,
       paid = Math.max(0, this.money(invoice, PAID) - amount);
     invoice.extension = [
@@ -440,7 +442,8 @@ export class BillingService {
     if (this.ext(claim, CLAIM_OUTCOME))
       throw new ConflictException('Claim is already adjudicated');
     const reference = dto.adjudicationReference.trim(),
-      currency: NonNullable<Money['currency']> = claim.total?.currency ?? 'SAR';
+      currency: NonNullable<Money['currency']> =
+        claim.total?.currency ?? hospitalCurrency();
     // Claim the adjudication with a guarded update before doing any work, so of
     // two parallel requests only one proceeds; the other gets a 409.
     const pending = this.ext(claim, CLAIM_PENDING);
@@ -690,7 +693,10 @@ export class BillingService {
           priceComponent: [
             {
               type: 'base',
-              amount: { value: dto.unitPrice, currency: dto.currency ?? 'SAR' },
+              amount: {
+                value: dto.unitPrice,
+                currency: dto.currency ?? hospitalCurrency(),
+              },
             },
           ],
         },
@@ -887,7 +893,9 @@ export class BillingService {
         description: c.description,
         quantity: c.quantity,
         unitPrice: price?.value ?? 0,
-        currency: (price?.currency as CreateChargeDto['currency']) ?? 'SAR',
+        currency:
+          (price?.currency as CreateChargeDto['currency']) ??
+          hospitalCurrency(),
         sourceReference: c.source,
       };
       captured.push(await this.createCharge(charge));

@@ -1,4 +1,5 @@
-export type BillingCurrency = 'SAR' | 'USD' | 'EUR';
+import type { HospitalCurrency } from '../../config/currency';
+export type BillingCurrency = HospitalCurrency;
 export class CreateChargeDto {
   hospitalId!: string;
   patientId!: string;
