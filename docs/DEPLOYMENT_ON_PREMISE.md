@@ -283,6 +283,37 @@ get accounts, and backups of staging follow the same rules. Don't use it for
 classroom training (30.3). Train on a separate instance with made-up patients,
 or on staging before the first restore.
 
+## 9. Training environment (30.3)
+
+A separate copy of both stacks with fictional data, so staff can practise
+without touching real records. Training material is in `docs/training/`.
+
+1. Make a separate checkout of the repository (the stacks bind-mount their
+   `secrets/` and `Caddyfile` from it).
+2. In both `.env` files set a project name and network of its own, so it can
+   run on the same machine as staging. Also give it its own ports and hostname:
+
+   - `medplum/.env`:
+     - `COMPOSE_PROJECT_NAME=unitech-training-medplum`
+     - `MEDPLUM_NETWORK=unitech-training-medplum`
+     - `MEDPLUM_ADMIN_BIND=127.0.0.1:18104`
+   - `.env`:
+     - `COMPOSE_PROJECT_NAME=unitech-training`
+     - `MEDPLUM_NETWORK=unitech-training-medplum`
+     - `EHR_HOSTNAME=training.<domain>`
+     - free `HTTP_PORT`, `HTTPS_PORT` and `ORTHANC_DICOM_BIND`
+3. Fill it from a backup of **test** data, never of production, with
+   `backup/restore-drill.sh`. Point the container and volume variables
+   (`MEDPLUM_PG_CONTAINER=unitech-training-medplum-postgres-1`, …) at the
+   training containers.
+4. Seed the training accounts and patients:
+   `node --env-file=<seed.env> scripts/seed-training.mjs --training-environment`
+   (in `services/hospital-api`; the variables are listed at the top of the
+   script). The account sheet with the shared password is written to
+   `TRAINING_ACCOUNTS_FILE`. Keep it outside the repository and give it to
+   the trainers only.
+5. Between training groups, restore and seed again to start from the same data.
+
 ## Firewall
 
 | Port | Allow from |
