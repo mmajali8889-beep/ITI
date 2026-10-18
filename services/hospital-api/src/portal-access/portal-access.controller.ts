@@ -9,7 +9,10 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import type { AuthSession } from '../auth/auth.types';
-import { CreatePortalAccessDto } from './dto/portal-access.dto';
+import {
+  CreatePortalAccessDto,
+  ResetPortalAccessDto,
+} from './dto/portal-access.dto';
 import { PortalAccessService } from './portal-access.service';
 
 /**
@@ -39,6 +42,13 @@ export class PortalAccessController {
     @Req() request: Request & { auth?: AuthSession },
   ) {
     return this.service.disable(patientId, this.hospital(request));
+  }
+  @Post(':patientId/reset') reset(
+    @Param('patientId') patientId: string,
+    @Body() dto: ResetPortalAccessDto,
+    @Req() request: Request & { auth?: AuthSession },
+  ) {
+    return this.service.reset(patientId, this.hospital(request), dto);
   }
   private hospital(request: Request & { auth?: AuthSession }): string {
     const hospitalId = request.auth?.hospitalId;

@@ -29,6 +29,7 @@ describe('PortalAccessService', () => {
     readResource: jest.fn(),
     updateResource: jest.fn(),
     invite: jest.fn(),
+    post: jest.fn(),
   };
   const auth = { revokeProfileSessions: jest.fn() };
   let portal: PortalAccessService;
@@ -44,6 +45,10 @@ describe('PortalAccessService', () => {
     }));
     provisioning.updateResource.mockImplementation(async (r) => r);
     provisioning.invite.mockImplementation(async () => membership('m-new'));
+    provisioning.post.mockResolvedValue({
+      resourceType: 'OperationOutcome',
+      id: 'ok',
+    });
     portal = new PortalAccessService(
       {
         getClient: () => service,
@@ -175,5 +180,95 @@ describe('PortalAccessService', () => {
       NotFoundException,
     );
     expect(auth.revokeProfileSessions).not.toHaveBeenCalled();
+  });
+
+  describe('reset', () => {
+    const dated = (id: string, active: boolean, lastUpdated: string) => ({
+      ...membership(id, active),
+      meta: { lastUpdated },
+    });
+
+    it('re-enables the latest disabled login with a one-time password', async () => {
+      provisioning.searchResources.mockResolvedValue([
+        dated('m-old', false, '2026-01-01T00:00:00Z'),
+        dated('m-new', false, '2026-06-01T00:00:00Z'),
+      ]);
+      const result = await portal.reset('p1', 'h1', {});
+      expect(auth.revokeProfileSessions).toHaveBeenCalledWith('Patient/p1');
+      expect(provisioning.post).toHaveBeenCalledWith(
+        'admin/super/setpassword',
+        {
+          email: 'u-m-new@unitech.local',
+          password: result.temporaryPassword,
+          projectId: 'project-1',
+        },
+      );
+      expect(provisioning.updateResource).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'm-new', active: true }),
+      );
+      expect(result).toMatchObject({ status: 'active', username: 'u-m-new' });
+      expect(result.temporaryPassword).toMatch(
+        /^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9]).{12,}$/,
+      );
+    });
+
+    it('resets the active login without touching its membership', async () => {
+      provisioning.searchResources.mockResolvedValue([membership('m1')]);
+      const result = await portal.reset('p1', 'h1', {
+        password: 'Portal-Pass2',
+      });
+      expect(provisioning.post).toHaveBeenCalledWith(
+        'admin/super/setpassword',
+        expect.objectContaining({ password: 'Portal-Pass2' }),
+      );
+      expect(provisioning.updateResource).not.toHaveBeenCalled();
+      expect(result).not.toHaveProperty('temporaryPassword');
+    });
+
+    it('refuses to re-enable a second login while one is active', async () => {
+      provisioning.searchResources.mockResolvedValue([
+        membership('m1'),
+        membership('m2', false),
+      ]);
+      await expect(
+        portal.reset('p1', 'h1', { loginId: 'm2' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(provisioning.post).not.toHaveBeenCalled();
+    });
+
+    it('rejects a weak password, a missing login, or a foreign patient', async () => {
+      provisioning.searchResources.mockResolvedValue([membership('m1')]);
+      await expect(
+        portal.reset('p1', 'h1', { password: 'weak' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        portal.reset('p1', 'h1', { loginId: 'nope' }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      provisioning.searchResources.mockResolvedValue([]);
+      await expect(portal.reset('p1', 'h1', {})).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      service.readResource.mockResolvedValue({
+        ...patient,
+        managingOrganization: { reference: 'Organization/h2' },
+      });
+      await expect(portal.reset('p1', 'h1', {})).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(provisioning.post).not.toHaveBeenCalled();
+    });
+
+    it('fails when Medplum does not set the password', async () => {
+      provisioning.searchResources.mockResolvedValue([membership('m1', false)]);
+      provisioning.post.mockResolvedValue({
+        resourceType: 'OperationOutcome',
+        id: 'forbidden',
+        issue: [{ diagnostics: 'Forbidden' }],
+      });
+      await expect(portal.reset('p1', 'h1', {})).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(provisioning.updateResource).not.toHaveBeenCalled();
+    });
   });
 });

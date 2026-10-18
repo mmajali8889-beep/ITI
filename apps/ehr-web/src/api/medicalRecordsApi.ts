@@ -17,3 +17,4 @@ export type PortalAccessCreated=PortalAccess&{username:string;temporaryPassword?
 export const getPortalAccess=async(patientId:string,hospitalId:string)=>(await api.get<PortalAccess>(`/medical-records/portal-access/${patientId}`,{params:{hospitalId}})).data;
 export const createPortalAccess=async(patientId:string,p:{hospitalId:string;username:string;password?:string})=>(await api.post<PortalAccessCreated>(`/medical-records/portal-access/${patientId}`,p)).data;
 export const disablePortalAccess=async(patientId:string,hospitalId:string)=>(await api.post<PortalAccess>(`/medical-records/portal-access/${patientId}/disable`,{hospitalId})).data;
+export const resetPortalAccess=async(patientId:string,p:{hospitalId:string;loginId?:string;password?:string})=>(await api.post<PortalAccessCreated>(`/medical-records/portal-access/${patientId}/reset`,p)).data;

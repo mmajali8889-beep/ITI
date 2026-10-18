@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Copy, KeyRound, Loader2, ShieldOff, UserPlus } from 'lucide-react';
+import { Copy, KeyRound, Loader2, RotateCcw, ShieldOff, UserPlus } from 'lucide-react';
 import {
   createPortalAccess,
   disablePortalAccess,
   getPortalAccess,
+  resetPortalAccess,
   type PortalAccess,
 } from '../api/medicalRecordsApi';
 import './PatientPortalAccess.css';
@@ -35,7 +36,7 @@ export default function PatientPortalAccess({
   const [creating, setCreating] = useState(false);
   const [username, setUsername] = useState(suggestedUsername ?? '');
   const [password, setPassword] = useState('');
-  const [issued, setIssued] = useState<{ username: string; password?: string }>();
+  const [issued, setIssued] = useState<{ username: string; password?: string; action: 'created' | 'reset' }>();
 
   useEffect(() => {
     let cancelled = false;
@@ -68,11 +69,30 @@ export default function PatientPortalAccess({
         password: password || undefined,
       });
       setAccess(result);
-      setIssued({ username: result.username, password: result.temporaryPassword });
+      setIssued({ username: result.username, password: result.temporaryPassword, action: 'created' });
       setCreating(false);
       setPassword('');
     } catch (err) {
       setError(errorMessage(err, 'Unable to create the portal login'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reset(reEnable: boolean) {
+    const question = reEnable
+      ? 'Re-enable this portal login with a new one-time password?'
+      : 'Reset the portal password? The patient is signed out and must use the new one-time password.';
+    if (!window.confirm(question)) return;
+    setBusy(true);
+    setError('');
+    try {
+      const result = await resetPortalAccess(patientId, { hospitalId });
+      setAccess(result);
+      setIssued({ username: result.username, password: result.temporaryPassword, action: 'reset' });
+      setCreating(false);
+    } catch (err) {
+      setError(errorMessage(err, 'Unable to reset the portal login'));
     } finally {
       setBusy(false);
     }
@@ -123,7 +143,9 @@ export default function PatientPortalAccess({
 
           {issued && (
             <div className="portal-access-issued" role="status">
-              <p>Portal login created for <b>{issued.username}</b>.</p>
+              <p>
+                {issued.action === 'created' ? 'Portal login created for' : 'New password set for'} <b>{issued.username}</b>.
+              </p>
               {issued.password && (
                 <p>
                   One-time password: <code>{issued.password}</code>
@@ -138,9 +160,14 @@ export default function PatientPortalAccess({
           )}
 
           {status === 'active' ? (
-            <button type="button" className="portal-access-danger" disabled={busy} onClick={() => void disable()}>
-              <ShieldOff size={14} /> Disable portal login
-            </button>
+            <div className="portal-access-actions">
+              <button type="button" className="portal-access-secondary" disabled={busy} onClick={() => void reset(false)}>
+                <RotateCcw size={14} /> Reset password
+              </button>
+              <button type="button" className="portal-access-danger" disabled={busy} onClick={() => void disable()}>
+                <ShieldOff size={14} /> Disable portal login
+              </button>
+            </div>
           ) : creating ? (
             <form
               className="portal-access-form"
@@ -166,6 +193,15 @@ export default function PatientPortalAccess({
                 </button>
               </div>
             </form>
+          ) : status === 'disabled' ? (
+            <div className="portal-access-actions">
+              <button type="button" disabled={busy} onClick={() => void reset(true)}>
+                <RotateCcw size={14} /> Re-enable with new password
+              </button>
+              <button type="button" className="portal-access-secondary" disabled={busy} onClick={() => setCreating(true)}>
+                <UserPlus size={14} /> Create a new login
+              </button>
+            </div>
           ) : (
             <button type="button" onClick={() => setCreating(true)}>
               <UserPlus size={14} /> Create portal login

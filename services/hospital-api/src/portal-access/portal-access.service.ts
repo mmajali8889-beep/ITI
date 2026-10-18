@@ -9,7 +9,10 @@ import type { MedplumClient } from '@medplum/core';
 import type { Patient, ProjectMembership, User } from '@medplum/fhirtypes';
 import { MedplumService } from '../medplum/medplum.service';
 import { AuthService } from '../auth/auth.service';
-import { CreatePortalAccessDto } from './dto/portal-access.dto';
+import {
+  CreatePortalAccessDto,
+  ResetPortalAccessDto,
+} from './dto/portal-access.dto';
 
 export interface PortalLogin {
   id: string;
@@ -151,6 +154,89 @@ export class PortalAccessService {
       memberships.map((m) => byId.get(m.id as string) ?? m),
     );
     return { ...result, disabled: updated.length };
+  }
+
+  /**
+   * Sets a new password on one of the patient's logins and makes it the active
+   * one: the active login, or else the given (or most recent) disabled one.
+   * Sessions opened with the old password are ended.
+   */
+  async reset(
+    patientId: string,
+    hospitalId: string,
+    dto: ResetPortalAccessDto,
+  ): Promise<
+    PortalAccessStatus & { username: string; temporaryPassword?: string }
+  > {
+    await this.patientOf(patientId, hospitalId);
+    const supplied = typeof dto?.password === 'string' && dto.password !== '';
+    if (supplied) this.assertPasswordPolicy(dto.password as string);
+    const password = supplied
+      ? (dto.password as string)
+      : this.generatePassword();
+
+    const provisioning = await this.provisioning();
+    const memberships = await this.memberships(provisioning, patientId);
+    if (!memberships.length)
+      throw new NotFoundException('This patient has no portal login');
+    const active = memberships.find((m) => m.active !== false);
+    const target = dto?.loginId
+      ? memberships.find((m) => m.id === dto.loginId)
+      : (active ??
+        [...memberships].sort((a, b) =>
+          (b.meta?.lastUpdated ?? '').localeCompare(a.meta?.lastUpdated ?? ''),
+        )[0]);
+    if (!target) throw new NotFoundException('Portal login not found');
+    if (active && active.id !== target.id)
+      throw new ConflictException(
+        'Another portal login is active; disable it first',
+      );
+
+    const userId = target.user?.reference?.startsWith('User/')
+      ? target.user.reference.slice(5)
+      : undefined;
+    const user = userId
+      ? ((await provisioning
+          .readResource('User', userId)
+          .catch(() => undefined)) as User | undefined)
+      : undefined;
+    if (!user?.email)
+      throw new BadRequestException('The portal login has no username');
+
+    // Old sessions end first, so none outlives the old password.
+    await this.authService.revokeProfileSessions(`Patient/${patientId}`);
+    const outcome: {
+      resourceType?: string;
+      id?: string;
+      issue?: Array<{ diagnostics?: string }>;
+    } = await provisioning.post('admin/super/setpassword', {
+      email: user.email,
+      password,
+      projectId: this.projectId(),
+    });
+    if (outcome?.resourceType === 'OperationOutcome' && outcome.id !== 'ok')
+      throw new BadRequestException(
+        outcome.issue?.[0]?.diagnostics ?? 'Unable to set the password',
+      );
+    const updated =
+      target.active === false
+        ? await provisioning.updateResource<ProjectMembership>({
+            ...target,
+            active: true,
+          })
+        : target;
+
+    const result = await this.describe(
+      provisioning,
+      patientId,
+      hospitalId,
+      memberships.map((m) => (m.id === updated.id ? updated : m)),
+    );
+    return {
+      ...result,
+      username: this.displayUsername(user.email),
+      ...(supplied ? {} : { temporaryPassword: password }),
+    };
   }
 
   /** The patient, only if the signed-in hospital manages it. */

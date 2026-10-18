@@ -177,3 +177,9 @@
     transform: rotate(360deg);
   }
 }
+
+.portal-access-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
