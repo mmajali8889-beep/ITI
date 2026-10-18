@@ -18,6 +18,7 @@ ORTHANC_CONTAINER=${ORTHANC_CONTAINER:-unitech-ehr-orthanc-1}
 ORTHANC_VOLUME=${ORTHANC_VOLUME:-unitech-ehr_orthanc-db}
 ORTHANC_IMAGE=${ORTHANC_IMAGE:-orthancteam/orthanc:24.10.3}
 API_CONTAINER=${API_CONTAINER:-unitech-ehr-api-1}
+PROXY_CONTAINER=${PROXY_CONTAINER:-unitech-ehr-proxy-1}
 MEDPLUM_SERVER_CONTAINER=${MEDPLUM_SERVER_CONTAINER:-unitech-medplum-medplum-server-1}
 
 log() { echo "$(date -u +%FT%TZ) restore: $*"; }
@@ -86,4 +87,7 @@ docker run --rm -v "$ORTHANC_VOLUME":/data --entrypoint sh "$ORTHANC_IMAGE" -c '
 docker run --rm -i -v "$ORTHANC_VOLUME":/data --entrypoint tar "$ORTHANC_IMAGE" xzf - -C /data < "$SET/orthanc-db.tar.gz"
 log "starting services"
 docker start "$ORTHANC_CONTAINER" "$MEDPLUM_SERVER_CONTAINER" "$API_CONTAINER" >/dev/null
+# On a freshly installed machine the API cannot start before its Medplum data is
+# restored, so Compose never started the proxy that depends on it. Start it now.
+docker start "$PROXY_CONTAINER" >/dev/null 2>&1 || log "WARNING: could not start $PROXY_CONTAINER; run 'docker compose up -d'"
 log "RESTORED from $SET; check https://<host>/api/health and sign in"
