@@ -31,6 +31,11 @@ const REVOCATION_HASH_SYSTEM =
   'https://hospital-ehr.local/revoked-session-sha256';
 const REVOCATION_EXPIRES_URL =
   'https://hospital-ehr.local/fhir/StructureDefinition/revoked-session-expires';
+// Per-profile revocation: every session of the profile issued at or before
+// "revoked-at" is refused, e.g. once a patient's portal login is disabled.
+const PROFILE_REVOCATION_SYSTEM = 'https://hospital-ehr.local/revoked-profile';
+const PROFILE_REVOKED_AT_URL =
+  'https://hospital-ehr.local/fhir/StructureDefinition/revoked-profile-at';
 
 /** Fails closed: a production process must never offer the development admin login. */
 export function assertDevAdminConfiguration(
@@ -50,6 +55,8 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
   // SHA-256 of revoked session tokens. Persisted in Medplum (Basic resources)
   // so a logout survives restarts and reaches other API instances on refresh.
   private readonly revokedTokenHashes = new Set<string>();
+  // "Patient/<id>" -> time (ms) before which that profile's sessions are refused.
+  private readonly revokedProfiles = new Map<string, number>();
   private revocationRefresh?: NodeJS.Timeout;
   private lockoutPurge?: NodeJS.Timeout;
   private readonly revocationRefreshMs =
@@ -110,10 +117,17 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     const now = Date.now();
     const active = new Set<string>();
     for await (const page of client.searchResourcePages('Basic', {
-      code: `${REVOCATION_CODE_SYSTEM}|revoked-session`,
+      code: `${REVOCATION_CODE_SYSTEM}|revoked-session,${REVOCATION_CODE_SYSTEM}|revoked-profile`,
       _count: '1000',
     })) {
       for (const item of page) {
+        const profile = item.identifier?.find(
+          (id) => id.system === PROFILE_REVOCATION_SYSTEM,
+        )?.value;
+        if (profile) {
+          await this.loadProfileRevocation(client, item, profile, now);
+          continue;
+        }
         const hash = item.identifier?.find(
           (id) => id.system === REVOCATION_HASH_SYSTEM,
         )?.value;
@@ -130,6 +144,82 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       }
     }
     for (const hash of active) this.revokedTokenHashes.add(hash);
+  }
+
+  private async loadProfileRevocation(
+    client: MedplumClient,
+    item: Basic,
+    profile: string,
+    now: number,
+  ): Promise<void> {
+    const revokedAt = Date.parse(
+      item.extension?.find((ext) => ext.url === PROFILE_REVOKED_AT_URL)
+        ?.valueDateTime ?? '',
+    );
+    if (!Number.isFinite(revokedAt)) return;
+    // No session lives longer than the remembered TTL, so after that the
+    // record has nothing left to refuse.
+    if (revokedAt + REMEMBERED_SESSION_TTL_MS <= now) {
+      await client
+        .deleteResource('Basic', item.id as string)
+        .catch(() => undefined);
+      return;
+    }
+    if (revokedAt > (this.revokedProfiles.get(profile) ?? 0))
+      this.revokedProfiles.set(profile, revokedAt);
+  }
+
+  /**
+   * Ends every session of a profile (e.g. "Patient/<id>") issued until now, on
+   * this instance at once and, through Medplum, on other instances at their
+   * next revocation refresh and after restarts.
+   */
+  async revokeProfileSessions(profile: string): Promise<void> {
+    const revokedAt = Date.now();
+    this.revokedProfiles.set(profile, revokedAt);
+    for (const [id, session] of this.sessions)
+      if (this.profileRef(session) === profile) this.sessions.delete(id);
+    const client = this.medplumService?.getClient();
+    if (!client) return;
+    const record: Basic = {
+      resourceType: 'Basic',
+      code: {
+        coding: [
+          {
+            system: REVOCATION_CODE_SYSTEM,
+            code: 'revoked-profile',
+            display: 'Revoked profile sessions',
+          },
+        ],
+      },
+      identifier: [{ system: PROFILE_REVOCATION_SYSTEM, value: profile }],
+      created: new Date(revokedAt).toISOString().slice(0, 10),
+      extension: [
+        {
+          url: PROFILE_REVOKED_AT_URL,
+          valueDateTime: new Date(revokedAt).toISOString(),
+        },
+      ],
+    };
+    try {
+      await client.upsertResource<Basic>(
+        record,
+        `identifier=${encodeURIComponent(PROFILE_REVOCATION_SYSTEM)}|${encodeURIComponent(profile)}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Could not persist profile session revocation; other instances and restarts will not see it: ${String(error)}`,
+      );
+    }
+  }
+
+  private profileRef(session: Pick<AuthSession, 'profile'>): string {
+    return `${session.profile.resourceType}/${session.profile.id}`;
+  }
+
+  /** A token from before issuedAt existed is dated by its longest possible life. */
+  private issuedAt(session: AuthSession): number {
+    return session.issuedAt ?? session.expiresAt - REMEMBERED_SESSION_TTL_MS;
   }
 
   private async persistRevocation(
@@ -246,6 +336,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
         v: 1,
         hospitalId: session.hospitalId,
         expiresAt: session.expiresAt,
+        issuedAt: session.issuedAt,
         profileId: session.profile.id,
         profileType: session.profile.resourceType,
         display: getDisplayString(session.profile),
@@ -274,6 +365,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
         v: number;
         hospitalId: string;
         expiresAt: number;
+        issuedAt?: number;
         profileId?: string;
         profileType: 'Practitioner' | 'Patient' | 'Bot';
         display: string;
@@ -300,6 +392,9 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
         id: token,
         hospitalId: claims.hospitalId,
         expiresAt: claims.expiresAt,
+        issuedAt: Number.isFinite(claims.issuedAt)
+          ? claims.issuedAt
+          : undefined,
         profile,
         roles: claims.roles,
         permissions: claims.permissions,
@@ -469,6 +564,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
           : [...new Set([...permissionsForRoles(roles), ...directPermissions])];
       const sessionData: Omit<AuthSession, 'id'> = {
         hospitalId,
+        issuedAt: Date.now(),
         expiresAt:
           Date.now() +
           (input.remember ? REMEMBERED_SESSION_TTL_MS : SESSION_TTL_MS),
@@ -536,6 +632,11 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     const session = this.sessions.get(id) ?? this.restoreSession(id);
     if (!session) return undefined;
     if (session.expiresAt <= Date.now()) {
+      this.sessions.delete(id);
+      return undefined;
+    }
+    const revokedAt = this.revokedProfiles.get(this.profileRef(session));
+    if (revokedAt !== undefined && this.issuedAt(session) <= revokedAt) {
       this.sessions.delete(id);
       return undefined;
     }
