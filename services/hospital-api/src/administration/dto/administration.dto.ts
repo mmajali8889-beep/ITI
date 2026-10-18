@@ -7,6 +7,8 @@ export class CreateCatalogItemDto {
   parentId?: string;
   price?: number;
   currency?: string;
+  /** Price lists: the billing category that charge capture matches on. */
+  category?: string;
   specialty?: string;
 }
 export class CreateRoleDto {
