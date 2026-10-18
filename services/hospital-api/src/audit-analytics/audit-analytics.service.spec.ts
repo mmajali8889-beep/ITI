@@ -165,6 +165,18 @@ describe('AuditAnalyticsService', () => {
     );
   });
 
+  it('filters events from a point in time, and rejects an invalid one', async () => {
+    medplum.searchResources.mockResolvedValue([]);
+    await service.events('hospital-a', 500, { since: '2026-10-18T05:00:00Z' });
+    expect(medplum.searchResources).toHaveBeenCalledWith(
+      'AuditEvent',
+      expect.objectContaining({ date: 'ge2026-10-18T05:00:00.000Z' }),
+    );
+    await expect(
+      service.events('hospital-a', 500, { since: 'yesterday' }),
+    ).rejects.toThrow('since must be a date-time');
+  });
+
   const patientEntity = () =>
     medplum.createResource.mock.calls[0][0].entity.find(
       (e: { what?: { reference?: string } }) =>

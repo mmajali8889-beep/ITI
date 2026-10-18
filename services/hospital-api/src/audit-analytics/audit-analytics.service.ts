@@ -143,9 +143,13 @@ export class AuditAnalyticsService {
   async events(
     hospitalId: string,
     limit = 100,
-    filter: { patientId?: string; encounterId?: string } = {},
+    filter: { patientId?: string; encounterId?: string; since?: string } = {},
   ) {
     if (!hospitalId) throw new BadRequestException('Hospital ID is required');
+    // Optional lower bound, e.g. the start of the day for a daily review.
+    const since = filter.since ? new Date(filter.since) : undefined;
+    if (since && Number.isNaN(since.getTime()))
+      throw new BadRequestException('since must be a date-time');
     const count = Math.min(Math.max(Number(limit) || 100, 1), 500);
     // Scope and order on the server: fetching an unfiltered page and filtering it
     // here silently drops a hospital's recent events once others have older ones.
@@ -157,6 +161,7 @@ export class AuditAnalyticsService {
         ...(filter.encounterId
           ? { entity: `Encounter/${filter.encounterId}` }
           : {}),
+        ...(since ? { date: `ge${since.toISOString()}` } : {}),
         _sort: '-date',
         _count: String(count),
       });
