@@ -91,6 +91,33 @@ describe('AuditInterceptor', () => {
     expect(recorded).toMatchObject({ patientId: 'p-1', encounterId: 'e-1' });
   });
 
+  it('audits portal-access actions against the patient, without the password', async () => {
+    for (const [method, url] of [
+      ['GET', '/api/medical-records/portal-access/p-1'],
+      ['POST', '/api/medical-records/portal-access/p-1'],
+      ['POST', '/api/medical-records/portal-access/p-1/disable'],
+    ]) {
+      const recorded = await run(
+        {
+          method,
+          originalUrl: url,
+          params: { patientId: 'p-1' },
+          body: { username: 'ahmad', password: 'Secret-Pass1' },
+        },
+        { patientId: 'p-1', temporaryPassword: 'Generated-Pass1' },
+      );
+      expect(recorded).toMatchObject({
+        patientId: 'p-1',
+        route: url,
+        method,
+        record: undefined,
+      });
+      expect(JSON.stringify(recorded)).not.toMatch(
+        /Secret-Pass1|Generated-Pass1/,
+      );
+    }
+  });
+
   it('records the patient and encounter from the request body', async () => {
     const recorded = await run(
       {

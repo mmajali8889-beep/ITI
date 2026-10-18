@@ -38,6 +38,7 @@ import { FinancialModule } from './financial/financial.module';
 import { ClinicalServicesModule } from './clinical-services/clinical-services.module';
 import { ResultReviewsModule } from './result-reviews/result-reviews.module';
 import { BillingModule } from './billing/billing.module';
+import { PortalAccessModule } from './portal-access/portal-access.module';
 import { MedicalRecordsModule } from './medical-records/medical-records.module';
 import { AuditAnalyticsModule } from './audit-analytics/audit-analytics.module';
 import { AuditInterceptor } from './audit-analytics/audit.interceptor';
@@ -94,6 +95,8 @@ import { HospitalScopeGuard } from './auth/hospital-scope.guard';
     ClinicalServicesModule,
     ResultReviewsModule,
     BillingModule,
+    // Before MedicalRecordsModule: its ':recordId/...' routes share the prefix.
+    PortalAccessModule,
     MedicalRecordsModule,
     AuditAnalyticsModule,
     NursingModule,

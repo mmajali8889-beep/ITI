@@ -65,7 +65,7 @@ export const RECORD_ROUTES: Array<{ pattern: RegExp; types: string[] }> = [
   },
   {
     pattern:
-      /^\/api\/medical-records\/(?!(?:encounters|queue|deficiencies)(?:\/|$))([^/]+)\//,
+      /^\/api\/medical-records\/(?!(?:encounters|queue|deficiencies|portal-access)(?:\/|$))([^/]+)\//,
     types: ['Composition'],
   },
   {
