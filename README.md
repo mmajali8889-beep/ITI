@@ -89,6 +89,8 @@ In the Claude desktop app, `.claude/launch.json` starts both servers.
 
 ## Production (on-premise)
 
+To set up a new machine from GitHub, step by step (in Arabic): [`docs/QUICKSTART_NEW_MACHINE.md`](docs/QUICKSTART_NEW_MACHINE.md).
+
 See [`docs/DEPLOYMENT_ON_PREMISE.md`](docs/DEPLOYMENT_ON_PREMISE.md): one HTTPS address via Caddy, secrets as files, and the API refusing unsafe production settings. Files are in `infrastructure/production/`.
 
 ## Tests
