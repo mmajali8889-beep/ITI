@@ -1,9 +1,11 @@
 # UNITECH-EHR edge: the only service reachable from the hospital network.
 # One HTTPS address serves the web app, the API and the image viewer, so
-# session cookies stay same-site and no CORS is needed. HTTP is redirected to
-# HTTPS automatically for the site address below.
+# session cookies stay same-site and no CORS is needed. HTTP only redirects to
+# HTTPS (the http:// site below).
 #
-# EHR_HOSTNAME  e.g. ehr.hospital.local (must match the certificate)
+# EHR_HOSTNAME     e.g. ehr.hospital.local (must match the certificate)
+# EHR_PORT_SUFFIX  empty when HTTPS is published on 443; otherwise the public
+#                  port with a colon, e.g. ":8448", so redirects keep it
 # EHR_TLS       "tls /certs/cert.pem /certs/key.pem" for a certificate issued
 #               by hospital IT (recommended), or "tls internal" for Caddy's own
 #               CA while you wait for one (browsers must trust that CA).
@@ -15,6 +17,10 @@
 		# The API trusts X-Forwarded-For only from this proxy (TRUST_PROXY).
 		trusted_proxies static private_ranges
 	}
+}
+
+http://{$EHR_HOSTNAME} {
+	redir https://{host}{$EHR_PORT_SUFFIX}{uri} permanent
 }
 
 {$EHR_HOSTNAME} {

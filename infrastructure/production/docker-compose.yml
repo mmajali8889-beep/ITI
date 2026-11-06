@@ -32,6 +32,7 @@ services:
     environment:
       EHR_HOSTNAME: ${EHR_HOSTNAME:?set EHR_HOSTNAME in .env}
       EHR_TLS: ${EHR_TLS:-tls internal}
+      EHR_PORT_SUFFIX: ${EHR_PORT_SUFFIX:-}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./certs:/certs:ro
@@ -54,7 +55,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: "4000"
-      WEB_ORIGIN: https://${EHR_HOSTNAME}
+      WEB_ORIGIN: https://${EHR_HOSTNAME}${EHR_PORT_SUFFIX:-}
       TRUST_PROXY: uniquelocal
       ENABLED_HOSPITAL_CODES: ${ENABLED_HOSPITAL_CODES:-HOSP-A}
       # Currency for prices, invoices and payments (JOD, SAR, USD or EUR).
